@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ p.nombre }} | Atención Psi {{ pais.nombre }}{% endblock %}
+{% block content %}
+<a href="{% url 'buscador_pais' pais.slug %}" class="volver">&larr; Psicólogos en {{ pais.nombre }}</a>
+
+<div class="perfil">
+    <div class="perfil-header">
+        {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% endif %}
+        <div>
+            <h1>{{ p.nombre }}</h1>
+            <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</p>
+            <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
+            {% if pais.muestra_precio_sesion and p.precio_sesion %}
+                <p class="perfil-precio">Sesión: {{ pais.simbolo_moneda }} {{ p.precio_sesion }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if p.bio %}
+        <section class="perfil-seccion">
+            <h2>Sobre mí</h2>
+            <p>{{ p.bio|linebreaksbr }}</p>
+        </section>
+    {% endif %}
+
+    {% if formaciones %}
+        <section class="perfil-seccion">
+            <h2>Formación</h2>
+            <ol class="perfil-formacion">
+                {% for f in formaciones %}<li>{{ f.descripcion }}</li>{% endfor %}
+            </ol>
+        </section>
+    {% endif %}
+
+    {% if p.docencia %}
+        <section class="perfil-seccion">
+            <h2>Docencia</h2>
+            <p>{{ p.docencia|linebreaksbr }}</p>
+        </section>
+    {% endif %}
+
+    <section class="perfil-seccion">
+        <h2>Contacto</h2>
+        <a href="https://wa.me/{{ p.whatsapp }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    </section>
+</div>
+{% endblock %}

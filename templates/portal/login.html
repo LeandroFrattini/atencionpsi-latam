@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Ingresar | Atención Psi{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Ingresar a tu cuenta</h1>
+    {% if form.errors %}<p class="portal-error">Usuario o contraseña incorrectos.</p>{% endif %}
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        <div class="portal-field">
+            <label for="id_username">Email</label>
+            {{ form.username }}
+        </div>
+        <div class="portal-field">
+            <label for="id_password">Contraseña</label>
+            {{ form.password }}
+        </div>
+        <button type="submit" class="btn-primario">Ingresar</button>
+    </form>
+</div>
+{% endblock %}

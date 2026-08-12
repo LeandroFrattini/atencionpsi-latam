@@ -35,10 +35,13 @@
 
 <div class="psicologos-grid">
     {% for p in psicologos %}
-        <div class="psicologo-card">
+        <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="psicologo-card">
             <div class="psicologo-nombre">{{ p.nombre }}</div>
             <div class="psicologo-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</div>
-        </div>
+            {% if pais.muestra_precio_sesion and p.precio_sesion %}
+                <div class="psicologo-precio">{{ pais.simbolo_moneda }} {{ p.precio_sesion }} / sesión</div>
+            {% endif %}
+        </a>
     {% empty %}
         <p class="sin-resultados">Todavía no hay psicólogos publicados en {{ pais.nombre }} con esos filtros.</p>
     {% endfor %}

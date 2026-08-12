@@ -16,6 +16,13 @@
         <a href="{% url 'hub' %}" class="logo"><span class="v">Atención</span><span class="r">Psi</span></a>
     </header>
     <main>
+        {% if messages %}
+            <ul class="mensajes">
+                {% for message in messages %}
+                    <li class="mensaje mensaje-{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
     <footer class="footer">

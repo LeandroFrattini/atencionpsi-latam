@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Mi cuenta | Atención Psi{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Hola, {{ p.nombre }}</h1>
+
+    <div class="portal-estado">
+        {% if p.publicado %}
+            <span class="portal-badge portal-badge-ok">Publicado — visible en el buscador de {{ p.pais.nombre }}</span>
+        {% elif not p.suscripcion_activa and not p.exento_de_pago %}
+            <span class="portal-badge portal-badge-warn">Suscripción pendiente</span>
+        {% elif not p.perfil_completo %}
+            <span class="portal-badge portal-badge-warn">Perfil incompleto</span>
+        {% else %}
+            <span class="portal-badge portal-badge-warn">Listo para publicar — todavía no lo publicaste</span>
+        {% endif %}
+    </div>
+
+    <ul class="portal-checklist">
+        <li class="{% if p.suscripcion_activa or p.exento_de_pago %}ok{% endif %}">Suscripción activa</li>
+        <li class="{% if p.foto %}ok{% endif %}">Foto de perfil</li>
+        <li class="{% if p.bio %}ok{% endif %}">Descripción</li>
+        <li class="{% if p.matricula %}ok{% endif %}">{{ p.pais.etiqueta_matricula }}</li>
+        <li class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
+        <li class="{% if p.orientaciones.exists %}ok{% endif %}">Al menos una orientación</li>
+    </ul>
+
+    <div class="portal-acciones">
+        <a href="{% url 'portal_editar_perfil' %}" class="btn-secundario">Editar mi perfil</a>
+        {% if not p.suscripcion_activa and not p.exento_de_pago %}
+            <a href="{% url 'portal_checkout' %}" class="btn-primario">Activar suscripción</a>
+        {% elif p.publicado %}
+            <form method="post" action="{% url 'portal_despublicar' %}" class="portal-inline-form">
+                {% csrf_token %}
+                <button type="submit" class="btn-secundario">Dejar de mostrarme</button>
+            </form>
+        {% elif p.puede_publicar %}
+            <form method="post" action="{% url 'portal_publicar' %}" class="portal-inline-form">
+                {% csrf_token %}
+                <button type="submit" class="btn-primario">Publicar mi perfil</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

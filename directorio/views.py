@@ -1,7 +1,7 @@
 from django.http import Http404
 from django.shortcuts import render
 
-from .models import Orientacion, Pais, Publico
+from .models import Orientacion, Pais, Psicologo, Publico
 
 
 def hub(request):
@@ -44,4 +44,25 @@ def buscador_pais(request, pais_slug):
         'ciudades': ciudades,
         'orientaciones_list': Orientacion.objects.all(),
         'publicos_list': Publico.objects.all(),
+    })
+
+
+def detalle_psicologo(request, pais_slug, pk):
+    try:
+        pais = Pais.objects.get(slug=pais_slug, activo=True)
+    except Pais.DoesNotExist:
+        raise Http404('País no disponible todavía')
+
+    try:
+        psicologo = pais.psicologos.get(pk=pk)
+    except Psicologo.DoesNotExist:
+        raise Http404('Perfil no encontrado')
+
+    if not psicologo.publicado:
+        raise Http404('Perfil no publicado')
+
+    return render(request, 'directorio/detalle_psicologo.html', {
+        'pais': pais,
+        'p': psicologo,
+        'formaciones': psicologo.formaciones.all(),
     })

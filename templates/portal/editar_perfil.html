@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Editar perfil | Atención Psi{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Editar mi perfil</h1>
+    <form method="post" enctype="multipart/form-data" class="portal-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="portal-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+        {% endfor %}
+
+        <h2 class="portal-subtitulo">Formación</h2>
+        {{ formset.management_form }}
+        {% for f in formset %}
+            <div class="portal-formacion-fila">
+                {{ f.id }}
+                {{ f.descripcion }}
+                {% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} Eliminar</label>{% endif %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn-primario">Guardar</button>
+    </form>
+    <a href="{% url 'portal_dashboard' %}" class="portal-lead-sm">&larr; Volver</a>
+</div>
+{% endblock %}

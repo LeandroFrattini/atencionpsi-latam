@@ -118,6 +118,7 @@ main {
 }
 .psicologo-nombre { font-weight: 600; color: var(--texto-titulo); margin-bottom: 4px; }
 .psicologo-meta { color: var(--texto-secundario); font-size: 0.85rem; }
+.psicologo-precio { color: var(--verde-oscuro); font-weight: 600; font-size: 0.85rem; margin-top: 6px; }
 .sin-resultados {
     grid-column: 1 / -1;
     text-align: center;
@@ -125,6 +126,92 @@ main {
     padding: 40px 0;
 }
 
+.mensajes { list-style: none; padding: 0; margin: 0 0 20px; }
+.mensaje { padding: 10px 16px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 8px; }
+.mensaje-success { background: var(--verde-suave); color: var(--verde-oscuro); }
+.mensaje-error { background: var(--rosa-suave); color: #c1467a; }
+
+/* Perfil individual */
+.volver { display: inline-block; margin-bottom: 20px; font-size: 0.85rem; color: var(--verde-oscuro); font-weight: 600; }
+.perfil { max-width: 640px; }
+.perfil-header { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 28px; }
+.perfil-foto { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
+.perfil-header h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--texto-titulo); }
+.perfil-meta { color: var(--texto-secundario); font-size: 0.9rem; margin: 0 0 4px; }
+.perfil-matricula { color: var(--texto-tenue); font-size: 0.82rem; margin: 0; }
+.perfil-precio { color: var(--verde-oscuro); font-weight: 600; margin: 6px 0 0; }
+.perfil-seccion { margin-bottom: 24px; }
+.perfil-seccion h2 { font-size: 1.1rem; color: var(--texto-titulo); margin-bottom: 8px; }
+.perfil-formacion { padding-left: 20px; color: var(--texto); }
+.perfil-formacion li { margin-bottom: 4px; }
+.btn-whatsapp {
+    display: inline-block;
+    background: #25d366;
+    color: #fff;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: 8px;
+}
+
+/* Portal (cuentas de profesionales) */
+.portal-card {
+    max-width: 520px;
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+    padding: 32px;
+}
+.portal-card h1 { font-size: 1.4rem; color: var(--texto-titulo); margin: 0 0 8px; }
+.portal-subtitulo { font-size: 1rem; color: var(--texto-titulo); margin: 24px 0 10px; }
+.portal-lead { color: var(--texto-secundario); font-size: 0.92rem; margin-bottom: 20px; }
+.portal-lead-sm { color: var(--texto-secundario); font-size: 0.85rem; margin-top: 16px; display: block; }
+.portal-form { display: flex; flex-direction: column; gap: 14px; }
+.portal-field { display: flex; flex-direction: column; gap: 5px; }
+.portal-field label { font-size: 0.85rem; font-weight: 600; color: var(--texto-titulo); }
+.portal-field input, .portal-field textarea, .portal-field select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--borde);
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+.portal-error { color: #c1467a; font-size: 0.8rem; margin: 0; }
+.portal-formacion-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.portal-formacion-fila input[type="text"] { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--borde); }
+.portal-check-eliminar { font-size: 0.78rem; color: var(--texto-tenue); white-space: nowrap; }
+.portal-inline-form { display: inline; }
+
+.btn-primario, .btn-secundario {
+    display: inline-block;
+    text-align: center;
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+.btn-primario { background: var(--verde-oscuro); color: #fff; }
+.btn-secundario { background: #fff; color: var(--verde-oscuro); border: 1px solid var(--verde-oscuro); }
+
+.portal-estado { margin-bottom: 18px; }
+.portal-badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+.portal-badge-ok { background: var(--verde-suave); color: var(--verde-oscuro); }
+.portal-badge-warn { background: var(--rosa-suave); color: #c1467a; }
+
+.portal-checklist { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 6px; }
+.portal-checklist li { font-size: 0.88rem; color: var(--texto-tenue); padding-left: 22px; position: relative; }
+.portal-checklist li::before { content: '○'; position: absolute; left: 0; }
+.portal-checklist li.ok { color: var(--texto); }
+.portal-checklist li.ok::before { content: '●'; color: var(--verde-oscuro); }
+
+.portal-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.portal-dev-box { background: var(--rosa-suave); border-radius: 10px; padding: 16px; margin-top: 8px; }
+.portal-dev-box p { margin: 0 0 10px; font-size: 0.85rem; }
+
 @media (max-width: 480px) {
     main { padding: 28px 16px 60px; }
+    .portal-card { padding: 22px; }
+    .perfil-header { flex-direction: column; align-items: flex-start; }
 }
