@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block content %}
+<div class="buscador-head">
+    <a href="{% url 'hub' %}" class="volver">&larr; Todos los países</a>
+    <h1>{{ pais.bandera_emoji }} Psicólogos en {{ pais.nombre }}</h1>
+</div>
+
+<form method="get" class="filtros">
+    <select name="modalidad" onchange="this.form.submit()">
+        <option value="">Modalidad</option>
+        <option value="online" {% if request.GET.modalidad == 'online' %}selected{% endif %}>Online</option>
+        <option value="presencial" {% if request.GET.modalidad == 'presencial' %}selected{% endif %}>Presencial</option>
+        <option value="ambas" {% if request.GET.modalidad == 'ambas' %}selected{% endif %}>Online y presencial</option>
+    </select>
+    <select name="ciudad" onchange="this.form.submit()">
+        <option value="">Ciudad</option>
+        {% for c in ciudades %}
+            <option value="{{ c }}" {% if request.GET.ciudad == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+    </select>
+    <select name="orientacion" onchange="this.form.submit()">
+        <option value="">Orientación</option>
+        {% for o in orientaciones_list %}
+            <option value="{{ o.pk }}" {% if request.GET.orientacion == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.nombre }}</option>
+        {% endfor %}
+    </select>
+    <select name="publico" onchange="this.form.submit()">
+        <option value="">¿Para quién?</option>
+        {% for pu in publicos_list %}
+            <option value="{{ pu.pk }}" {% if request.GET.publico == pu.pk|stringformat:'s' %}selected{% endif %}>{{ pu.nombre }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="psicologos-grid">
+    {% for p in psicologos %}
+        <div class="psicologo-card">
+            <div class="psicologo-nombre">{{ p.nombre }}</div>
+            <div class="psicologo-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</div>
+        </div>
+    {% empty %}
+        <p class="sin-resultados">Todavía no hay psicólogos publicados en {{ pais.nombre }} con esos filtros.</p>
+    {% endfor %}
+</div>
+{% endblock %}

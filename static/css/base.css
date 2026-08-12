@@ -1,0 +1,130 @@
+:root {
+    --verde-oscuro: #4a7c59;
+    --verde-medio: #7da87b;
+    --verde-suave: #eaf2ea;
+    --rosa-medio: #e9a8a6;
+    --rosa-suave: #faf0ee;
+    --rosa-degrade: #f3e7e4;
+    --crema: #fdfbf9;
+    --texto: #333333;
+    --texto-titulo: #222222;
+    --texto-secundario: #666666;
+    --texto-tenue: #888888;
+    --borde: #eeeeee;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--crema);
+    color: var(--texto);
+    font-family: 'Montserrat', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .logo {
+    font-family: 'Playfair Display', Georgia, serif;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.topbar {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--borde);
+    background: #fff;
+}
+
+.logo { font-size: 1.3rem; font-weight: 700; color: var(--texto-titulo); }
+.logo .v { color: var(--verde-oscuro); }
+.logo .r { color: var(--rosa-medio); }
+
+main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--texto-tenue);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--borde);
+}
+
+/* Hub de países */
+.hub-hero { text-align: center; margin-bottom: 48px; }
+.hub-hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    color: var(--texto-titulo);
+    margin-bottom: 10px;
+}
+.hub-hero p { color: var(--texto-secundario); font-size: 1.05rem; }
+
+.paises-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+.pais-card {
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.pais-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(74,60,45,0.08); }
+.pais-bandera { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+.pais-nombre { font-weight: 600; color: var(--texto-titulo); font-size: 1.05rem; }
+.pais-vacio {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--texto-tenue);
+    padding: 40px 0;
+}
+
+/* Buscador por país */
+.buscador-head { margin-bottom: 24px; }
+.buscador-head h1 { font-size: 1.8rem; color: var(--texto-titulo); margin-bottom: 4px; }
+.buscador-head .volver { font-size: 0.85rem; color: var(--verde-oscuro); font-weight: 600; }
+
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
+}
+.filtros select {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--borde);
+    background: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.psicologos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+.psicologo-card {
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+    padding: 20px;
+}
+.psicologo-nombre { font-weight: 600; color: var(--texto-titulo); margin-bottom: 4px; }
+.psicologo-meta { color: var(--texto-secundario); font-size: 0.85rem; }
+.sin-resultados {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--texto-tenue);
+    padding: 40px 0;
+}
+
+@media (max-width: 480px) {
+    main { padding: 28px 16px 60px; }
+}
