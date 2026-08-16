@@ -127,34 +127,83 @@ main {
 
 .psicologos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 18px;
 }
 .psicologo-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 14px;
+    text-align: center;
     background: #fff;
     border: 1px solid var(--borde);
-    border-radius: 16px;
-    padding: 16px 18px;
+    border-radius: 18px;
+    padding: 22px 18px 18px;
     box-shadow: 0 1px 3px rgba(74,60,45,0.05);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .psicologo-card:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(74,60,45,0.12); border-color: transparent; }
+
+.psicologo-card-link { display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+.psicologo-foto-wrap {
+    width: 96px; height: 96px; border-radius: 50%; padding: 3px;
+    background: linear-gradient(135deg, var(--verde-medio), var(--rosa-medio));
+    margin-bottom: 14px;
+}
 .psicologo-foto {
-    width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
-    object-fit: cover; box-shadow: 0 2px 8px rgba(74,60,45,0.15);
+    width: 100%; height: 100%; border-radius: 50%; display: block;
+    object-fit: cover; border: 3px solid #fff;
 }
 .psicologo-foto-vacia {
+    width: 100%; height: 100%; border-radius: 50%; border: 3px solid #fff;
     display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, var(--verde-medio), var(--rosa-medio));
-    color: #fff; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.3rem;
+    background: linear-gradient(135deg, var(--verde-oscuro), #a5566f);
+    color: #fff; font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.5rem;
 }
-.psicologo-card-info { min-width: 0; }
-.psicologo-nombre { font-weight: 600; color: var(--texto-titulo); margin-bottom: 3px; }
-.psicologo-meta { color: var(--texto-secundario); font-size: 0.85rem; }
-.psicologo-precio { color: var(--verde-oscuro); font-weight: 600; font-size: 0.85rem; margin-top: 5px; }
+
+.psicologo-nombre { font-weight: 700; color: var(--texto-titulo); font-size: 1.02rem; }
+
+.psicologo-linea {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    color: var(--texto-secundario); font-size: 0.82rem; margin-top: 6px;
+}
+.psicologo-linea svg { color: var(--verde-medio); flex-shrink: 0; }
+.psicologo-modalidad { gap: 12px; }
+.psicologo-modalidad span { display: inline-flex; align-items: center; gap: 4px; }
+.psicologo-modalidad svg { color: var(--rosa-medio); }
+
+.psicologo-orientacion {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: var(--verde-oscuro);
+    margin-top: 8px;
+    line-height: 1.1;
+}
+
+.psicologo-precio { color: var(--verde-oscuro); font-weight: 600; font-size: 0.85rem; margin-top: 8px; }
+
+.psicologo-chips {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+    margin-top: 12px;
+}
+.psicologo-chip {
+    background: var(--rosa-suave); color: #96355c;
+    font-size: 0.74rem; font-weight: 600;
+    padding: 4px 11px; border-radius: 999px;
+}
+
+.psicologo-card-botones { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 16px; }
+.btn-ver-perfil {
+    display: block; text-align: center;
+    background: var(--rosa-medio); color: #fff; font-weight: 700;
+    padding: 11px; border-radius: 10px; font-size: 0.88rem;
+}
+.psicologo-card-botones .btn-whatsapp {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px; border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+}
 .sin-resultados {
     grid-column: 1 / -1;
     text-align: center;

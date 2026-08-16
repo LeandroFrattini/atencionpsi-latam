@@ -35,20 +35,63 @@
 
 <div class="psicologos-grid">
     {% for p in psicologos %}
-        <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="psicologo-card">
-            {% if p.foto %}
-                <img src="{{ p.foto.url }}" alt="" class="psicologo-foto">
-            {% else %}
-                <div class="psicologo-foto psicologo-foto-vacia">{{ p.nombre|slice:":1" }}</div>
-            {% endif %}
-            <div class="psicologo-card-info">
+        <div class="psicologo-card">
+            <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="psicologo-card-link">
+                <div class="psicologo-foto-wrap">
+                    {% if p.foto %}
+                        <img src="{{ p.foto.url }}" alt="" class="psicologo-foto">
+                    {% else %}
+                        <div class="psicologo-foto psicologo-foto-vacia">{{ p.nombre|slice:":1" }}</div>
+                    {% endif %}
+                </div>
+
                 <div class="psicologo-nombre">{{ p.nombre }}</div>
-                <div class="psicologo-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</div>
-                {% if pais.muestra_precio_sesion and p.precio_sesion %}
-                    <div class="psicologo-precio">{{ pais.simbolo_moneda }} {{ p.precio_sesion }} / sesión</div>
+            </a>
+
+            {% if p.ciudad %}
+                <div class="psicologo-linea">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {{ p.ciudad }}
+                </div>
+            {% endif %}
+
+            <div class="psicologo-linea psicologo-modalidad">
+                {% if p.modalidad == 'online' or p.modalidad == 'ambas' %}
+                    <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Online</span>
+                {% endif %}
+                {% if p.modalidad == 'presencial' or p.modalidad == 'ambas' %}
+                    <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Presencial</span>
                 {% endif %}
             </div>
-        </a>
+
+            {% if p.orientaciones.all %}
+                <div class="psicologo-orientacion">
+                    {% for o in p.orientaciones.all %}{{ o.nombre }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+                </div>
+            {% endif %}
+
+            {% if pais.muestra_precio_sesion and p.precio_sesion %}
+                <div class="psicologo-precio">{{ pais.simbolo_moneda }} {{ p.precio_sesion }} / sesión</div>
+            {% endif %}
+
+            {% if p.publicos.all %}
+                <div class="psicologo-chips">
+                    {% for pu in p.publicos.all %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="psicologo-card-botones">
+                {% if p.tipos_sesion.all %}
+                    <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-ver-perfil">Reservar turno</a>
+                {% else %}
+                    <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="btn-ver-perfil">Ver perfil</a>
+                {% endif %}
+                <a href="https://wa.me/{{ p.whatsapp }}" class="btn-whatsapp" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.77.46 3.45 1.28 4.9L2 22l5.31-1.39a9.9 9.9 0 0 0 4.73 1.2h.01c5.46 0 9.9-4.45 9.9-9.9C21.95 6.45 17.5 2 12.04 2Zm5.8 14.02c-.24.68-1.19 1.24-1.95 1.4-.52.11-1.19.2-3.46-.74-2.9-1.2-4.77-4.15-4.92-4.34-.14-.2-1.18-1.57-1.18-3 0-1.42.75-2.12 1.02-2.41.27-.29.58-.36.78-.36h.56c.18 0 .42-.07.65.5.24.58.81 2.01.88 2.16.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.44.52-.15.15-.3.31-.13.6.17.3.76 1.26 1.64 2.04 1.13 1 2.07 1.32 2.37 1.47.3.15.48.13.65-.08.18-.2.73-.85.93-1.15.2-.29.4-.24.66-.15.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+                    WhatsApp
+                </a>
+            </div>
+        </div>
     {% empty %}
         <p class="sin-resultados">Todavía no hay psicólogos publicados en {{ pais.nombre }} con esos filtros.</p>
     {% endfor %}

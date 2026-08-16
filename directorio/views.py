@@ -15,7 +15,7 @@ def buscador_pais(request, pais_slug):
     except Pais.DoesNotExist:
         raise Http404('País no disponible todavía')
 
-    psicologos_qs = pais.psicologos.all()
+    psicologos_qs = pais.psicologos.all().prefetch_related('orientaciones', 'publicos', 'tipos_sesion')
 
     ciudad = request.GET.get('ciudad', '').strip()
     modalidad = request.GET.get('modalidad', '').strip()
