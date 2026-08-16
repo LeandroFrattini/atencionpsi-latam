@@ -1,0 +1,17 @@
+{% load static %}
+<div class="wizard-progreso">
+    <div class="wizard-barra"><div class="wizard-barra-fill" style="width: {{ porcentaje }}%"></div></div>
+    <div class="wizard-cabecera">
+        <span class="wizard-paso-num">Paso {{ paso_actual.numero }} de {{ pasos|length }}</span>
+        <span class="wizard-paso-nombre">{{ paso_actual.nombre }}</span>
+    </div>
+    <div class="wizard-pills">
+        {% for paso in pasos %}
+            <span class="wizard-pill{% if paso.completado %} wizard-pill-ok{% elif paso.actual %} wizard-pill-actual{% endif %}">
+                {% if paso.completado %}<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{% endif %}
+                {{ paso.numero }} {{ paso.nombre }}
+            </span>
+            {% if not forloop.last %}<span class="wizard-sep">&rsaquo;</span>{% endif %}
+        {% endfor %}
+    </div>
+</div>

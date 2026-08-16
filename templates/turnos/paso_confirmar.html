@@ -1,0 +1,25 @@
+{% extends 'turnos/_wizard_base.html' %}
+{% block wizard_body %}
+<h1>Confirmá tu reserva</h1>
+<p class="wizard-subtitulo">Revisá que todo esté correcto antes de confirmar</p>
+
+{% include 'turnos/_resumen.html' %}
+
+<div class="wizard-resumen">
+    <strong class="wizard-resumen-titulo">Tus datos</strong>
+    <div class="wizard-resumen-fila"><span>{{ reserva.nombres }} {{ reserva.apellidos }}</span></div>
+    <div class="wizard-resumen-fila"><span>{{ reserva.telefono }} &middot; {{ reserva.email }}</span></div>
+</div>
+
+<p class="wizard-nota-pago">
+    El pago de la sesión se coordina directamente con {{ p.nombre }} &mdash; Atención Psi no procesa cobros.
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="wizard-nav">
+        <a href="{% url 'reserva_datos' pais.slug p.pk %}" class="btn-secundario">&larr; Anterior</a>
+        <button type="submit" class="btn-primario">Confirmar turno</button>
+    </div>
+</form>
+{% endblock %}

@@ -41,7 +41,12 @@
 
     <section class="perfil-seccion">
         <h2>Contacto</h2>
-        <a href="https://wa.me/{{ p.whatsapp }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+        <div class="perfil-acciones">
+            {% if p.tipos_sesion.exists %}
+                <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-primario">Reservar turno</a>
+            {% endif %}
+            <a href="https://wa.me/{{ p.whatsapp }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+        </div>
     </section>
 </div>
 {% endblock %}

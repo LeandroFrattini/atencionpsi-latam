@@ -1,0 +1,30 @@
+from django.contrib import admin
+
+from .models import DiaNoAtiende, DisponibilidadSemanal, TipoSesion, Turno
+
+
+@admin.register(TipoSesion)
+class TipoSesionAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'psicologo', 'duracion_min', 'precio', 'orden')
+    list_filter = ('psicologo__pais',)
+    search_fields = ('nombre', 'psicologo__nombre')
+
+
+@admin.register(DisponibilidadSemanal)
+class DisponibilidadSemanalAdmin(admin.ModelAdmin):
+    list_display = ('psicologo', 'dia_semana', 'hora_desde', 'hora_hasta')
+    list_filter = ('psicologo__pais', 'dia_semana')
+
+
+@admin.register(DiaNoAtiende)
+class DiaNoAtiendeAdmin(admin.ModelAdmin):
+    list_display = ('psicologo', 'fecha_desde', 'fecha_hasta', 'motivo')
+    list_filter = ('psicologo__pais',)
+
+
+@admin.register(Turno)
+class TurnoAdmin(admin.ModelAdmin):
+    list_display = ('psicologo', 'nombres', 'apellidos', 'fecha_hora', 'modalidad', 'estado')
+    list_filter = ('psicologo__pais', 'modalidad', 'estado')
+    search_fields = ('nombres', 'apellidos', 'email', 'psicologo__nombre')
+    date_hierarchy = 'fecha_hora'

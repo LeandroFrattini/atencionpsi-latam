@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Turno confirmado | Atención Psi{% endblock %}
+{% block content %}
+<div class="portal-card wizard-confirmado">
+    <span class="wizard-check-grande">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+    </span>
+    <h1>¡Turno confirmado!</h1>
+    <p class="wizard-subtitulo">
+        Tu sesión con {{ p.nombre }} quedó reservada para el {{ turno.fecha_hora|date:'l j \\d\\e F, H:i' }}.
+        Te contactamos a {{ turno.email }} si hace falta algo más.
+    </p>
+    <a href="{% url 'buscador_pais' pais.slug %}" class="btn-primario">Volver al buscador</a>
+</div>
+{% endblock %}

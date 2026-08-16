@@ -1,0 +1,23 @@
+{% extends 'turnos/_wizard_base.html' %}
+{% block wizard_body %}
+{% include 'turnos/_resumen.html' %}
+
+<h2 class="wizard-subtitulo-seccion">Tus datos de contacto</h2>
+<p class="wizard-subtitulo">Los necesitamos para confirmar la reserva y avisarte</p>
+
+<form method="post" class="portal-form">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="portal-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+    {% endfor %}
+
+    <div class="wizard-nav">
+        <a href="{% url 'reserva_horario' pais.slug p.pk %}" class="btn-secundario">&larr; Anterior</a>
+        <button type="submit" class="btn-primario">Siguiente &rarr;</button>
+    </div>
+</form>
+{% endblock %}

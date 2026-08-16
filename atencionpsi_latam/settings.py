@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'storages',  # Requerido para Supabase/S3
     'directorio',
     'portal',
+    'turnos',
     'axes',  # Bloqueo por fuerza bruta en el login del portal
     'django.contrib.sitemaps',
 ]

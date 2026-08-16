@@ -1,0 +1,30 @@
+{% extends 'turnos/_wizard_base.html' %}
+{% block wizard_body %}
+<h1>Seleccioná la modalidad</h1>
+<p class="wizard-subtitulo">Cómo preferís realizar la sesión</p>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="wizard-opciones">
+        <label class="wizard-opcion{% if reserva.modalidad == 'online' %} wizard-opcion-elegida{% endif %}">
+            <input type="radio" name="modalidad" value="online" {% if reserva.modalidad == 'online' %}checked{% endif %} required>
+            <span class="wizard-opcion-texto">
+                <strong>Online (videollamada)</strong>
+                <span class="wizard-opcion-sub">Te vamos a enviar el enlace antes de tu cita</span>
+            </span>
+        </label>
+        <label class="wizard-opcion{% if reserva.modalidad == 'presencial' %} wizard-opcion-elegida{% endif %}">
+            <input type="radio" name="modalidad" value="presencial" {% if reserva.modalidad == 'presencial' %}checked{% endif %} required>
+            <span class="wizard-opcion-texto">
+                <strong>Presencial (consultorio)</strong>
+                <span class="wizard-opcion-sub">Asistís al consultorio del profesional</span>
+            </span>
+        </label>
+    </div>
+
+    <div class="wizard-nav">
+        <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-secundario">&larr; Anterior</a>
+        <button type="submit" class="btn-primario">Siguiente &rarr;</button>
+    </div>
+</form>
+{% endblock %}

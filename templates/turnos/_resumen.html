@@ -1,0 +1,11 @@
+<div class="wizard-resumen">
+    <strong class="wizard-resumen-titulo">Resumen de tu cita</strong>
+    <div class="wizard-resumen-fila">
+        <span>{{ resumen.tipo_sesion.nombre }}</span>
+        <span>{{ resumen.tipo_sesion.duracion_min }} min{% if resumen.modalidad %} &middot; {{ resumen.modalidad|capfirst }}{% endif %}</span>
+    </div>
+    <div class="wizard-resumen-fila"><span>{{ resumen.fecha_larga|capfirst }}, {{ resumen.hora|time:'H:i' }}</span></div>
+    {% if resumen.tipo_sesion.precio %}
+        <div class="wizard-resumen-fila wizard-resumen-precio"><span>{{ pais.simbolo_moneda }} {{ resumen.tipo_sesion.precio }}</span></div>
+    {% endif %}
+</div>

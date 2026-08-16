@@ -1,0 +1,28 @@
+{% extends 'turnos/_wizard_base.html' %}
+{% block wizard_body %}
+<h1>Seleccioná el tipo de sesión</h1>
+<p class="wizard-subtitulo">Elegí según tus necesidades</p>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="wizard-opciones">
+        {% for tipo in tipos %}
+            <label class="wizard-opcion{% if reserva.tipo_sesion_id == tipo.pk %} wizard-opcion-elegida{% endif %}">
+                <input type="radio" name="tipo_sesion" value="{{ tipo.pk }}" {% if reserva.tipo_sesion_id == tipo.pk %}checked{% endif %} required>
+                <span class="wizard-opcion-texto">
+                    <strong>{{ tipo.nombre }}</strong>
+                    <span class="wizard-opcion-sub">Duración: {{ tipo.duracion_min }} minutos</span>
+                </span>
+                {% if tipo.precio %}<span class="wizard-opcion-precio">{{ p.pais.simbolo_moneda }} {{ tipo.precio }}</span>{% endif %}
+            </label>
+        {% empty %}
+            <p class="sin-resultados">Este profesional todavía no cargó tipos de sesión.</p>
+        {% endfor %}
+    </div>
+
+    <div class="wizard-nav">
+        <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="btn-secundario">&larr; Cancelar</a>
+        <button type="submit" class="btn-primario">Siguiente &rarr;</button>
+    </div>
+</form>
+{% endblock %}

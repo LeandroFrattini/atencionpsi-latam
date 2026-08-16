@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Reservar turno con {{ p.nombre }} | Atención Psi{% endblock %}
+{% block content %}
+<div class="wizard-card">
+    {% include 'turnos/_progreso.html' %}
+    <div class="wizard-body">
+        {% block wizard_body %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

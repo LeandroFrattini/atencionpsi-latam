@@ -1,0 +1,61 @@
+{% extends 'turnos/_wizard_base.html' %}
+{% block wizard_body %}
+<h1>Seleccioná fecha y hora</h1>
+<p class="wizard-aviso-huso">Todos los horarios en hora de {{ pais.nombre }}</p>
+
+<div class="wizard-calendario-layout">
+    <div class="calendario">
+        <div class="calendario-cabecera">
+            <a href="?mes={{ mes_anterior }}" class="calendario-nav">&lsaquo;</a>
+            <span>{{ mes_nombre }}</span>
+            <a href="?mes={{ mes_siguiente }}" class="calendario-nav">&rsaquo;</a>
+        </div>
+        <div class="calendario-dias-semana">
+            <span>lu</span><span>ma</span><span>mi</span><span>ju</span><span>vi</span><span>sá</span><span>do</span>
+        </div>
+        {% for semana in semanas %}
+            <div class="calendario-semana">
+                {% for dia in semana %}
+                    {% if dia.estado == 'disponible' %}
+                        <a href="?mes={{ mes_ref|date:'Y-m' }}&fecha={{ dia.fecha|date:'Y-m-d' }}"
+                           class="calendario-dia calendario-dia-disponible{% if dia.fecha == fecha_elegida %} calendario-dia-elegido{% endif %}">{{ dia.fecha.day }}</a>
+                    {% elif dia.estado == 'no-disponible' %}
+                        <span class="calendario-dia calendario-dia-no-disponible">{{ dia.fecha.day }}</span>
+                    {% else %}
+                        <span class="calendario-dia calendario-dia-fuera">{{ dia.fecha.day }}</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <div class="calendario-leyenda">
+            <span><i class="calendario-punto calendario-punto-disponible"></i> Disponible</span>
+            <span><i class="calendario-punto calendario-punto-no-disponible"></i> No disponible</span>
+            <span><i class="calendario-punto calendario-punto-fuera"></i> Fuera de rango</span>
+        </div>
+    </div>
+
+    <div class="calendario-slots">
+        <div class="calendario-slots-cabecera">
+            <strong>{{ fecha_elegida_larga|capfirst }}</strong>
+            <span class="calendario-duracion">{{ tipo_sesion.duracion_min }} min</span>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ fecha_elegida|date:'Y-m-d' }}">
+            <div class="calendario-slots-grid">
+                {% for slot in slots %}
+                    <button type="submit" name="hora" value="{{ slot.hora|time:'H:i' }}"
+                            class="calendario-slot{% if slot.tomado %} calendario-slot-tomado{% endif %}"
+                            {% if slot.tomado %}disabled{% endif %}>{{ slot.hora|time:'H:i' }}</button>
+                {% empty %}
+                    <p class="sin-resultados">No hay horarios disponibles ese día.</p>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="wizard-nav">
+    <a href="{% url 'reserva_modalidad' pais.slug p.pk %}" class="btn-secundario">&larr; Anterior</a>
+</div>
+{% endblock %}
