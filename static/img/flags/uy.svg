@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+    <rect width="900" height="600" fill="#fff"/>
+    <g fill="#0038A8">
+        <rect y="0" width="900" height="66.7"/>
+        <rect y="133.3" width="900" height="66.7"/>
+        <rect y="266.7" width="900" height="66.7"/>
+        <rect y="400" width="900" height="66.7"/>
+        <rect y="533.3" width="900" height="66.7"/>
+    </g>
+    <rect width="355" height="333" fill="#fff"/>
+    <g transform="translate(177,166)">
+        <circle r="72" fill="#FCD116"/>
+        <g stroke="#FCD116" stroke-width="14">
+            <line x1="0" y1="-118" x2="0" y2="-96"/>
+            <line x1="0" y1="118" x2="0" y2="96"/>
+            <line x1="-118" y1="0" x2="-96" y2="0"/>
+            <line x1="118" y1="0" x2="96" y2="0"/>
+            <line x1="-83" y1="-83" x2="-68" y2="-68"/>
+            <line x1="83" y1="83" x2="68" y2="68"/>
+            <line x1="-83" y1="83" x2="-68" y2="68"/>
+            <line x1="83" y1="-83" x2="68" y2="-68"/>
+        </g>
+        <g stroke="#FCD116" stroke-width="9">
+            <line x1="-45" y1="-112" x2="-36" y2="-91"/>
+            <line x1="45" y1="112" x2="36" y2="91"/>
+            <line x1="-45" y1="112" x2="-36" y2="91"/>
+            <line x1="45" y1="-112" x2="36" y2="-91"/>
+            <line x1="-112" y1="-45" x2="-91" y2="-36"/>
+            <line x1="112" y1="45" x2="91" y2="36"/>
+            <line x1="-112" y1="45" x2="-91" y2="36"/>
+            <line x1="112" y1="-45" x2="91" y2="-36"/>
+        </g>
+        <circle r="30" fill="#8B5A2B" opacity="0"/>
+    </g>
+</svg>

@@ -38,6 +38,13 @@ class Pais(models.Model):
     def __str__(self):
         return self.nombre
 
+    @property
+    def bandera_svg(self):
+        """Ícono de bandera real (SVG en static/img/flags/) en vez del emoji
+        -- en Windows los emoji de bandera a veces se ven como el código de
+        país en texto plano en lugar de la bandera."""
+        return f'img/flags/{self.codigo_iso.lower()}.svg'
+
 
 class Orientacion(models.Model):
     nombre = models.CharField(max_length=60, unique=True)

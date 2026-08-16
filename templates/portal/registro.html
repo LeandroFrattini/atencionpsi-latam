@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Sumate como profesional | Atención Psi {{ pais.nombre }}{% endblock %}
 {% block content %}
 <div class="portal-card">
-    <h1>{{ pais.bandera_emoji }} Sumate a Atención Psi {{ pais.nombre }}</h1>
+    <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Sumate a Atención Psi {{ pais.nombre }}</h1>
     <p class="portal-lead">Creá tu cuenta, armá tu perfil y publicalo cuando esté listo. El próximo paso después de esto es la suscripción mensual.</p>
     <form method="post" class="portal-form">
         {% csrf_token %}

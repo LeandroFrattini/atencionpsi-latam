@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Atención Psi | Elegí tu país{% endblock %}
 {% block content %}
 <div class="hub-hero">
@@ -8,7 +9,7 @@
 <div class="paises-grid">
     {% for pais in paises %}
         <a href="{% url 'buscador_pais' pais.slug %}" class="pais-card">
-            <span class="pais-bandera">{{ pais.bandera_emoji }}</span>
+            <img src="{% static pais.bandera_svg %}" alt="" class="pais-bandera">
             <span class="pais-nombre">{{ pais.nombre }}</span>
         </a>
     {% empty %}

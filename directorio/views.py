@@ -9,6 +9,10 @@ def hub(request):
     return render(request, 'directorio/hub.html', {'paises': paises})
 
 
+def faq(request):
+    return render(request, 'directorio/faq.html')
+
+
 def buscador_pais(request, pais_slug):
     try:
         pais = Pais.objects.get(slug=pais_slug, activo=True)
