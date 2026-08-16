@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 
-from directorio.models import Pais, Psicologo
+from directorio.models import Pais, Psicologo, Publico
 
 from .forms import FormacionFormSet, PerfilForm, RegistroForm
 
@@ -81,8 +81,17 @@ def editar_perfil(request):
         form = PerfilForm(request.POST, request.FILES, instance=psicologo, pais=psicologo.pais)
         formset = FormacionFormSet(request.POST, instance=psicologo)
         if form.is_valid() and formset.is_valid():
-            form.save()
+            psicologo = form.save()
             formset.save()
+
+            nombre_nuevo = form.cleaned_data.get('publico_nuevo', '').strip()
+            if nombre_nuevo:
+                publico, _creado = Publico.objects.get_or_create(
+                    nombre__iexact=nombre_nuevo,
+                    defaults={'nombre': nombre_nuevo},
+                )
+                psicologo.publicos.add(publico)
+
             messages.success(request, 'Perfil actualizado.')
             return redirect('portal_dashboard')
     else:

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=7">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=8">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -16,7 +16,7 @@
         <a href="{% url 'hub' %}" class="logo"><span class="v">Atención</span><span class="r">Psi</span></a>
         <nav class="topbar-nav">
             <a href="{% url 'faq' %}" class="topbar-link">Preguntas frecuentes</a>
-            {% if pais %}
+            {% if pais and not pais.es_externo %}
                 <a href="{% url 'portal_registro' pais.slug %}" class="topbar-link topbar-link-cta">¿Sos psicólogo/a? Sumate</a>
             {% endif %}
             <a href="{% url 'portal_login' %}" class="topbar-link">Portal profesional</a>
@@ -28,7 +28,7 @@
                     </summary>
                     <div class="pais-switcher-menu">
                         {% for pa in paises_activos %}
-                            <a href="{% url 'buscador_pais' pa.slug %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}">
+                            <a href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{% url 'buscador_pais' pa.slug %}{% endif %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}">
                                 <img src="{% static pa.bandera_svg %}" alt="" class="bandera-icono"> {{ pa.nombre }}
                             </a>
                         {% endfor %}

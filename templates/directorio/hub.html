@@ -8,7 +8,7 @@
 </div>
 <div class="paises-grid">
     {% for pais in paises %}
-        <a href="{% url 'buscador_pais' pais.slug %}" class="pais-card">
+        <a href="{% if pais.es_externo %}{{ pais.url_externa }}{% else %}{% url 'buscador_pais' pais.slug %}{% endif %}" class="pais-card">
             <img src="{% static pais.bandera_svg %}" alt="" class="pais-bandera">
             <span class="pais-nombre">{{ pais.nombre }}</span>
         </a>

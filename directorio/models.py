@@ -8,11 +8,27 @@ class Pais(models.Model):
     nombre = models.CharField(max_length=60)
     slug = models.SlugField(max_length=30, unique=True)
     codigo_iso = models.CharField('Código ISO', max_length=2, help_text='Ej: PE, UY, CL')
-    bandera_emoji = models.CharField(max_length=8, help_text='Ej: 🇵🇪 (temporal, reemplazar por ícono de bandera real)')
+    bandera_emoji = models.CharField(
+        max_length=8,
+        help_text='Ej: 🇵🇪 -- ya no se usa para mostrar la bandera en el sitio (eso sale de bandera_svg), se mantiene solo de referencia'
+    )
     moneda = models.CharField('Moneda', max_length=3, help_text='Código ISO de moneda, ej: PEN, UYU')
     simbolo_moneda = models.CharField('Símbolo de moneda', max_length=6, blank=True, help_text='Ej: S/, $U, $')
     activo = models.BooleanField(default=False, help_text='Recién se activa cuando el país está listo para mostrarse al público')
     orden = models.PositiveIntegerField(default=0)
+
+    # Argentina no vive en esta base -- sigue siendo atencionpsi.com.ar,
+    # un proyecto totalmente aparte. Para que su bandera aparezca en el hub
+    # y el menú junto a las demás sin que nadie termine en un buscador
+    # interno vacío, se marca como "externo" y linkea directo afuera.
+    es_externo = models.BooleanField(
+        'Es un sitio externo (no vive en este proyecto)', default=False,
+        help_text='Marcar para Argentina: la bandera linkea directo a url_externa en vez de abrir el buscador de acá'
+    )
+    url_externa = models.URLField(
+        'URL externa', blank=True,
+        help_text='Solo si "Es un sitio externo" está tildado, ej: https://atencionpsi.com.ar'
+    )
 
     # Cada país llama distinto a la habilitación profesional -- mostrar el
     # rótulo correcto en el perfil público es lo que le da seriedad al perfil
@@ -94,7 +110,7 @@ class Psicologo(models.Model):
     docencia = models.TextField('Docencia', blank=True, help_text='Un párrafo con la experiencia dando clases/formación a otros, si tiene')
     precio_sesion = models.DecimalField(
         'Precio de sesión', max_digits=8, decimal_places=2, null=True, blank=True,
-        help_text='Opcional. Solo se muestra en el perfil público si el país lo tiene habilitado (ver Pais.muestra_precio_sesion)'
+        help_text='Opcional. Se muestra en tu perfil público.'
     )
 
     orientaciones = models.ManyToManyField(Orientacion, blank=True, related_name='psicologos')

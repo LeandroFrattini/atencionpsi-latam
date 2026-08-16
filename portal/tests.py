@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from directorio.models import Orientacion, Pais, Psicologo
+from directorio.models import Orientacion, Pais, Psicologo, Publico
 
 
 class RegistroTests(TestCase):
@@ -87,6 +87,42 @@ class PublicarDespublicarTests(TestCase):
         self.client.post(reverse('portal_despublicar'))
         self.psicologo.refresh_from_db()
         self.assertFalse(self.psicologo.publicado_por_usuario)
+
+
+class EditarPerfilPublicoNuevoTests(TestCase):
+    def setUp(self):
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
+        self.psicologo = Psicologo.objects.create(
+            usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519',
+        )
+        self.client.force_login(self.usuario)
+
+    def _post_perfil(self, **extra):
+        data = dict(
+            nombre='Psico', matricula='1', whatsapp='519', ciudad='', modalidad='online',
+            bio='', docencia='',
+            **{'formaciones-TOTAL_FORMS': '0', 'formaciones-INITIAL_FORMS': '0',
+               'formaciones-MIN_NUM_FORMS': '0', 'formaciones-MAX_NUM_FORMS': '1000'},
+        )
+        data.update(extra)
+        return self.client.post(reverse('portal_editar_perfil'), data)
+
+    def test_publico_nuevo_crea_y_asocia(self):
+        self._post_perfil(publico_nuevo='Deportistas')
+        self.assertTrue(Publico.objects.filter(nombre='Deportistas').exists())
+        self.psicologo.refresh_from_db()
+        self.assertIn('Deportistas', [p.nombre for p in self.psicologo.publicos.all()])
+
+    def test_publico_nuevo_reusa_uno_existente_sin_duplicar(self):
+        Publico.objects.create(nombre='Deportistas')
+        self._post_perfil(publico_nuevo='deportistas')  # distinta capitalización a propósito
+        self.assertEqual(Publico.objects.filter(nombre__iexact='Deportistas').count(), 1)
+
+    def test_sin_publico_nuevo_no_pasa_nada(self):
+        antes = Publico.objects.count()
+        self._post_perfil()
+        self.assertEqual(Publico.objects.count(), antes)
 
 
 class RecordatoriosCommandTests(TestCase):

@@ -1,5 +1,5 @@
 from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from .models import Orientacion, Pais, Psicologo, Publico
 
@@ -18,6 +18,12 @@ def buscador_pais(request, pais_slug):
         pais = Pais.objects.get(slug=pais_slug, activo=True)
     except Pais.DoesNotExist:
         raise Http404('País no disponible todavía')
+
+    # Argentina (y cualquier otro país marcado "externo") no vive en esta
+    # base -- si alguien toca este link a mano, se lo manda directo afuera
+    # en vez de mostrarle un buscador interno vacío.
+    if pais.es_externo:
+        return redirect(pais.url_externa)
 
     psicologos_qs = pais.psicologos.all().prefetch_related('orientaciones', 'publicos', 'tipos_sesion')
 

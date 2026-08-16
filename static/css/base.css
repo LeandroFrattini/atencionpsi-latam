@@ -334,6 +334,7 @@ main {
     font-size: 0.95rem;
 }
 .portal-error { color: #c1467a; font-size: 0.8rem; margin: 0; }
+.portal-field-ayuda { color: var(--texto-tenue); font-size: 0.78rem; margin: 0; }
 .portal-formacion-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .portal-formacion-fila input[type="text"] { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--borde); }
 .portal-check-eliminar { font-size: 0.78rem; color: var(--texto-tenue); white-space: nowrap; }

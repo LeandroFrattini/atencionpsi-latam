@@ -107,3 +107,11 @@ class BuscadorYDetalleTests(TestCase):
     def test_detalle_de_no_publicado_da_404(self):
         resp = self.client.get(reverse('detalle_psicologo', args=['peru', self.sin_publicar.pk]))
         self.assertEqual(resp.status_code, 404)
+
+    def test_pais_externo_redirige_afuera_en_vez_de_mostrar_buscador_vacio(self):
+        Pais.objects.create(
+            nombre='Argentina', slug='argentina', codigo_iso='AR', bandera_emoji='🇦🇷', moneda='ARS',
+            activo=True, es_externo=True, url_externa='https://atencionpsi.com.ar',
+        )
+        resp = self.client.get(reverse('buscador_pais', args=['argentina']))
+        self.assertRedirects(resp, 'https://atencionpsi.com.ar', fetch_redirect_response=False)

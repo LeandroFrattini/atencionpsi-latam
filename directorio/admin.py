@@ -5,7 +5,7 @@ from .models import Formacion, Orientacion, Pais, Psicologo, Publico
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'etiqueta_matricula', 'muestra_precio_sesion', 'activo', 'orden')
+    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'etiqueta_matricula', 'muestra_precio_sesion', 'es_externo', 'activo', 'orden')
     list_editable = ('activo', 'orden')
     prepopulated_fields = {'slug': ('nombre',)}
 

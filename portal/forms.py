@@ -19,6 +19,16 @@ class RegistroForm(forms.Form):
 
 
 class PerfilForm(forms.ModelForm):
+    # No es un campo del modelo -- si el profesional escribe algo acá, la
+    # vista crea (o reusa si ya existe) un Publico nuevo y se lo agrega.
+    # Así la lista de "¿Para quién?" crece sola con lo que va apareciendo en
+    # cada país, en vez de que la dueña tenga que darlas de alta a mano en
+    # el admin antes de que alguien las pueda usar.
+    publico_nuevo = forms.CharField(
+        label='¿No está en la lista? Escribilo acá', max_length=60, required=False,
+        help_text='Ej: "Adultos mayores", "Deportistas" -- se agrega a las opciones para todos'
+    )
+
     class Meta:
         model = Psicologo
         fields = [
