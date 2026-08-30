@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="{% if pais %}es-{{ pais.codigo_iso }}{% else %}es{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

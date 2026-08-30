@@ -115,3 +115,29 @@ class BuscadorYDetalleTests(TestCase):
         )
         resp = self.client.get(reverse('buscador_pais', args=['argentina']))
         self.assertRedirects(resp, 'https://atencionpsi.com.ar', fetch_redirect_response=False)
+
+    def test_buscador_incluye_hreflang_de_todos_los_paises_activos(self):
+        # El buscador de un país tiene que avisarle a los buscadores que hay
+        # una versión equivalente por cada otro país activo -- incluyendo
+        # Argentina (externa, apunta directo a atencionpsi.com.ar) -- para
+        # que a alguien en Uruguay no le aparezca el resultado de Perú.
+        Pais.objects.create(
+            nombre='Uruguay', slug='uruguay', codigo_iso='UY', bandera_emoji='🇺🇾', moneda='UYU', activo=True,
+        )
+        Pais.objects.create(
+            nombre='Argentina', slug='argentina', codigo_iso='AR', bandera_emoji='🇦🇷', moneda='ARS',
+            activo=True, es_externo=True, url_externa='https://atencionpsi.com.ar',
+        )
+        resp = self.client.get(reverse('buscador_pais', args=['peru']))
+        self.assertContains(resp, '<link rel="alternate" hreflang="es-PE" href="http://testserver/peru/">')
+        self.assertContains(resp, '<link rel="alternate" hreflang="es-UY" href="http://testserver/uruguay/">')
+        self.assertContains(resp, '<link rel="alternate" hreflang="es-AR" href="https://atencionpsi.com.ar">')
+        self.assertContains(resp, '<link rel="alternate" hreflang="x-default" href="http://testserver/">')
+
+    def test_html_lang_usa_el_codigo_de_pais_en_el_buscador(self):
+        resp = self.client.get(reverse('buscador_pais', args=['peru']))
+        self.assertContains(resp, '<html lang="es-PE">')
+
+    def test_html_lang_generico_fuera_de_un_pais(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, '<html lang="es">')
