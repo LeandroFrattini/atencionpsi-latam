@@ -1,5 +1,50 @@
 {% extends 'base.html' %}
-{% block title %}{{ p.nombre }} | Atención Psi {{ pais.nombre }}{% endblock %}
+{% block title %}{{ p.nombre }}, Psicólogo/a en {{ p.ciudad }}{% if p.ciudad %}, {% endif %}{{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}{{ p.nombre }}{% if p.ciudad %}, psicólogo/a en {{ p.ciudad }}{% endif %} ({{ pais.nombre }}) &middot; {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.orientaciones.all %} &middot; {% for o in p.orientaciones.all %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Agendá tu turno o escribí por WhatsApp.{% endblock %}
+{% block og_title %}{{ p.nombre }} | Psicólogo/a en {{ pais.nombre }}{% endblock %}
+{% block og_description %}{{ pais.etiqueta_matricula }} {{ p.matricula }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}{% endblock %}
+{% if p.foto %}
+{% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}">{% endblock %}
+{% endif %}
+{% block json_ld %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Inicio", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'hub' %}"},
+                {"@type": "ListItem", "position": 2, "name": "Psicólogos en {{ pais.nombre }}", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'buscador_pais' pais.slug %}"},
+                {"@type": "ListItem", "position": 3, "name": "{{ p.nombre|escapejs }}"}
+            ]
+        },
+        {
+            "@type": "Person",
+            "name": "{{ p.nombre|escapejs }}",
+            "jobTitle": "Psicólogo/a",
+            "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'detalle_psicologo' pais.slug p.pk %}",
+            {% if p.foto %}"image": "{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}",{% endif %}
+            {% if p.bio %}"description": "{{ p.bio|escapejs }}",{% endif %}
+            "hasCredential": {
+                "@type": "EducationalOccupationalCredential",
+                "credentialCategory": "{{ pais.etiqueta_matricula|escapejs }}",
+                "identifier": "{{ p.matricula|escapejs }}"
+            },
+            {% if formaciones %}
+            "alumniOf": [
+                {% for f in formaciones %}{"@type": "EducationalOrganization", "name": "{{ f.descripcion|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+            ],
+            {% endif %}
+            {% if p.ciudad %}
+            "address": {"@type": "PostalAddress", "addressLocality": "{{ p.ciudad|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
+            {% endif %}
+            "worksFor": {"@type": "Organization", "name": "Atención Psi"}
+        }
+    ]
+}
+</script>
+{% endblock %}
 {% block content %}
 <a href="{% url 'buscador_pais' pais.slug %}" class="volver">&larr; Psicólogos en {{ pais.nombre }}</a>
 

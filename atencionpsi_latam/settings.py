@@ -13,8 +13,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-solo-para-loc
 DEBUG = 'RENDER' not in os.environ
 
 ALLOWED_HOSTS = [
-    'atencionpsi.com',
-    'www.atencionpsi.com',
+    'atencionpsi.lat',
+    'www.atencionpsi.lat',
     '.onrender.com',
     'localhost',
     '127.0.0.1',
@@ -51,8 +51,8 @@ if 'RENDER' in os.environ:
     # rechazar el POST del login con "Verificación CSRF fallida" detrás del
     # proxy de Render si el Origin no matchea exactamente el host esperado.
     CSRF_TRUSTED_ORIGINS = [
-        'https://atencionpsi.com',
-        'https://www.atencionpsi.com',
+        'https://atencionpsi.lat',
+        'https://www.atencionpsi.lat',
     ]
 
 # APLICACIONES
@@ -168,7 +168,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_LOGIN', '')
 EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY', '')
-DEFAULT_FROM_EMAIL = 'Atención Psi <hola@atencionpsi.com>'
+DEFAULT_FROM_EMAIL = 'Atención Psi <hola@atencionpsi.lat>'
 
 # dLocal Go -- credenciales de suscripciones (se completan cuando estén listas).
 DLOCAL_GO_API_KEY = os.environ.get('DLOCAL_GO_API_KEY', '')

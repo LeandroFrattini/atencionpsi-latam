@@ -138,6 +138,30 @@ class BuscadorYDetalleTests(TestCase):
         resp = self.client.get(reverse('buscador_pais', args=['peru']))
         self.assertContains(resp, '<html lang="es-PE">')
 
+    def test_ningun_comentario_de_django_se_filtra_al_html(self):
+        # {# ... #} de una sola línea se recorta bien, pero si por error
+        # alguien escribe uno que ocupe varias líneas, Django deja de
+        # reconocerlo como comentario y lo manda tal cual al HTML -- eso
+        # ya pasó una vez acá y le rompía el <head> entero al navegador
+        # (cerraba <head> antes de tiempo al toparse con texto suelto),
+        # tirando abajo el CSS, el canonical y los meta OG de esa página.
+        # Usar siempre {% comment %}...{% endcomment %} para multilínea.
+        for url in [reverse('hub'), reverse('buscador_pais', args=['peru']),
+                    reverse('detalle_psicologo', args=['peru', self.publicado.pk])]:
+            resp = self.client.get(url)
+            self.assertNotIn(b'{#', resp.content)
+
+    def test_seo_completo_en_el_perfil_no_se_corta_el_head(self):
+        resp = self.client.get(reverse('detalle_psicologo', args=['peru', self.publicado.pk]))
+        contenido = resp.content.decode()
+        self.assertIn('<meta name="description"', contenido)
+        self.assertIn('<link rel="canonical"', contenido)
+        self.assertIn('<meta property="og:image" content="http://testserver/media/psicologos/test.jpg">', contenido)
+        self.assertIn('application/ld+json', contenido)
+        # Todo eso tiene que estar realmente adentro de <head>, no después
+        # de que el navegador ya lo haya cerrado por error.
+        self.assertLess(contenido.index('og:image'), contenido.index('</head>'))
+
     def test_html_lang_generico_fuera_de_un_pais(self):
         resp = self.client.get(reverse('hub'))
         self.assertContains(resp, '<html lang="es">')

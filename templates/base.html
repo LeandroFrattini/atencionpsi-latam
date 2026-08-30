@@ -5,10 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Atención Psi{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay y Chile.{% endblock %}">
+    <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+    {% comment %}
+    Canónica automática por página (sin query string) -- evita que Google
+    trate /pe/?ciudad=Lima y /pe/ como contenido duplicado.
+    {% endcomment %}
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+    <meta property="og:site_name" content="Atención Psi">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+    <meta property="og:locale" content="{% if pais %}es_{{ pais.codigo_iso }}{% else %}es_LA{% endif %}">
+    <meta property="og:title" content="{% block og_title %}Atención Psi{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay y Chile.{% endblock %}">
+    {% comment %}
+    Sin imagen de OG por defecto todavía -- no hay un banner genérico
+    diseñado. Cada página puede sobreescribir este bloque con su propia
+    meta og:image, por ejemplo la foto del profesional en el perfil.
+    {% endcomment %}
+    {% block og_image %}{% endblock %}
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/base.css' %}?v=8">
+    {% block json_ld %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
 <body>

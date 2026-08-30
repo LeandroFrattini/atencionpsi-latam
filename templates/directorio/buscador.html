@@ -1,6 +1,29 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}Encontrá psicólogos verificados en {{ pais.nombre }}: perfiles con matrícula habilitante, turnos online por videollamada y contacto directo por WhatsApp. Elegí por ciudad, modalidad y orientación.{% endblock %}
+{% block og_title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block og_description %}Perfiles de psicólogos verificados en {{ pais.nombre }}, con matrícula habilitante y turnos online.{% endblock %}
+{% block json_ld %}
+{% if psicologos %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Psicólogos en {{ pais.nombre }}",
+    "itemListElement": [
+        {% for p in psicologos %}
+        {
+            "@type": "ListItem",
+            "position": {{ forloop.counter }},
+            "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'detalle_psicologo' pais.slug p.pk %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
+{% endif %}
+{% endblock %}
 {% block extra_head %}
 {% comment %}
 hreflang: le dice a Google que esta página (buscador de un país) tiene

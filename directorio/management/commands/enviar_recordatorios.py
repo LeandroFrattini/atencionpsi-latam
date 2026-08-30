@@ -48,7 +48,7 @@ class Command(BaseCommand):
                         f'Hola {p.nombre},\n\n'
                         'Empezaste a crear tu perfil en Atención Psi pero todavía no activaste tu suscripción. '
                         'Sin eso tu perfil no se puede publicar.\n\n'
-                        f'Entrá a tu cuenta para terminar: https://atencionpsi.com/portal/checkout/\n\n'
+                        f'Entrá a tu cuenta para terminar: https://atencionpsi.lat/portal/checkout/\n\n'
                         'Cualquier cosa, respondé este mail.'
                     ),
                     from_email=None,
@@ -68,7 +68,7 @@ class Command(BaseCommand):
                         'Ya activaste tu suscripción en Atención Psi, pero tu perfil todavía no está '
                         'publicado en el buscador.\n\n'
                         f'Entrá a tu cuenta, completá los datos que falten y tocá "Publicar mi perfil": '
-                        'https://atencionpsi.com/portal/\n\n'
+                        'https://atencionpsi.lat/portal/\n\n'
                         'Cualquier cosa, respondé este mail.'
                     ),
                     from_email=None,

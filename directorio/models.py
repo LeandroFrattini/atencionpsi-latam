@@ -4,7 +4,7 @@ from django.db import models
 
 class Pais(models.Model):
     """Cada país de la expansión vive acá, no en repos separados.
-    El slug es el path público: atencionpsi.com/<slug>/."""
+    El slug es el path público: atencionpsi.lat/<slug>/."""
     nombre = models.CharField(max_length=60)
     slug = models.SlugField(max_length=30, unique=True)
     codigo_iso = models.CharField('Código ISO', max_length=2, help_text='Ej: PE, UY, CL')
