@@ -119,6 +119,17 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         self._post_perfil(publico_nuevo='deportistas')  # distinta capitalización a propósito
         self.assertEqual(Publico.objects.filter(nombre__iexact='Deportistas').count(), 1)
 
+    def test_orientacion_nueva_crea_y_asocia(self):
+        self._post_perfil(orientacion_nueva='Gestalt')
+        self.assertTrue(Orientacion.objects.filter(nombre='Gestalt').exists())
+        self.psicologo.refresh_from_db()
+        self.assertIn('Gestalt', [o.nombre for o in self.psicologo.orientaciones.all()])
+
+    def test_orientacion_nueva_reusa_una_existente_sin_duplicar(self):
+        Orientacion.objects.create(nombre='Gestalt')
+        self._post_perfil(orientacion_nueva='gestalt')  # distinta capitalización a propósito
+        self.assertEqual(Orientacion.objects.filter(nombre__iexact='Gestalt').count(), 1)
+
     def test_sesiones_atendidas_es_opcional_y_se_guarda(self):
         self._post_perfil(sesiones_atendidas='1000')
         self.psicologo.refresh_from_db()

@@ -327,6 +327,16 @@ main {
     border-radius: 14px;
     padding: 32px;
 }
+
+.registro-beneficios { max-width: 520px; margin-bottom: 20px; }
+.registro-beneficios-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.registro-beneficios-lista li {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--verde-suave); border-radius: 12px; padding: 14px 16px;
+}
+.registro-beneficios-lista svg { color: var(--verde-oscuro); flex-shrink: 0; margin-top: 2px; }
+.registro-beneficios-lista strong { color: var(--texto-titulo); }
+.registro-beneficios-lista div { font-size: 0.9rem; color: var(--texto-secundario); line-height: 1.4; }
 .portal-card h1 { font-size: 1.4rem; color: var(--texto-titulo); margin: 0 0 8px; }
 .portal-subtitulo { font-size: 1rem; color: var(--texto-titulo); margin: 24px 0 10px; }
 .portal-lead { color: var(--texto-secundario); font-size: 0.92rem; margin-bottom: 20px; }

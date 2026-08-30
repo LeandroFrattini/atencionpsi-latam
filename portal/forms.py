@@ -25,8 +25,17 @@ class PerfilForm(forms.ModelForm):
     # cada país, en vez de que la dueña tenga que darlas de alta a mano en
     # el admin antes de que alguien las pueda usar.
     publico_nuevo = forms.CharField(
-        label='¿No está en la lista? Escribilo acá', max_length=60, required=False,
+        label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
         help_text='Ej: "Adultos mayores", "Deportistas" -- se agrega a las opciones para todos'
+    )
+    # Mismo patrón que publico_nuevo, para Orientación -- estaba asimétrico
+    # que "¿Para quién?" pudiera crecer sola y "Orientación" no. El form
+    # renderiza los campos declarados acá (no del modelo) al final, después
+    # de las dos listas de checkboxes -- por eso los labels tienen que
+    # aclarar a cuál lista corresponde cada uno, no alcanza con la posición.
+    orientacion_nueva = forms.CharField(
+        label='¿Tu orientación no está en la lista? Escribila acá', max_length=60, required=False,
+        help_text='Ej: "Gestalt", "EMDR" -- se agrega a las opciones para todos'
     )
 
     class Meta:
