@@ -1,7 +1,23 @@
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 
 from .models import Orientacion, Pais, Psicologo, Publico
+
+
+def robots_txt(request):
+    # Bloquea todo lo privado/funcional (portal de profesionales, admin,
+    # checkout) -- lo mismo que hace Terapify con /mi-espacio/, /checkout/,
+    # etc. -- para que Google no gaste rastreo ahí ni indexe una página de
+    # login o de pago por error. El buscador y los perfiles publicados
+    # quedan abiertos, y se apunta al sitemap para que los encuentre rápido.
+    lineas = [
+        'User-agent: *',
+        'Disallow: /admin/',
+        'Disallow: /portal/',
+        '',
+        f'Sitemap: {request.scheme}://{request.get_host()}/sitemap.xml',
+    ]
+    return HttpResponse('\n'.join(lineas), content_type='text/plain')
 
 
 def hub(request):

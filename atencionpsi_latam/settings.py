@@ -104,6 +104,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'directorio.context_processors.paises_activos',
+                'directorio.context_processors.stats_globales',
             ],
         },
     },

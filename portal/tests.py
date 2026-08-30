@@ -119,6 +119,22 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         self._post_perfil(publico_nuevo='deportistas')  # distinta capitalización a propósito
         self.assertEqual(Publico.objects.filter(nombre__iexact='Deportistas').count(), 1)
 
+    def test_sesiones_atendidas_es_opcional_y_se_guarda(self):
+        self._post_perfil(sesiones_atendidas='1000')
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.sesiones_atendidas, 1000)
+
+    def test_sesiones_atendidas_sin_elegir_no_bloquea_el_guardado(self):
+        resp = self._post_perfil()
+        self.assertEqual(resp.status_code, 302)
+        self.psicologo.refresh_from_db()
+        self.assertIsNone(self.psicologo.sesiones_atendidas)
+
+    def test_opcion_en_blanco_del_select_esta_en_español(self):
+        resp = self.client.get(reverse('portal_editar_perfil'))
+        self.assertContains(resp, 'Preferís no decir por ahora')
+        self.assertNotContains(resp, 'Select an option')
+
     def test_sin_publico_nuevo_no_pasa_nada(self):
         antes = Publico.objects.count()
         self._post_perfil()

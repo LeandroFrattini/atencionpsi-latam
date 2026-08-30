@@ -165,3 +165,45 @@ class BuscadorYDetalleTests(TestCase):
     def test_html_lang_generico_fuera_de_un_pais(self):
         resp = self.client.get(reverse('hub'))
         self.assertContains(resp, '<html lang="es">')
+
+
+class SEOTecnicoTests(TestCase):
+    def setUp(self):
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.usuario_publicado = User.objects.create_user('pub2@example.com', password='ClaveSegura123')
+        self.usuario_sin_publicar = User.objects.create_user('nopub2@example.com', password='ClaveSegura123')
+        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+
+        self.publicado = Psicologo.objects.create(
+            usuario=self.usuario_publicado, pais=self.pais, nombre='Publicada SEO',
+            matricula='1', whatsapp='51999999999', bio='Bio', foto='psicologos/test.jpg',
+            suscripcion_activa=True, publicado_por_usuario=True, sesiones_atendidas=1000,
+        )
+        self.publicado.orientaciones.add(self.orientacion)
+
+        self.sin_publicar = Psicologo.objects.create(
+            usuario=self.usuario_sin_publicar, pais=self.pais, nombre='Sin Publicar SEO',
+            matricula='2', whatsapp='51999999998', sesiones_atendidas=2000,
+        )
+
+    def test_robots_txt_bloquea_lo_privado_y_apunta_al_sitemap(self):
+        resp = self.client.get('/robots.txt')
+        contenido = resp.content.decode()
+        self.assertIn('Disallow: /admin/', contenido)
+        self.assertIn('Disallow: /portal/', contenido)
+        self.assertIn('Sitemap: http://testserver/sitemap.xml', contenido)
+
+    def test_sitemap_solo_lista_publicados(self):
+        resp = self.client.get('/sitemap.xml')
+        contenido = resp.content.decode()
+        self.assertIn(f'/peru/p/{self.publicado.pk}/', contenido)
+        self.assertNotIn(f'/peru/p/{self.sin_publicar.pk}/', contenido)
+        # El hub y el buscador de cada país activo también tienen que estar.
+        self.assertIn('<loc>http://testserver/</loc>', contenido)
+        self.assertIn('<loc>http://testserver/peru/</loc>', contenido)
+
+    def test_total_de_sesiones_solo_suma_publicados(self):
+        # El sin publicar declaró 2000 pero no debería contar -- todavía no
+        # pagó ni completó el perfil, no es un profesional real y visible.
+        resp = self.client.get(reverse('buscador_pais', args=['peru']))
+        self.assertContains(resp, 'Más de 1000 sesiones atendidas en Latinoamérica')

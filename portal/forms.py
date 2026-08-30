@@ -33,7 +33,7 @@ class PerfilForm(forms.ModelForm):
         model = Psicologo
         fields = [
             'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad',
-            'foto', 'bio', 'docencia', 'precio_sesion',
+            'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
             'orientaciones', 'publicos',
         ]
         widgets = {
@@ -49,6 +49,12 @@ class PerfilForm(forms.ModelForm):
             self.fields['matricula'].label = pais.etiqueta_matricula
             if not pais.muestra_precio_sesion:
                 del self.fields['precio_sesion']
+        # La opción en blanco que arma Django para un choices field opcional
+        # sale en inglés por defecto ("- Select an option -") -- se pisa acá
+        # en vez de una traducción global porque es la única del sitio.
+        self.fields['sesiones_atendidas'].choices = (
+            [('', 'Preferís no decir por ahora')] + Psicologo.SESIONES_CHOICES
+        )
 
 
 FormacionFormSet = inlineformset_factory(

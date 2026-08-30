@@ -36,7 +36,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     inlines = [FormacionInline]
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
-        ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'orientaciones', 'publicos')}),
+        ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'publicos')}),
         ('Pago y publicación', {'fields': ('suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago')}),
     )
 

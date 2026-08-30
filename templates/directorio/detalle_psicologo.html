@@ -36,6 +36,13 @@
                 {% for f in formaciones %}{"@type": "EducationalOrganization", "name": "{{ f.descripcion|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
             ],
             {% endif %}
+            {% if p.sesiones_atendidas %}
+            "additionalProperty": {
+                "@type": "PropertyValue",
+                "name": "Sesiones atendidas en su trayectoria",
+                "value": "{{ p.get_sesiones_atendidas_display|escapejs }} sesiones"
+            },
+            {% endif %}
             {% if p.ciudad %}
             "address": {"@type": "PostalAddress", "addressLocality": "{{ p.ciudad|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
             {% endif %}
@@ -55,6 +62,9 @@
             <h1>{{ p.nombre }}</h1>
             <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</p>
             <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
+            {% if p.sesiones_atendidas %}
+                <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>
+            {% endif %}
             {% if pais.muestra_precio_sesion and p.precio_sesion %}
                 <p class="perfil-precio">Sesión: {{ pais.simbolo_moneda }} {{ p.precio_sesion }}</p>
             {% endif %}

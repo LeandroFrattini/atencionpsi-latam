@@ -113,6 +113,23 @@ class Psicologo(models.Model):
         help_text='Opcional. Se muestra en tu perfil público.'
     )
 
+    # Rango aproximado, no un conteo exacto -- es autodeclarado en el
+    # registro (todavía no hay turnos reales pasando por la plataforma para
+    # medirlo solos). Se usa para mostrar "Más de X sesiones atendidas en su
+    # trayectoria" en el perfil (nunca "a través de Atención Psi", sería
+    # engañoso) y para sumar un total agregado en el buscador/hub. Opcional
+    # -- no bloquea la publicación si no lo contesta.
+    SESIONES_CHOICES = [
+        (100, 'Más de 100'),
+        (500, 'Más de 500'),
+        (1000, 'Más de 1.000'),
+        (2000, 'Más de 2.000'),
+    ]
+    sesiones_atendidas = models.PositiveIntegerField(
+        'Sesiones atendidas (aprox.)', choices=SESIONES_CHOICES, null=True, blank=True,
+        help_text='Elegí el rango que mejor represente tu trayectoria profesional (no hace falta ser exacto).'
+    )
+
     orientaciones = models.ManyToManyField(Orientacion, blank=True, related_name='psicologos')
     publicos = models.ManyToManyField(Publico, blank=True, related_name='psicologos')
 

@@ -42,6 +42,9 @@ request.scheme/get_host en vez de solo {% url %}.
 <div class="buscador-head">
     <a href="{% url 'hub' %}" class="volver">&larr; Todos los países</a>
     <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Psicólogos en {{ pais.nombre }}</h1>
+    {% if total_sesiones_atendidas_latam %}
+        <p class="hub-stat-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>
+    {% endif %}
 </div>
 
 <form method="get" class="filtros">

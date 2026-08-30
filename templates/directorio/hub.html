@@ -5,6 +5,9 @@
 <div class="hub-hero">
     <h1>Encontrá tu psicólogo</h1>
     <p>Elegí tu país para ver los profesionales disponibles</p>
+    {% if total_sesiones_atendidas_latam %}
+        <p class="hub-stat-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>
+    {% endif %}
 </div>
 <div class="paises-grid">
     {% for pais in paises %}
