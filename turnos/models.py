@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 
 class TipoSesion(models.Model):
@@ -60,12 +62,63 @@ class DiaNoAtiende(models.Model):
         return f'{self.psicologo} · {self.fecha_desde:%d/%m/%Y} — {self.fecha_hasta:%d/%m/%Y}'
 
 
+class Paciente(models.Model):
+    """Ficha de paciente que el profesional maneja desde su portal. Se crea
+    sola cuando alguien reserva un turno (agrupando por email dentro de la
+    cartera de ese psicólogo) y también se puede cargar a mano para pacientes
+    que ya venían atendiendo por fuera de la plataforma.
+
+    A diferencia del `Turno`, que guarda un snapshot de los datos de contacto
+    tal como se cargaron al reservar, la ficha es editable y acumula la
+    historia: todos los turnos de esa persona con ese psicólogo, más las
+    notas privadas que el profesional quiera dejar."""
+    psicologo = models.ForeignKey('directorio.Psicologo', on_delete=models.CASCADE, related_name='pacientes')
+
+    nombres = models.CharField(max_length=100)
+    apellidos = models.CharField(max_length=100)
+    telefono = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    edad = models.PositiveIntegerField(null=True, blank=True)
+    notas = models.TextField(
+        'Notas privadas', blank=True,
+        help_text='Solo las ves vos. No se muestran en ningún lado público.'
+    )
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Paciente'
+        verbose_name_plural = 'Pacientes'
+        ordering = ['apellidos', 'nombres']
+        constraints = [
+            # Un mismo email no se repite dentro de la cartera de un psicólogo
+            # (así el alta automática al reservar reusa la ficha en vez de
+            # duplicarla). Los pacientes cargados a mano sin email quedan
+            # afuera de la restricción.
+            models.UniqueConstraint(
+                fields=['psicologo', 'email'],
+                condition=~Q(email=''),
+                name='paciente_email_unico_por_psicologo',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.nombre_completo} ({self.psicologo.nombre})'
+
+    @property
+    def nombre_completo(self):
+        return f'{self.nombres} {self.apellidos}'.strip()
+
+
 class Turno(models.Model):
-    """Reserva hecha por un paciente. Guarda los datos de contacto directo
-    en vez de un modelo Paciente aparte -- acá no hay CRM de pacientes
-    (todavía), solo la reserva puntual."""
+    """Reserva puntual. Guarda un snapshot de los datos de contacto tal como
+    se cargaron al reservar (los de la ficha del paciente pueden cambiar
+    después); `paciente` linkea a esa ficha para poder ver la historia."""
     ESTADO_CHOICES = [
         ('agendado', 'Agendado'),
+        ('realizado', 'Realizado'),
+        ('ausente', 'No asistió'),
         ('cancelado', 'Cancelado'),
     ]
     MODALIDAD_CHOICES = [
@@ -74,6 +127,9 @@ class Turno(models.Model):
     ]
 
     psicologo = models.ForeignKey('directorio.Psicologo', on_delete=models.CASCADE, related_name='turnos')
+    paciente = models.ForeignKey(
+        Paciente, on_delete=models.SET_NULL, null=True, blank=True, related_name='turnos'
+    )
     tipo_sesion = models.ForeignKey(TipoSesion, on_delete=models.PROTECT, related_name='turnos')
     fecha_hora = models.DateTimeField()
     modalidad = models.CharField(max_length=12, choices=MODALIDAD_CHOICES)
@@ -85,6 +141,10 @@ class Turno(models.Model):
     email = models.EmailField()
     edad = models.PositiveIntegerField(null=True, blank=True)
     motivo_consulta = models.TextField(blank=True)
+    notas_profesional = models.TextField(
+        'Notas del profesional', blank=True,
+        help_text='Privadas, para esta sesión puntual.'
+    )
 
     creado_en = models.DateTimeField(auto_now_add=True)
 
@@ -95,3 +155,11 @@ class Turno(models.Model):
 
     def __str__(self):
         return f'{self.nombres} {self.apellidos} con {self.psicologo.nombre} el {self.fecha_hora:%d/%m %H:%M}'
+
+    @property
+    def nombre_completo(self):
+        return f'{self.nombres} {self.apellidos}'.strip()
+
+    @property
+    def es_futuro(self):
+        return self.fecha_hora >= timezone.now()

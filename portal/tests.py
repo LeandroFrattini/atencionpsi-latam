@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from directorio.models import Orientacion, Pais, Psicologo, Publico
+from turnos.models import DisponibilidadSemanal, Paciente, TipoSesion, Turno
 
 
 class RegistroTests(TestCase):
@@ -150,6 +151,153 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         antes = Publico.objects.count()
         self._post_perfil()
         self.assertEqual(Publico.objects.count(), antes)
+
+
+class AgendaPortalTests(TestCase):
+    def setUp(self):
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
+        self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
+        self.client.force_login(self.usuario)
+
+    def _payload(self, **extra):
+        data = {
+            'tipos-TOTAL_FORMS': '1', 'tipos-INITIAL_FORMS': '0',
+            'tipos-MIN_NUM_FORMS': '0', 'tipos-MAX_NUM_FORMS': '1000',
+            'tipos-0-nombre': '', 'tipos-0-duracion_min': '', 'tipos-0-precio': '', 'tipos-0-orden': '',
+            'disp-TOTAL_FORMS': '2', 'disp-INITIAL_FORMS': '0',
+            'disp-MIN_NUM_FORMS': '0', 'disp-MAX_NUM_FORMS': '1000',
+            'disp-0-dia_semana': '', 'disp-0-hora_desde': '', 'disp-0-hora_hasta': '',
+            'disp-1-dia_semana': '', 'disp-1-hora_desde': '', 'disp-1-hora_hasta': '',
+            'libres-TOTAL_FORMS': '1', 'libres-INITIAL_FORMS': '0',
+            'libres-MIN_NUM_FORMS': '0', 'libres-MAX_NUM_FORMS': '1000',
+            'libres-0-fecha_desde': '', 'libres-0-fecha_hasta': '', 'libres-0-motivo': '',
+        }
+        data.update(extra)
+        return data
+
+    def test_carga_tipo_de_sesion_y_disponibilidad(self):
+        resp = self.client.post(reverse('portal_agenda'), self._payload(**{
+            'tipos-0-nombre': 'Individual', 'tipos-0-duracion_min': '50', 'tipos-0-orden': '0',
+            'disp-0-dia_semana': '0', 'disp-0-hora_desde': '09:00', 'disp-0-hora_hasta': '13:00',
+        }))
+        self.assertRedirects(resp, reverse('portal_agenda'))
+        self.assertEqual(self.psicologo.tipos_sesion.count(), 1)
+        self.assertEqual(self.psicologo.disponibilidad_semanal.count(), 1)
+
+    def test_rechaza_bloque_con_horario_invertido(self):
+        resp = self.client.post(reverse('portal_agenda'), self._payload(**{
+            'disp-0-dia_semana': '0', 'disp-0-hora_desde': '18:00', 'disp-0-hora_hasta': '09:00',
+        }))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.psicologo.disponibilidad_semanal.count(), 0)
+
+    def test_agenda_es_privada_por_login(self):
+        self.client.logout()
+        resp = self.client.get(reverse('portal_agenda'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('portal_login'), resp['Location'])
+
+
+class TurnosPortalTests(TestCase):
+    def setUp(self):
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
+        self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
+        self.otro = Psicologo.objects.create(
+            usuario=User.objects.create_user('otro@example.com', password='ClaveSegura123'),
+            pais=self.pais, nombre='Otro', matricula='2', whatsapp='520',
+        )
+        self.tipo = TipoSesion.objects.create(psicologo=self.psicologo, nombre='Individual', duracion_min=50)
+        self.turno = Turno.objects.create(
+            psicologo=self.psicologo, tipo_sesion=self.tipo,
+            fecha_hora=timezone.now() - datetime.timedelta(days=1), modalidad='online',
+            nombres='Ana', apellidos='Paciente', telefono='1', email='ana@example.com',
+        )
+        self.client.force_login(self.usuario)
+
+    def test_marcar_realizado(self):
+        resp = self.client.post(reverse('portal_turno_accion', args=[self.turno.pk]), {'accion': 'realizado'})
+        self.assertRedirects(resp, reverse('portal_turnos'))
+        self.turno.refresh_from_db()
+        self.assertEqual(self.turno.estado, 'realizado')
+
+    def test_cancelar_y_reactivar(self):
+        self.client.post(reverse('portal_turno_accion', args=[self.turno.pk]), {'accion': 'cancelado'})
+        self.turno.refresh_from_db()
+        self.assertEqual(self.turno.estado, 'cancelado')
+        self.client.post(reverse('portal_turno_accion', args=[self.turno.pk]), {'accion': 'reactivar'})
+        self.turno.refresh_from_db()
+        self.assertEqual(self.turno.estado, 'agendado')
+
+    def test_no_puede_tocar_turno_de_otro_psicologo(self):
+        ajeno = Turno.objects.create(
+            psicologo=self.otro, tipo_sesion=TipoSesion.objects.create(psicologo=self.otro, nombre='X'),
+            fecha_hora=timezone.now(), modalidad='online',
+            nombres='B', apellidos='C', telefono='1', email='b@example.com',
+        )
+        resp = self.client.post(reverse('portal_turno_accion', args=[ajeno.pk]), {'accion': 'cancelado'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_guardar_notas_de_sesion(self):
+        self.client.post(reverse('portal_turno_detalle', args=[self.turno.pk]), {'notas_profesional': 'Trabajamos respiración.'})
+        self.turno.refresh_from_db()
+        self.assertEqual(self.turno.notas_profesional, 'Trabajamos respiración.')
+
+
+class PacientesPortalTests(TestCase):
+    def setUp(self):
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
+        self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
+        self.otro = Psicologo.objects.create(
+            usuario=User.objects.create_user('otro@example.com', password='ClaveSegura123'),
+            pais=self.pais, nombre='Otro', matricula='2', whatsapp='520',
+        )
+        self.client.force_login(self.usuario)
+
+    def test_alta_manual_de_paciente(self):
+        resp = self.client.post(reverse('portal_paciente_nuevo'), {
+            'nombres': 'Juan', 'apellidos': 'Pérez', 'telefono': '555', 'email': 'juan@example.com',
+            'edad': '30', 'notas': 'Viene por recomendación.',
+        })
+        paciente = Paciente.objects.get(email='juan@example.com')
+        self.assertEqual(paciente.psicologo, self.psicologo)
+        self.assertRedirects(resp, reverse('portal_paciente_detalle', args=[paciente.pk]))
+
+    def test_no_deja_email_duplicado_en_la_misma_cartera(self):
+        Paciente.objects.create(psicologo=self.psicologo, nombres='A', apellidos='B', email='dup@example.com')
+        resp = self.client.post(reverse('portal_paciente_nuevo'), {
+            'nombres': 'C', 'apellidos': 'D', 'telefono': '', 'email': 'dup@example.com', 'edad': '', 'notas': '',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Paciente.objects.filter(email='dup@example.com').count(), 1)
+
+    def test_lista_solo_muestra_pacientes_propios(self):
+        Paciente.objects.create(psicologo=self.psicologo, nombres='Mío', apellidos='Uno')
+        Paciente.objects.create(psicologo=self.otro, nombres='Ajeno', apellidos='Dos')
+        resp = self.client.get(reverse('portal_pacientes'))
+        self.assertContains(resp, 'Mío')
+        self.assertNotContains(resp, 'Ajeno')
+
+    def test_no_puede_ver_ficha_de_otro_psicologo(self):
+        ajeno = Paciente.objects.create(psicologo=self.otro, nombres='Ajeno', apellidos='Dos')
+        resp = self.client.get(reverse('portal_paciente_detalle', args=[ajeno.pk]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_eliminar_ficha_conserva_los_turnos(self):
+        paciente = Paciente.objects.create(psicologo=self.psicologo, nombres='Con', apellidos='Turnos', email='ct@example.com')
+        tipo = TipoSesion.objects.create(psicologo=self.psicologo, nombre='Individual', duracion_min=50)
+        turno = Turno.objects.create(
+            psicologo=self.psicologo, paciente=paciente, tipo_sesion=tipo,
+            fecha_hora=timezone.now(), modalidad='online',
+            nombres='Con', apellidos='Turnos', telefono='1', email='ct@example.com',
+        )
+        self.client.post(reverse('portal_paciente_eliminar', args=[paciente.pk]))
+        self.assertFalse(Paciente.objects.filter(pk=paciente.pk).exists())
+        turno.refresh_from_db()
+        self.assertIsNone(turno.paciente)
+        self.assertEqual(turno.nombres, 'Con')
 
 
 class RecordatoriosCommandTests(TestCase):

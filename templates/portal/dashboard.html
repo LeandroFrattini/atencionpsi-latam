@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}Mi cuenta | Atención Psi{% endblock %}
 {% block content %}
-<div class="portal-card">
+<div class="portal-card portal-card-ancho">
+    {% with seccion='cuenta' %}{% include 'portal/_nav.html' %}{% endwith %}
+
     <h1>Hola, {{ p.nombre }}</h1>
 
     <div class="portal-estado">
@@ -23,6 +25,7 @@
         <li class="{% if p.matricula %}ok{% endif %}">{{ p.pais.etiqueta_matricula }}</li>
         <li class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
         <li class="{% if p.orientaciones.exists %}ok{% endif %}">Al menos una orientación</li>
+        <li class="{% if agenda_lista %}ok{% endif %}">Agenda configurada (tipos de sesión + disponibilidad)</li>
     </ul>
 
     <div class="portal-acciones">
@@ -41,5 +44,36 @@
             </form>
         {% endif %}
     </div>
+
+    <div class="portal-resumen">
+        <a href="{% url 'portal_turnos' %}" class="portal-resumen-item">
+            <span class="portal-resumen-num">{{ proximos_turnos|length }}</span>
+            <span class="portal-resumen-lbl">próximos turnos</span>
+        </a>
+        <a href="{% url 'portal_turnos' %}" class="portal-resumen-item">
+            <span class="portal-resumen-num">{{ turnos_por_confirmar }}</span>
+            <span class="portal-resumen-lbl">pasados sin marcar</span>
+        </a>
+        <a href="{% url 'portal_pacientes' %}" class="portal-resumen-item">
+            <span class="portal-resumen-num">{{ total_pacientes }}</span>
+            <span class="portal-resumen-lbl">pacientes</span>
+        </a>
+    </div>
+
+    {% if proximos_turnos %}
+        <h2 class="portal-subtitulo">Tus próximos turnos</h2>
+        <table class="portal-tabla">
+            <tbody>
+            {% for t in proximos_turnos %}
+                <tr>
+                    <td>{{ t.fecha_hora|date:"D d/m H:i" }}</td>
+                    <td>{{ t.nombre_completo }}</td>
+                    <td>{{ t.tipo_sesion.nombre }} · {{ t.get_modalidad_display }}</td>
+                    <td><a href="{% url 'portal_turno_detalle' t.pk %}">ver</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}{% if paciente %}{{ paciente.nombre_completo }}{% else %}Nuevo paciente{% endif %} | Atención Psi{% endblock %}
+
+{% block content %}
+<div class="portal-card portal-card-ancho">
+    {% with seccion='pacientes' %}{% include 'portal/_nav.html' %}{% endwith %}
+    <a href="{% url 'portal_pacientes' %}" class="portal-lead-sm">&larr; Volver a pacientes</a>
+
+    <h1>{% if paciente %}{{ paciente.nombre_completo|default:"Ficha de paciente" }}{% else %}Nuevo paciente{% endif %}</h1>
+
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="portal-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="portal-field-ayuda">{{ field.help_text }}</p>{% endif %}
+                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn-primario">{% if paciente %}Guardar ficha{% else %}Crear paciente{% endif %}</button>
+    </form>
+
+    {% if paciente %}
+        <h2 class="portal-subtitulo">Historial de turnos</h2>
+        {% if turnos %}
+            <table class="portal-tabla">
+                <thead><tr><th>Cuándo</th><th>Sesión</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                {% for t in turnos %}
+                    <tr>
+                        <td>{{ t.fecha_hora|date:"d/m/Y H:i" }}</td>
+                        <td>{{ t.tipo_sesion.nombre }} · {{ t.get_modalidad_display }}</td>
+                        <td><span class="portal-pill portal-pill-{{ t.estado }}">{{ t.get_estado_display }}</span></td>
+                        <td><a href="{% url 'portal_turno_detalle' t.pk %}">ver</a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="portal-lead">Sin turnos registrados.</p>
+        {% endif %}
+
+        <form method="post" action="{% url 'portal_paciente_eliminar' paciente.pk %}" class="portal-form portal-form-peligro"
+              onsubmit="return confirm('¿Eliminar la ficha de {{ paciente.nombre_completo|escapejs }}? Los turnos quedan guardados.');">
+            {% csrf_token %}
+            <button type="submit" class="portal-link-btn portal-link-btn-peligro">Eliminar ficha de paciente</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

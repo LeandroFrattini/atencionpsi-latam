@@ -528,3 +528,85 @@ main {
     .topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
     .topbar-nav { width: 100%; justify-content: space-between; }
 }
+
+/* ---- Portal: agenda, turnos y pacientes ---- */
+.portal-card-ancho { max-width: 860px; }
+
+.portal-nav {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    border-bottom: 1px solid var(--borde); margin-bottom: 22px; padding-bottom: 12px;
+}
+.portal-nav-link {
+    font-size: 0.85rem; font-weight: 600; color: var(--texto-tenue);
+    padding: 6px 12px; border-radius: 999px;
+}
+.portal-nav-link:hover { color: var(--verde-oscuro); background: var(--verde-suave); }
+.portal-nav-link.activo { color: var(--verde-oscuro); background: var(--verde-suave); }
+.portal-nav-logout { margin-left: auto; display: inline; }
+.portal-nav-logout button {
+    background: none; border: none; font-family: inherit; font-size: 0.82rem;
+    color: var(--texto-tenue); cursor: pointer; padding: 6px 10px;
+}
+.portal-nav-logout button:hover { color: #c1467a; }
+
+.portal-titulo-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+.portal-resumen { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 8px; }
+.portal-resumen-item {
+    flex: 1; min-width: 120px; background: var(--verde-suave); border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 2px;
+}
+.portal-resumen-num { font-size: 1.5rem; font-weight: 700; color: var(--verde-oscuro); font-family: 'Playfair Display', Georgia, serif; }
+.portal-resumen-lbl { font-size: 0.8rem; color: var(--texto-secundario); }
+
+.portal-tabla { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 4px 0 12px; }
+.portal-tabla th {
+    text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--texto-tenue); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--borde);
+}
+.portal-tabla td { padding: 9px 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.portal-tabla a { color: var(--verde-oscuro); font-weight: 600; }
+.portal-tabla-form td { padding: 6px 6px; }
+.portal-tabla-form input, .portal-tabla-form select {
+    width: 100%; padding: 7px 8px; border: 1px solid var(--borde); border-radius: 7px;
+    font-family: inherit; font-size: 0.85rem;
+}
+.portal-tabla-form input[type="checkbox"] { width: auto; }
+
+.portal-tenue { color: var(--texto-tenue); font-size: 0.82rem; }
+.portal-acciones-celda { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; white-space: nowrap; }
+
+.portal-link-btn {
+    background: none; border: none; font-family: inherit; font-size: 0.85rem;
+    color: var(--verde-oscuro); font-weight: 600; cursor: pointer; padding: 0;
+}
+.portal-link-btn:hover { text-decoration: underline; }
+.portal-link-btn-peligro { color: #c1467a; }
+
+.portal-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; background: var(--surface-2, #f5f2ee); color: var(--texto-tenue);
+}
+.portal-pill-agendado { background: var(--verde-suave); color: var(--verde-oscuro); }
+.portal-pill-realizado { background: #e7eef8; color: #3a6ea5; }
+.portal-pill-ausente { background: var(--rosa-suave); color: #c1467a; }
+.portal-pill-cancelado { background: #f0f0f0; color: #999; text-decoration: line-through; }
+
+.portal-busqueda { display: flex; gap: 8px; margin: 12px 0 18px; }
+.portal-busqueda input {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--borde); border-radius: 8px;
+    font-family: inherit; font-size: 0.9rem;
+}
+
+.portal-datos { margin: 16px 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.portal-datos > div { display: grid; grid-template-columns: 160px 1fr; gap: 12px; }
+.portal-datos dt { font-size: 0.8rem; color: var(--texto-tenue); font-weight: 600; margin: 0; }
+.portal-datos dd { margin: 0; font-size: 0.9rem; color: var(--texto); }
+
+.portal-form-peligro { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--borde); }
+
+@media (max-width: 640px) {
+    .portal-card-ancho { padding: 22px; }
+    .portal-tabla { display: block; overflow-x: auto; white-space: nowrap; }
+    .portal-datos > div { grid-template-columns: 1fr; gap: 2px; }
+}

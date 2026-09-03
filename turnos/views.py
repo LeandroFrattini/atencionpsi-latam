@@ -11,7 +11,7 @@ from directorio.models import Pais, Psicologo
 
 from .disponibilidad import fecha_larga, fechas_horizonte, slot_disponible, slots_para_fecha
 from .forms import ReservaDatosForm
-from .models import TipoSesion, Turno
+from .models import Paciente, TipoSesion, Turno
 
 PASOS = [
     ('tipo', 'Tipo'), ('modalidad', 'Modalidad'), ('horario', 'Horario'),
@@ -249,8 +249,9 @@ def paso_confirmar(request, pais_slug, pk):
                 messages.error(request, 'Uy, justo se ocupó ese horario. Elegí otro.')
                 return redirect('reserva_horario', pais_slug, pk)
 
+            paciente = _upsert_paciente(psicologo, reserva)
             turno = Turno.objects.create(
-                psicologo=psicologo, tipo_sesion=tipo_sesion, fecha_hora=fecha_hora,
+                psicologo=psicologo, paciente=paciente, tipo_sesion=tipo_sesion, fecha_hora=fecha_hora,
                 modalidad=reserva['modalidad'], nombres=reserva['nombres'], apellidos=reserva['apellidos'],
                 telefono=reserva['telefono'], email=reserva['email'], edad=reserva.get('edad') or None,
                 motivo_consulta=reserva.get('motivo_consulta', ''),
@@ -279,6 +280,39 @@ def _resumen(psicologo, reserva):
         'fecha_larga': fecha_larga(fecha) if fecha else None,
         'hora': hora,
     }
+
+
+def _upsert_paciente(psicologo, reserva):
+    """Al confirmar una reserva, busca (o crea) la ficha de paciente de esa
+    persona dentro de la cartera del psicólogo, agrupando por email. Si ya
+    existía, completa los datos que estuvieran vacíos pero no pisa lo que el
+    profesional haya editado a mano en la ficha."""
+    email = (reserva.get('email') or '').strip().lower()
+    nombres = reserva.get('nombres', '').strip()
+    apellidos = reserva.get('apellidos', '').strip()
+    telefono = reserva.get('telefono', '').strip()
+    edad = reserva.get('edad') or None
+
+    paciente = None
+    if email:
+        paciente = Paciente.objects.filter(psicologo=psicologo, email=email).first()
+
+    if paciente is None:
+        return Paciente.objects.create(
+            psicologo=psicologo, nombres=nombres, apellidos=apellidos,
+            telefono=telefono, email=email, edad=edad,
+        )
+
+    cambios = []
+    if not paciente.telefono and telefono:
+        paciente.telefono = telefono
+        cambios.append('telefono')
+    if paciente.edad is None and edad is not None:
+        paciente.edad = edad
+        cambios.append('edad')
+    if cambios:
+        paciente.save(update_fields=cambios)
+    return paciente
 
 
 def _avisar_por_mail(turno):

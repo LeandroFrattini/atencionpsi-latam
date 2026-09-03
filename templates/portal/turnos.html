@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Turnos | Atención Psi{% endblock %}
+
+{% block content %}
+<div class="portal-card portal-card-ancho">
+    {% with seccion='turnos' %}{% include 'portal/_nav.html' %}{% endwith %}
+    <h1>Turnos</h1>
+
+    <h2 class="portal-subtitulo">Próximos</h2>
+    {% if proximos %}
+        <table class="portal-tabla">
+            <thead><tr><th>Cuándo</th><th>Paciente</th><th>Sesión</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+            {% for t in proximos %}
+                <tr>
+                    <td>{{ t.fecha_hora|date:"D d/m/Y H:i" }}</td>
+                    <td>
+                        {% if t.paciente %}<a href="{% url 'portal_paciente_detalle' t.paciente.pk %}">{{ t.nombre_completo }}</a>
+                        {% else %}{{ t.nombre_completo }}{% endif %}
+                        <span class="portal-tenue">· {{ t.telefono }}</span>
+                    </td>
+                    <td>{{ t.tipo_sesion.nombre }} · {{ t.get_modalidad_display }}</td>
+                    <td><span class="portal-pill portal-pill-{{ t.estado }}">{{ t.get_estado_display }}</span></td>
+                    <td class="portal-acciones-celda">
+                        <a href="{% url 'portal_turno_detalle' t.pk %}">ver</a>
+                        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+                            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+                            <button name="accion" value="cancelado" class="portal-link-btn">cancelar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="portal-lead">No tenés turnos próximos.</p>
+    {% endif %}
+
+    <h2 class="portal-subtitulo">Pasados</h2>
+    {% if pasados %}
+        <table class="portal-tabla">
+            <thead><tr><th>Cuándo</th><th>Paciente</th><th>Sesión</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+            {% for t in pasados %}
+                <tr>
+                    <td>{{ t.fecha_hora|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        {% if t.paciente %}<a href="{% url 'portal_paciente_detalle' t.paciente.pk %}">{{ t.nombre_completo }}</a>
+                        {% else %}{{ t.nombre_completo }}{% endif %}
+                    </td>
+                    <td>{{ t.tipo_sesion.nombre }}</td>
+                    <td><span class="portal-pill portal-pill-{{ t.estado }}">{{ t.get_estado_display }}</span></td>
+                    <td class="portal-acciones-celda">
+                        <a href="{% url 'portal_turno_detalle' t.pk %}">ver</a>
+                        {% if t.estado == 'agendado' %}
+                            <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+                                {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+                                <button name="accion" value="realizado" class="portal-link-btn">realizado</button>
+                                <button name="accion" value="ausente" class="portal-link-btn">no asistió</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="portal-lead">Todavía no hay turnos pasados.</p>
+    {% endif %}
+
+    {% if cancelados %}
+        <h2 class="portal-subtitulo">Cancelados (próximos)</h2>
+        <table class="portal-tabla">
+            <tbody>
+            {% for t in cancelados %}
+                <tr>
+                    <td>{{ t.fecha_hora|date:"D d/m/Y H:i" }}</td>
+                    <td>{{ t.nombre_completo }}</td>
+                    <td class="portal-acciones-celda">
+                        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+                            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+                            <button name="accion" value="reactivar" class="portal-link-btn">reactivar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}

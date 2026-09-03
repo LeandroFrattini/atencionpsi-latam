@@ -1,0 +1,14 @@
+{% comment %}
+Navegación del portal del profesional. `seccion` (string) marca el link activo:
+"cuenta" | "agenda" | "turnos" | "pacientes".
+{% endcomment %}
+<nav class="portal-nav">
+    <a href="{% url 'portal_dashboard' %}" class="portal-nav-link{% if seccion == 'cuenta' %} activo{% endif %}">Mi cuenta</a>
+    <a href="{% url 'portal_agenda' %}" class="portal-nav-link{% if seccion == 'agenda' %} activo{% endif %}">Mi agenda</a>
+    <a href="{% url 'portal_turnos' %}" class="portal-nav-link{% if seccion == 'turnos' %} activo{% endif %}">Turnos</a>
+    <a href="{% url 'portal_pacientes' %}" class="portal-nav-link{% if seccion == 'pacientes' %} activo{% endif %}">Pacientes</a>
+    <form method="post" action="{% url 'portal_logout' %}" class="portal-nav-logout">
+        {% csrf_token %}
+        <button type="submit">Salir</button>
+    </form>
+</nav>

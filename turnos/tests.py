@@ -124,3 +124,26 @@ class WizardReservaTests(TestCase):
             'fecha': self.lunes.isoformat(), 'hora': '09:00',
         }, follow=True)
         self.assertContains(resp, 'ya no está disponible')
+
+    def _reservar(self, hora, email, nombres='Juan', apellidos='Pérez', telefono='51999999999'):
+        self._avanzar_hasta_horario()
+        self.client.post(reverse('reserva_horario', args=['peru', self.psicologo.pk]),
+                         {'fecha': self.lunes.isoformat(), 'hora': hora})
+        self.client.post(reverse('reserva_datos', args=['peru', self.psicologo.pk]),
+                         {'nombres': nombres, 'apellidos': apellidos, 'telefono': telefono, 'email': email})
+        return self.client.post(reverse('reserva_confirmar', args=['peru', self.psicologo.pk]))
+
+    def test_reservar_crea_ficha_de_paciente_linkeada(self):
+        self._reservar('09:00', 'juan@example.com')
+        from turnos.models import Paciente
+        paciente = Paciente.objects.get(psicologo=self.psicologo, email='juan@example.com')
+        turno = Turno.objects.get(email='juan@example.com')
+        self.assertEqual(turno.paciente, paciente)
+        self.assertEqual(paciente.nombres, 'Juan')
+
+    def test_dos_reservas_del_mismo_email_reusan_la_ficha(self):
+        from turnos.models import Paciente
+        self._reservar('09:00', 'juan@example.com')
+        self._reservar('09:50', 'JUAN@example.com')  # mismo mail, otra capitalización
+        self.assertEqual(Paciente.objects.filter(psicologo=self.psicologo).count(), 1)
+        self.assertEqual(Paciente.objects.get(psicologo=self.psicologo).turnos.count(), 2)

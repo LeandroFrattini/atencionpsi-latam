@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Mi agenda | Atención Psi{% endblock %}
+{% block content %}
+<div class="portal-card portal-card-ancho">
+    {% with seccion='agenda' %}{% include 'portal/_nav.html' %}{% endwith %}
+
+    <h1>Mi agenda</h1>
+    <p class="portal-lead">
+        Definí tus tipos de sesión y tus horarios. Con esto, los pacientes pueden
+        reservar turnos desde tu perfil público. Dejá una fila vacía para agregar; tildá
+        &ldquo;eliminar&rdquo; para borrar.
+    </p>
+
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+
+        {# ---------------- Tipos de sesión ---------------- #}
+        <h2 class="portal-subtitulo">Tipos de sesión</h2>
+        {{ fs_tipos.non_form_errors }}
+        {{ fs_tipos.management_form }}
+        <table class="portal-tabla portal-tabla-form">
+            <thead><tr><th>Nombre</th><th>Duración (min)</th><th>Precio (opcional)</th><th>Orden</th><th></th></tr></thead>
+            <tbody>
+            {% for f in fs_tipos %}
+                <tr>
+                    {{ f.id }}
+                    <td>{{ f.nombre }}{% if f.nombre.errors %}<p class="portal-error">{{ f.nombre.errors.0 }}</p>{% endif %}</td>
+                    <td>{{ f.duracion_min }}</td>
+                    <td>{{ f.precio }}</td>
+                    <td>{{ f.orden }}</td>
+                    <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {# ---------------- Disponibilidad semanal ---------------- #}
+        <h2 class="portal-subtitulo">Disponibilidad semanal</h2>
+        <p class="portal-field-ayuda">Se repite todas las semanas. Podés cargar varios bloques por día (ej: mañana y tarde).</p>
+        {{ fs_disp.non_form_errors }}
+        {{ fs_disp.management_form }}
+        <table class="portal-tabla portal-tabla-form">
+            <thead><tr><th>Día</th><th>Desde</th><th>Hasta</th><th></th></tr></thead>
+            <tbody>
+            {% for f in fs_disp %}
+                <tr>
+                    {{ f.id }}
+                    <td>{{ f.dia_semana }}</td>
+                    <td>{{ f.hora_desde }}</td>
+                    <td>{{ f.hora_hasta }}</td>
+                    <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
+                </tr>
+                {% if f.non_field_errors %}<tr><td colspan="4"><p class="portal-error">{{ f.non_field_errors.0 }}</p></td></tr>{% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {# ---------------- Días que no atiende ---------------- #}
+        <h2 class="portal-subtitulo">Días que no atiendo</h2>
+        <p class="portal-field-ayuda">Vacaciones, licencia, feriados. Tienen prioridad sobre la disponibilidad semanal.</p>
+        {{ fs_libres.non_form_errors }}
+        {{ fs_libres.management_form }}
+        <table class="portal-tabla portal-tabla-form">
+            <thead><tr><th>Desde</th><th>Hasta</th><th>Motivo (opcional)</th><th></th></tr></thead>
+            <tbody>
+            {% for f in fs_libres %}
+                <tr>
+                    {{ f.id }}
+                    <td>{{ f.fecha_desde }}</td>
+                    <td>{{ f.fecha_hasta }}</td>
+                    <td>{{ f.motivo }}</td>
+                    <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
+                </tr>
+                {% if f.non_field_errors %}<tr><td colspan="4"><p class="portal-error">{{ f.non_field_errors.0 }}</p></td></tr>{% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn-primario">Guardar agenda</button>
+    </form>
+</div>
+{% endblock %}

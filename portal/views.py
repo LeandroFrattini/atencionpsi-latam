@@ -3,12 +3,23 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.db.models import Count, Max
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from directorio.models import Orientacion, Pais, Psicologo, Publico
+from turnos.models import Paciente, Turno
 
-from .forms import FormacionFormSet, PerfilForm, RegistroForm
+from .forms import (
+    DiaNoAtiendeFormSet,
+    DisponibilidadFormSet,
+    FormacionFormSet,
+    PacienteForm,
+    PerfilForm,
+    RegistroForm,
+    TipoSesionFormSet,
+)
 
 
 def registro(request, pais_slug):
@@ -71,7 +82,16 @@ def simular_pago(request):
 @login_required
 def dashboard(request):
     psicologo = request.user.psicologo
-    return render(request, 'portal/dashboard.html', {'p': psicologo})
+    ahora = timezone.now()
+    proximos = (psicologo.turnos.filter(fecha_hora__gte=ahora, estado='agendado')
+                .select_related('tipo_sesion').order_by('fecha_hora')[:5])
+    return render(request, 'portal/dashboard.html', {
+        'p': psicologo,
+        'proximos_turnos': proximos,
+        'turnos_por_confirmar': psicologo.turnos.filter(fecha_hora__lt=ahora, estado='agendado').count(),
+        'total_pacientes': psicologo.pacientes.count(),
+        'agenda_lista': psicologo.tipos_sesion.exists() and psicologo.disponibilidad_semanal.exists(),
+    })
 
 
 @login_required
@@ -132,3 +152,164 @@ def despublicar(request):
     psicologo.save()
     messages.success(request, 'Tu perfil dejó de mostrarse en el buscador.')
     return redirect('portal_dashboard')
+
+
+# =========================================================================
+# AGENDA -- tipos de sesión, disponibilidad semanal y días que no atiende.
+# Las tres cosas se editan en una sola página con un solo "Guardar".
+# =========================================================================
+@login_required
+def agenda(request):
+    psicologo = request.user.psicologo
+
+    def armar(data=None):
+        return (
+            TipoSesionFormSet(data, instance=psicologo, prefix='tipos'),
+            DisponibilidadFormSet(data, instance=psicologo, prefix='disp'),
+            DiaNoAtiendeFormSet(data, instance=psicologo, prefix='libres'),
+        )
+
+    if request.method == 'POST':
+        fs_tipos, fs_disp, fs_libres = armar(request.POST)
+        if fs_tipos.is_valid() and fs_disp.is_valid() and fs_libres.is_valid():
+            fs_tipos.save()
+            fs_disp.save()
+            fs_libres.save()
+            messages.success(request, 'Agenda actualizada.')
+            return redirect('portal_agenda')
+    else:
+        fs_tipos, fs_disp, fs_libres = armar()
+
+    return render(request, 'portal/agenda.html', {
+        'p': psicologo,
+        'fs_tipos': fs_tipos,
+        'fs_disp': fs_disp,
+        'fs_libres': fs_libres,
+    })
+
+
+# =========================================================================
+# TURNOS
+# =========================================================================
+_ACCIONES_TURNO = {
+    'realizado': ('realizado', 'Turno marcado como realizado.'),
+    'ausente': ('ausente', 'Turno marcado como "no asistió".'),
+    'cancelado': ('cancelado', 'Turno cancelado.'),
+    'reactivar': ('agendado', 'Turno reactivado.'),
+}
+
+
+@login_required
+def turnos_lista(request):
+    psicologo = request.user.psicologo
+    ahora = timezone.now()
+    base = psicologo.turnos.select_related('tipo_sesion', 'paciente')
+    return render(request, 'portal/turnos.html', {
+        'p': psicologo,
+        'proximos': base.filter(fecha_hora__gte=ahora).exclude(estado='cancelado').order_by('fecha_hora'),
+        'pasados': base.filter(fecha_hora__lt=ahora).order_by('-fecha_hora')[:100],
+        'cancelados': base.filter(estado='cancelado', fecha_hora__gte=ahora).order_by('fecha_hora'),
+    })
+
+
+@login_required
+def turno_detalle(request, pk):
+    psicologo = request.user.psicologo
+    turno = get_object_or_404(Turno.objects.select_related('tipo_sesion', 'paciente'),
+                              pk=pk, psicologo=psicologo)
+
+    if request.method == 'POST':
+        turno.notas_profesional = request.POST.get('notas_profesional', '').strip()
+        turno.save(update_fields=['notas_profesional'])
+        messages.success(request, 'Notas guardadas.')
+        return redirect('portal_turno_detalle', pk=turno.pk)
+
+    return render(request, 'portal/turno_detalle.html', {'p': psicologo, 't': turno})
+
+
+@login_required
+def turno_accion(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    psicologo = request.user.psicologo
+    turno = get_object_or_404(Turno, pk=pk, psicologo=psicologo)
+
+    accion = request.POST.get('accion')
+    if accion not in _ACCIONES_TURNO:
+        messages.error(request, 'Acción no válida.')
+    else:
+        nuevo_estado, msg = _ACCIONES_TURNO[accion]
+        turno.estado = nuevo_estado
+        turno.save(update_fields=['estado'])
+        messages.success(request, msg)
+
+    return redirect(request.POST.get('next') or 'portal_turnos')
+
+
+# =========================================================================
+# PACIENTES
+# =========================================================================
+@login_required
+def pacientes_lista(request):
+    psicologo = request.user.psicologo
+    q = request.GET.get('q', '').strip()
+    pacientes = psicologo.pacientes.annotate(
+        n_turnos=Count('turnos'), ultimo=Max('turnos__fecha_hora'),
+    )
+    if q:
+        pacientes = pacientes.filter(nombres__icontains=q) | pacientes.filter(apellidos__icontains=q)
+    return render(request, 'portal/pacientes.html', {
+        'p': psicologo, 'pacientes': pacientes, 'q': q,
+    })
+
+
+@login_required
+def paciente_nuevo(request):
+    psicologo = request.user.psicologo
+    if request.method == 'POST':
+        form = PacienteForm(request.POST, psicologo=psicologo)
+        if form.is_valid():
+            paciente = form.save(commit=False)
+            paciente.psicologo = psicologo
+            paciente.save()
+            messages.success(request, 'Paciente agregado.')
+            return redirect('portal_paciente_detalle', pk=paciente.pk)
+    else:
+        form = PacienteForm(psicologo=psicologo)
+    return render(request, 'portal/paciente_detalle.html', {
+        'p': psicologo, 'form': form, 'paciente': None, 'turnos': [],
+    })
+
+
+@login_required
+def paciente_detalle(request, pk):
+    psicologo = request.user.psicologo
+    paciente = get_object_or_404(Paciente, pk=pk, psicologo=psicologo)
+
+    if request.method == 'POST':
+        form = PacienteForm(request.POST, instance=paciente, psicologo=psicologo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Ficha actualizada.')
+            return redirect('portal_paciente_detalle', pk=paciente.pk)
+    else:
+        form = PacienteForm(instance=paciente, psicologo=psicologo)
+
+    return render(request, 'portal/paciente_detalle.html', {
+        'p': psicologo,
+        'form': form,
+        'paciente': paciente,
+        'turnos': paciente.turnos.select_related('tipo_sesion').order_by('-fecha_hora'),
+    })
+
+
+@login_required
+def paciente_eliminar(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    psicologo = request.user.psicologo
+    paciente = get_object_or_404(Paciente, pk=pk, psicologo=psicologo)
+    # Los turnos quedan (Turno.paciente es SET_NULL) con su snapshot de datos.
+    paciente.delete()
+    messages.success(request, 'Ficha de paciente eliminada.')
+    return redirect('portal_pacientes')

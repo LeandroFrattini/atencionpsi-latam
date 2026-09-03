@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.forms import inlineformset_factory
 
 from directorio.models import Formacion, Psicologo
+from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
 class RegistroForm(forms.Form):
@@ -71,3 +72,80 @@ FormacionFormSet = inlineformset_factory(
     fields=['descripcion'],
     extra=1, can_delete=True,
 )
+
+
+# --- Agenda del profesional -------------------------------------------------
+# Tres formsets que se editan juntos en /portal/agenda/. Los widgets nativos
+# type="time"/type="date" evitan tener que sumar una librería de datepicker.
+
+_hora = forms.TimeInput(attrs={'type': 'time'}, format='%H:%M')
+_fecha = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
+
+
+class DisponibilidadForm(forms.ModelForm):
+    class Meta:
+        model = DisponibilidadSemanal
+        fields = ['dia_semana', 'hora_desde', 'hora_hasta']
+        widgets = {'hora_desde': _hora, 'hora_hasta': _hora}
+
+    def clean(self):
+        cleaned = super().clean()
+        desde, hasta = cleaned.get('hora_desde'), cleaned.get('hora_hasta')
+        if desde and hasta and desde >= hasta:
+            raise forms.ValidationError('El horario "desde" tiene que ser anterior al "hasta".')
+        return cleaned
+
+
+class DiaNoAtiendeForm(forms.ModelForm):
+    class Meta:
+        model = DiaNoAtiende
+        fields = ['fecha_desde', 'fecha_hasta', 'motivo']
+        widgets = {'fecha_desde': _fecha, 'fecha_hasta': _fecha}
+
+    def clean(self):
+        cleaned = super().clean()
+        desde, hasta = cleaned.get('fecha_desde'), cleaned.get('fecha_hasta')
+        if desde and hasta and desde > hasta:
+            raise forms.ValidationError('La fecha "desde" no puede ser posterior a la "hasta".')
+        return cleaned
+
+
+TipoSesionFormSet = inlineformset_factory(
+    Psicologo, TipoSesion,
+    fields=['nombre', 'duracion_min', 'precio', 'orden'],
+    extra=1, can_delete=True,
+)
+
+DisponibilidadFormSet = inlineformset_factory(
+    Psicologo, DisponibilidadSemanal,
+    form=DisponibilidadForm,
+    extra=2, can_delete=True,
+)
+
+DiaNoAtiendeFormSet = inlineformset_factory(
+    Psicologo, DiaNoAtiende,
+    form=DiaNoAtiendeForm,
+    extra=1, can_delete=True,
+)
+
+
+# --- Pacientes ------------------------------------------------------------
+class PacienteForm(forms.ModelForm):
+    class Meta:
+        model = Paciente
+        fields = ['nombres', 'apellidos', 'telefono', 'email', 'edad', 'notas']
+        widgets = {'notas': forms.Textarea(attrs={'rows': 5})}
+
+    def __init__(self, *args, psicologo=None, **kwargs):
+        self.psicologo = psicologo
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if email and self.psicologo:
+            chocan = Paciente.objects.filter(psicologo=self.psicologo, email=email)
+            if self.instance.pk:
+                chocan = chocan.exclude(pk=self.instance.pk)
+            if chocan.exists():
+                raise forms.ValidationError('Ya tenés una ficha de paciente con ese email.')
+        return email

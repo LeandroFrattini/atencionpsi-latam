@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import DiaNoAtiende, DisponibilidadSemanal, TipoSesion, Turno
+from .models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion, Turno
+
+
+@admin.register(Paciente)
+class PacienteAdmin(admin.ModelAdmin):
+    list_display = ('nombre_completo', 'psicologo', 'telefono', 'email', 'creado_en')
+    list_filter = ('psicologo__pais',)
+    search_fields = ('nombres', 'apellidos', 'email', 'psicologo__nombre')
 
 
 @admin.register(TipoSesion)
@@ -28,3 +35,4 @@ class TurnoAdmin(admin.ModelAdmin):
     list_filter = ('psicologo__pais', 'modalidad', 'estado')
     search_fields = ('nombres', 'apellidos', 'email', 'psicologo__nombre')
     date_hierarchy = 'fecha_hora'
+    raw_id_fields = ('paciente',)

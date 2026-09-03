@@ -13,4 +13,18 @@ urlpatterns = [
     path('perfil/', views.editar_perfil, name='portal_editar_perfil'),
     path('publicar/', views.publicar, name='portal_publicar'),
     path('despublicar/', views.despublicar, name='portal_despublicar'),
+
+    # Agenda (tipos de sesión + disponibilidad + días que no atiende)
+    path('agenda/', views.agenda, name='portal_agenda'),
+
+    # Turnos
+    path('turnos/', views.turnos_lista, name='portal_turnos'),
+    path('turnos/<int:pk>/', views.turno_detalle, name='portal_turno_detalle'),
+    path('turnos/<int:pk>/accion/', views.turno_accion, name='portal_turno_accion'),
+
+    # Pacientes
+    path('pacientes/', views.pacientes_lista, name='portal_pacientes'),
+    path('pacientes/nuevo/', views.paciente_nuevo, name='portal_paciente_nuevo'),
+    path('pacientes/<int:pk>/', views.paciente_detalle, name='portal_paciente_detalle'),
+    path('pacientes/<int:pk>/eliminar/', views.paciente_eliminar, name='portal_paciente_eliminar'),
 ]

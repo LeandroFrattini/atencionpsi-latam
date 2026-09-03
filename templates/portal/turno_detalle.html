@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Turno de {{ t.nombre_completo }} | Atención Psi{% endblock %}
+
+{% block content %}
+<div class="portal-card portal-card-ancho">
+    {% with seccion='turnos' %}{% include 'portal/_nav.html' %}{% endwith %}
+    <a href="{% url 'portal_turnos' %}" class="portal-lead-sm">&larr; Volver a turnos</a>
+
+    <h1>{{ t.fecha_hora|date:"l d/m/Y H:i" }}</h1>
+    <span class="portal-pill portal-pill-{{ t.estado }}">{{ t.get_estado_display }}</span>
+
+    <dl class="portal-datos">
+        <div><dt>Paciente</dt><dd>
+            {% if t.paciente %}<a href="{% url 'portal_paciente_detalle' t.paciente.pk %}">{{ t.nombre_completo }}</a>
+            {% else %}{{ t.nombre_completo }}{% endif %}
+        </dd></div>
+        <div><dt>Teléfono</dt><dd>{{ t.telefono }}</dd></div>
+        <div><dt>Email</dt><dd>{{ t.email }}</dd></div>
+        {% if t.edad %}<div><dt>Edad</dt><dd>{{ t.edad }}</dd></div>{% endif %}
+        <div><dt>Tipo de sesión</dt><dd>{{ t.tipo_sesion.nombre }} ({{ t.tipo_sesion.duracion_min }} min)</dd></div>
+        <div><dt>Modalidad</dt><dd>{{ t.get_modalidad_display }}</dd></div>
+        {% if t.motivo_consulta %}<div><dt>Motivo de consulta</dt><dd>{{ t.motivo_consulta|linebreaksbr }}</dd></div>{% endif %}
+    </dl>
+
+    <div class="portal-acciones">
+        {% if t.estado != 'realizado' %}
+        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            <button name="accion" value="realizado" class="btn-secundario">Marcar realizado</button>
+        </form>
+        {% endif %}
+        {% if t.estado != 'ausente' %}
+        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            <button name="accion" value="ausente" class="btn-secundario">No asistió</button>
+        </form>
+        {% endif %}
+        {% if t.estado != 'cancelado' %}
+        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            <button name="accion" value="cancelado" class="btn-secundario">Cancelar</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'portal_turno_accion' t.pk %}" class="portal-inline-form">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            <button name="accion" value="reactivar" class="btn-secundario">Reactivar</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <h2 class="portal-subtitulo">Notas de esta sesión</h2>
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        <div class="portal-field">
+            <textarea name="notas_profesional" rows="6">{{ t.notas_profesional }}</textarea>
+            <p class="portal-field-ayuda">Privadas. Solo las ves vos.</p>
+        </div>
+        <button type="submit" class="btn-primario">Guardar notas</button>
+    </form>
+</div>
+{% endblock %}

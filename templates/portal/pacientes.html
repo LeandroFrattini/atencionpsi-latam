@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Pacientes | Atención Psi{% endblock %}
+
+{% block content %}
+<div class="portal-card portal-card-ancho">
+    {% with seccion='pacientes' %}{% include 'portal/_nav.html' %}{% endwith %}
+
+    <div class="portal-titulo-fila">
+        <h1>Pacientes</h1>
+        <a href="{% url 'portal_paciente_nuevo' %}" class="btn-secundario">+ Nuevo paciente</a>
+    </div>
+
+    <form method="get" class="portal-busqueda">
+        <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre o apellido...">
+        <button type="submit" class="btn-secundario">Buscar</button>
+    </form>
+
+    {% if pacientes %}
+        <table class="portal-tabla">
+            <thead><tr><th>Paciente</th><th>Contacto</th><th>Turnos</th><th>Último</th></tr></thead>
+            <tbody>
+            {% for pac in pacientes %}
+                <tr>
+                    <td><a href="{% url 'portal_paciente_detalle' pac.pk %}">{{ pac.nombre_completo|default:"(sin nombre)" }}</a></td>
+                    <td class="portal-tenue">{{ pac.telefono }}{% if pac.telefono and pac.email %} · {% endif %}{{ pac.email }}</td>
+                    <td>{{ pac.n_turnos }}</td>
+                    <td>{{ pac.ultimo|date:"d/m/Y"|default:"—" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% elif q %}
+        <p class="portal-lead">No hay pacientes que coincidan con &ldquo;{{ q }}&rdquo;.</p>
+    {% else %}
+        <p class="portal-lead">
+            Todavía no tenés pacientes. Se agregan solos cuando alguien reserva un turno
+            desde tu perfil, o podés cargarlos a mano.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}
