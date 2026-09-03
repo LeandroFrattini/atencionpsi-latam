@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'directorio.context_processors.paises_activos',
                 'directorio.context_processors.stats_globales',
+                'directorio.context_processors.footer_contexto',
             ],
         },
     },
@@ -170,6 +171,26 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_LOGIN', '')
 EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY', '')
 DEFAULT_FROM_EMAIL = 'Atención Psi <hola@atencionpsi.lat>'
+# A dónde llegan los mensajes del formulario de contacto público -- por
+# defecto el mismo mail de la marca, pero es una sola línea para agregar
+# también su mail personal si lo pide (ej: [x, 'personal@...']).
+CONTACTO_EMAIL = 'hola@atencionpsi.lat'
+# WhatsApp de contacto general de la plataforma (no el de cada psicólogo) --
+# vacío hasta confirmar el número. Si queda vacío no se muestra el link
+# (ver directorio/contacto.html y el footer).
+CONTACTO_WHATSAPP = ''
+
+# Textos que dLocal Go pidió que estén en Términos y Condiciones, con datos
+# reales y específicos (no genéricos) -- se completan en un solo lugar acá
+# apenas estén confirmados, en vez de hardcodear en el template.
+TERMINOS_PRECIO_SUSCRIPCION = ''
+TERMINOS_DATOS_LEGALES = ''
+
+# Redes sociales del footer -- vacío por defecto a propósito: dLocal Go pidió
+# explícitamente no mostrar íconos genéricos si no hay perfil real detrás.
+# Se completa acá el que exista (ej: 'https://instagram.com/atencionpsi').
+INSTAGRAM_URL = ''
+FACEBOOK_URL = ''
 
 # dLocal Go -- credenciales de suscripciones (se completan cuando estén listas).
 DLOCAL_GO_API_KEY = os.environ.get('DLOCAL_GO_API_KEY', '')

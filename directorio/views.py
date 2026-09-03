@@ -1,6 +1,10 @@
+from django.conf import settings
+from django.contrib import messages
+from django.core.mail import EmailMessage
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 
+from .forms import ContactoForm
 from .models import Orientacion, Pais, Psicologo, Publico
 
 
@@ -27,6 +31,48 @@ def hub(request):
 
 def faq(request):
     return render(request, 'directorio/faq.html')
+
+
+def terminos(request):
+    return render(request, 'directorio/terminos.html', {
+        'contacto_email': settings.CONTACTO_EMAIL,
+        'terminos_precio_suscripcion': settings.TERMINOS_PRECIO_SUSCRIPCION,
+        'terminos_datos_legales': settings.TERMINOS_DATOS_LEGALES,
+    })
+
+
+def contacto(request):
+    enviado = False
+    if request.method == 'POST':
+        form = ContactoForm(request.POST)
+        if form.is_valid():
+            # El remitente real siempre tiene que ser DEFAULT_FROM_EMAIL (así
+            # lo exige Brevo -- no deja mandar "de parte de" un email que no
+            # esté verificado), así que el email de quien escribe va como
+            # reply_to para poder responderle directo desde el cliente de
+            # mail de la dueña sin tener que copiar y pegar la dirección.
+            EmailMessage(
+                subject=f"Contacto desde atencionpsi.lat -- {form.cleaned_data['nombre']}",
+                body=(
+                    f"Nombre: {form.cleaned_data['nombre']}\n"
+                    f"Email: {form.cleaned_data['email']}\n\n"
+                    f"{form.cleaned_data['mensaje']}"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[settings.CONTACTO_EMAIL],
+                reply_to=[form.cleaned_data['email']],
+            ).send()
+            messages.success(request, 'Mensaje enviado, te vamos a responder a la brevedad.')
+            enviado = True
+            form = ContactoForm()
+    else:
+        form = ContactoForm()
+
+    return render(request, 'directorio/contacto.html', {
+        'form': form, 'enviado': enviado,
+        'contacto_email': settings.CONTACTO_EMAIL,
+        'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+    })
 
 
 def buscador_pais(request, pais_slug):

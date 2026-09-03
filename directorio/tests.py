@@ -1,7 +1,8 @@
 import datetime
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -207,3 +208,49 @@ class SEOTecnicoTests(TestCase):
         # pagó ni completó el perfil, no es un profesional real y visible.
         resp = self.client.get(reverse('buscador_pais', args=['peru']))
         self.assertContains(resp, 'Más de 1000 sesiones atendidas en Latinoamérica')
+
+
+@override_settings(CONTACTO_EMAIL='hola@atencionpsi.lat')
+class ContactoTests(TestCase):
+    def test_formulario_valido_manda_el_mail(self):
+        resp = self.client.post(reverse('contacto'), {
+            'nombre': 'Ana', 'email': 'ana@example.com', 'mensaje': 'Hola, tengo una consulta.',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        enviado = mail.outbox[0]
+        self.assertEqual(enviado.to, ['hola@atencionpsi.lat'])
+        self.assertEqual(enviado.reply_to, ['ana@example.com'])
+        self.assertIn('Ana', enviado.subject)
+        self.assertIn('Hola, tengo una consulta.', enviado.body)
+
+    def test_formulario_invalido_no_manda_nada(self):
+        resp = self.client.post(reverse('contacto'), {'nombre': '', 'email': 'no-es-un-mail', 'mensaje': ''})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class TerminosYFooterTests(TestCase):
+    def test_terminos_carga_y_avisa_lo_que_falta_completar(self):
+        resp = self.client.get(reverse('terminos'))
+        self.assertEqual(resp.status_code, 200)
+        # Mientras TERMINOS_PRECIO_SUSCRIPCION/DATOS_LEGALES sigan vacíos en
+        # settings, tiene que avisar en la propia página en vez de mostrar
+        # el texto en blanco sin que nadie note que falta completarlo.
+        self.assertContains(resp, 'Completar')
+
+    def test_footer_tiene_los_links_legales_en_cualquier_pagina(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, reverse('terminos'))
+        self.assertContains(resp, reverse('faq'))
+        self.assertContains(resp, reverse('contacto'))
+
+    @override_settings(INSTAGRAM_URL='', FACEBOOK_URL='')
+    def test_sin_redes_configuradas_no_muestra_iconos_genericos(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertNotContains(resp, 'footer-redes')
+
+    @override_settings(INSTAGRAM_URL='https://instagram.com/atencionpsi')
+    def test_con_instagram_configurado_muestra_el_link_real(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, 'https://instagram.com/atencionpsi')

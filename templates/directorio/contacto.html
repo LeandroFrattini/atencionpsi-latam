@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Contacto | Atención Psi{% endblock %}
+{% block meta_description %}Escribinos a Atención Psi -- contacto directo por formulario, email o WhatsApp.{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Contacto</h1>
+    <p class="portal-lead">
+        ¿Consultas, sugerencias o algún problema con el sitio? Escribinos por acá o directo a
+        <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %} / por
+        <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}.
+    </p>
+
+    {% if enviado %}
+        <p class="mensaje mensaje-success">Mensaje enviado, te vamos a responder a la brevedad.</p>
+    {% endif %}
+
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="portal-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn-primario">Enviar mensaje</button>
+    </form>
+</div>
+{% endblock %}

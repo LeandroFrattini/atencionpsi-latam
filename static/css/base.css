@@ -494,6 +494,28 @@ main {
 .faq-item summary::-webkit-details-marker { display: none; }
 .faq-item summary::after { content: '+'; float: right; color: var(--texto-tenue); font-weight: 400; }
 .faq-item[open] summary::after { content: '−'; }
+
+/* Términos y Condiciones */
+.terminos { max-width: 720px; }
+.terminos h1 { font-size: 1.8rem; color: var(--texto-titulo); margin-bottom: 4px; }
+.terminos-fecha { color: var(--texto-tenue); font-size: 0.85rem; margin-bottom: 28px; }
+.terminos-seccion { margin-bottom: 26px; }
+.terminos-seccion h2 { font-size: 1.1rem; color: var(--verde-oscuro); margin-bottom: 10px; }
+.terminos-seccion p, .terminos-seccion li { color: var(--texto-secundario); line-height: 1.6; font-size: 0.95rem; }
+.terminos-seccion ul { padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* Footer */
+.footer {
+    border-top: 1px solid var(--borde); margin-top: 48px; padding: 28px 5%;
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
+    font-size: 0.85rem; color: var(--texto-tenue);
+}
+.footer-links { display: flex; flex-wrap: wrap; gap: 16px; }
+.footer-links a { color: var(--texto-tenue); text-decoration: none; }
+.footer-links a:hover { color: var(--verde-oscuro); }
+.footer-redes { display: flex; gap: 12px; }
+.footer-redes a { color: var(--texto-tenue); display: inline-flex; }
+.footer-redes a:hover { color: var(--verde-oscuro); }
 .faq-item p { margin: 0 0 16px; color: var(--texto-secundario); font-size: 0.92rem; line-height: 1.55; }
 
 @media (max-width: 480px) {

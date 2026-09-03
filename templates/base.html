@@ -28,7 +28,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=9">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=10">
     {% block json_ld %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
@@ -69,7 +69,30 @@
         {% block content %}{% endblock %}
     </main>
     <footer class="footer">
-        <span>Atención Psi &mdash; expandiendo en Latinoamérica</span>
+        <span>
+            Atención Psi &mdash; expandiendo en Latinoamérica &middot;
+            <a href="mailto:{{ footer_contacto_email }}">{{ footer_contacto_email }}</a>{% if footer_contacto_whatsapp %} &middot;
+            <a href="https://wa.me/{{ footer_contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+        </span>
+        <span class="footer-links">
+            <a href="{% url 'faq' %}">Preguntas frecuentes</a>
+            <a href="{% url 'terminos' %}">Términos y Condiciones</a>
+            <a href="{% url 'contacto' %}">Contacto</a>
+        </span>
+        {% if footer_instagram_url or footer_facebook_url %}
+        <span class="footer-redes">
+            {% if footer_instagram_url %}
+                <a href="{{ footer_instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+                </a>
+            {% endif %}
+            {% if footer_facebook_url %}
+                <a href="{{ footer_facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 9h3V5h-3c-2.2 0-4 1.8-4 4v2H7v4h3v7h4v-7h3l1-4h-4V9c0-.6.4-1 1-1Z"/></svg>
+                </a>
+            {% endif %}
+        </span>
+        {% endif %}
     </footer>
 </body>
 </html>

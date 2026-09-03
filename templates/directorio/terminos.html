@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Términos y Condiciones | Atención Psi{% endblock %}
+{% block meta_description %}Términos y condiciones de uso de Atención Psi: cómo funciona el directorio, la suscripción de profesionales y la relación con pacientes.{% endblock %}
+{% block content %}
+<div class="terminos">
+    <h1>Términos y Condiciones de uso</h1>
+    <p class="terminos-fecha">Última actualización: {% now "d/m/Y" %}</p>
+
+    <section class="terminos-seccion">
+        <h2>1. Qué es Atención Psi</h2>
+        <p>Atención Psi es un directorio online que conecta a pacientes con psicólogos y psicólogas independientes, habilitados para ejercer en su país (Perú, Uruguay y Chile, con más países en camino). Atención Psi <strong>no presta servicios de salud mental ni de psicoterapia</strong>: cada profesional listado ejerce por su cuenta, bajo su propia matrícula, colegiatura o habilitación profesional, y es el único responsable de la atención que brinda.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>2. Cómo funciona para pacientes</h2>
+        <ul>
+            <li>Buscar y contactar profesionales en Atención Psi es <strong>gratuito</strong>.</li>
+            <li>Elegís un profesional filtrando por país, ciudad, modalidad (online o presencial), orientación y a quién atiende.</li>
+            <li>El contacto se hace directo por WhatsApp o, si el profesional lo tiene habilitado, reservando un turno online desde su perfil.</li>
+            <li>El precio de la sesión, la forma de pago y las condiciones de cancelación se acuerdan <strong>directamente entre el paciente y el profesional</strong>. Atención Psi no interviene en ese pago ni se queda con ninguna comisión por sesión.</li>
+        </ul>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>3. Cómo funciona para profesionales (el servicio pago)</h2>
+        <ul>
+            <li>Un psicólogo o psicóloga que quiere aparecer en el buscador público crea su cuenta, completa su perfil (foto, formación, matrícula, orientación) y activa una <strong>suscripción mensual</strong>.</li>
+            <li>{{ terminos_precio_suscripcion|default:"[Completar: precio y periodicidad exacta de la suscripción, por país]" }}</li>
+            <li>La suscripción se cobra con renovación automática mensual a través de la pasarela de pago habilitada en el sitio, hasta que el profesional la cancele.</li>
+            <li>Publicar el perfil es una decisión explícita del profesional: aunque la suscripción esté activa y el perfil completo, <strong>nadie ve el perfil hasta que el profesional toca "Publicar mi perfil"</strong> desde su cuenta.</li>
+            <li>El profesional puede despublicar su perfil cuando quiera (por ejemplo, durante vacaciones) sin cancelar la suscripción, y puede cancelar la suscripción cuando quiera.</li>
+            <li>Si la suscripción se corta por falta de pago, o el perfil queda incompleto, el perfil se oculta automáticamente del buscador hasta que se resuelva.</li>
+        </ul>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>4. Responsabilidad</h2>
+        <p>Atención Psi le pide a cada profesional que cargue un número de matrícula, colegiatura o habilitación válida antes de poder publicar su perfil, pero no participa en la relación terapéutica ni evalúa la calidad de la atención brindada. Cualquier reclamo sobre la atención recibida debe dirigirse directamente al profesional correspondiente.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>5. Datos de la empresa / titular</h2>
+        <p>{{ terminos_datos_legales|default:"[Completar: persona física o jurídica, nombre legal / razón social, y número de documento o identificación fiscal, según el registro en la plataforma de pagos]" }}</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>6. Contacto</h2>
+        <p>Para consultas sobre estos términos, escribinos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a> o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>.</p>
+    </section>
+</div>
+{% endblock %}

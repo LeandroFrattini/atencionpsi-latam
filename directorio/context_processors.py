@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from .models import Pais, Psicologo
 
 
@@ -18,3 +20,14 @@ def stats_globales(request):
     )
     total = sum(p.sesiones_atendidas for p in qs if p.publicado)
     return {'total_sesiones_atendidas_latam': total}
+
+
+def footer_contexto(request):
+    """Datos de contacto/redes para el footer, disponibles en todas las
+    páginas (dLocal Go pidió que estén visibles en todo el sitio)."""
+    return {
+        'footer_contacto_email': settings.CONTACTO_EMAIL,
+        'footer_contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'footer_instagram_url': settings.INSTAGRAM_URL,
+        'footer_facebook_url': settings.FACEBOOK_URL,
+    }
