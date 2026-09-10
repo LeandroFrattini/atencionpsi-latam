@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static precio_tags %}
 {% block title %}Términos y Condiciones | Atención Psi{% endblock %}
 {% block meta_description %}Términos y condiciones de uso de Atención Psi: cómo funciona el directorio, la suscripción de profesionales y la relación con pacientes.{% endblock %}
 {% block content %}
@@ -24,13 +25,30 @@
     <section class="terminos-seccion">
         <h2>3. Cómo funciona para profesionales (el servicio pago)</h2>
         <ul>
-            <li>Un psicólogo o psicóloga que quiere aparecer en el buscador público crea su cuenta, completa su perfil (foto, formación, matrícula, orientación) y activa una <strong>suscripción mensual</strong>.</li>
-            <li>{{ terminos_precio_suscripcion|default:"[Completar: precio y periodicidad exacta de la suscripción, por país]" }}</li>
-            <li>La suscripción se cobra con renovación automática mensual a través de la pasarela de pago habilitada en el sitio, hasta que el profesional la cancele.</li>
+            <li>Un psicólogo o psicóloga que quiere aparecer en el buscador público crea su cuenta, completa su perfil (foto, formación, matrícula, orientación) y activa una <strong>suscripción mensual</strong> eligiendo uno de los dos planes.</li>
+            <li>La suscripción se cobra con renovación automática cada mes calendario a través de la pasarela de pago habilitada en el sitio (por ejemplo, si te suscribís el día 9, el próximo cobro es el día 9 del mes siguiente), hasta que el profesional la cancele.</li>
             <li>Publicar el perfil es una decisión explícita del profesional: aunque la suscripción esté activa y el perfil completo, <strong>nadie ve el perfil hasta que el profesional toca "Publicar mi perfil"</strong> desde su cuenta.</li>
-            <li>El profesional puede despublicar su perfil cuando quiera (por ejemplo, durante vacaciones) sin cancelar la suscripción, y puede cancelar la suscripción cuando quiera.</li>
+            <li>El profesional puede despublicar su perfil cuando quiera (por ejemplo, durante vacaciones) sin cancelar la suscripción, y puede dar de baja la suscripción cuando quiera escribiendo a {{ contacto_email }} o por WhatsApp.</li>
             <li>Si la suscripción se corta por falta de pago, o el perfil queda incompleto, el perfil se oculta automáticamente del buscador hasta que se resuelva.</li>
         </ul>
+
+        {% for pais in paises_con_plan %}
+        <div class="terminos-planes-pais">
+            <h3><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono"> {{ pais.nombre }}</h3>
+            <div class="terminos-planes">
+                <div class="terminos-plan">
+                    <p class="terminos-plan-nombre">Plan Básico</p>
+                    <p class="terminos-plan-precio">{{ pais.simbolo_moneda }} {{ pais.precio_basico|miles }} <span>/ mes</span></p>
+                    <p class="terminos-plan-incluye">Perfil publicado en el buscador de {{ pais.nombre }}.</p>
+                </div>
+                <div class="terminos-plan terminos-plan-premium">
+                    <p class="terminos-plan-nombre">Plan Premium</p>
+                    <p class="terminos-plan-precio">{{ pais.simbolo_moneda }} {{ pais.precio_premium|miles }} <span>/ mes</span></p>
+                    <p class="terminos-plan-incluye">Todo lo del Básico, más agenda de reserva de turnos online y difusión en el Instagram de Atención Psi {{ pais.nombre }}.</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </section>
 
     <section class="terminos-seccion">

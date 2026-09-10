@@ -46,6 +46,20 @@ class Pais(models.Model):
         help_text='Convención de mercado: en Perú se acostumbra publicar el costo de la sesión en el perfil, en otros países no'
     )
 
+    # Dos planes reales (2026-09-09): Básico (perfil publicado en el
+    # buscador) y Premium (Básico + agenda de turnos online + difusión en el
+    # Instagram de Atención Psi de ese país). Precios en moneda local, sin
+    # decimales -- así se cargan en los tres países activos hoy. En 0 para
+    # los países que todavía no tienen plan definido (inactivos o externos).
+    precio_basico = models.PositiveIntegerField(
+        'Precio Plan Básico (moneda local)', default=0,
+        help_text='En la moneda de este país, sin decimales. Ej: 49 (soles), 590 (pesos uruguayos)'
+    )
+    precio_premium = models.PositiveIntegerField(
+        'Precio Plan Premium (moneda local)', default=0,
+        help_text='Básico + agenda de turnos online + difusión en el Instagram de Atención Psi del país'
+    )
+
     class Meta:
         verbose_name = 'País'
         verbose_name_plural = 'Países'

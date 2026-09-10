@@ -34,9 +34,15 @@ def faq(request):
 
 
 def terminos(request):
+    # Un país por sección, con sus dos planes y precios reales -- así la
+    # misma página sirve para mandar a dLocal sin importar para cuál de los
+    # 3 países activos sea el chequeo. Argentina no entra (es externa, vive
+    # en atencionpsi.com.ar) y los países todavía inactivos tampoco tienen
+    # plan cargado.
+    paises_con_plan = Pais.objects.filter(activo=True, es_externo=False).order_by('orden')
     return render(request, 'directorio/terminos.html', {
         'contacto_email': settings.CONTACTO_EMAIL,
-        'terminos_precio_suscripcion': settings.TERMINOS_PRECIO_SUSCRIPCION,
+        'paises_con_plan': paises_con_plan,
         'terminos_datos_legales': settings.TERMINOS_DATOS_LEGALES,
     })
 

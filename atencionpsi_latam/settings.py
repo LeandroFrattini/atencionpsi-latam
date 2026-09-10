@@ -180,11 +180,11 @@ CONTACTO_EMAIL = 'hola@atencionpsi.lat'
 # (ver directorio/contacto.html y el footer).
 CONTACTO_WHATSAPP = ''
 
-# Textos que dLocal Go pidió que estén en Términos y Condiciones, con datos
-# reales y específicos (no genéricos) -- se completan en un solo lugar acá
-# apenas estén confirmados, en vez de hardcodear en el template.
-TERMINOS_PRECIO_SUSCRIPCION = ''
-TERMINOS_DATOS_LEGALES = ''
+# Texto que dLocal Go pidió que esté en Términos y Condiciones, con el dato
+# legal real del titular de la cuenta (no genérico) -- confirmado 2026-09-09.
+# El precio de la suscripción ya no vive acá: sale de Pais.precio_basico /
+# Pais.precio_premium, porque ahora es un dato por país, no un texto único.
+TERMINOS_DATOS_LEGALES = 'Leandro Frattini, persona física, CUIL 20-38404694-1 (Argentina).'
 
 # Redes sociales del footer -- vacío por defecto a propósito: dLocal Go pidió
 # explícitamente no mostrar íconos genéricos si no hay perfil real detrás.
