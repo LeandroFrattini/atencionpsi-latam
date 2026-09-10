@@ -125,6 +125,17 @@ main {
 }
 .hub-hero p { color: var(--texto-secundario); font-size: 1.08rem; }
 
+/* Home por país */
+.home-hero-bandera { width: 40px; height: 27px; border-radius: 5px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.home-hero-cta { display: inline-block; margin-top: 22px; }
+.home-destacados { margin-bottom: 48px; }
+.home-destacados-titulo { font-size: 1.5rem; color: var(--texto-titulo); text-align: center; margin-bottom: 24px; }
+.ver-todos-link {
+    display: block; text-align: center; margin-top: 28px;
+    color: var(--verde-oscuro); font-weight: 700; font-size: 0.95rem;
+}
+.ver-todos-link:hover { text-decoration: underline; }
+
 .paises-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

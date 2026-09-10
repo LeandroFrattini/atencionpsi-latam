@@ -5,8 +5,8 @@ from .models import Formacion, Orientacion, Pais, Psicologo, Publico
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'etiqueta_matricula', 'muestra_precio_sesion', 'es_externo', 'activo', 'orden')
-    list_editable = ('activo', 'orden')
+    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'precio_basico', 'precio_premium', 'etiqueta_matricula', 'muestra_precio_sesion', 'es_externo', 'activo', 'orden')
+    list_editable = ('activo', 'orden', 'precio_basico', 'precio_premium')
     prepopulated_fields = {'slug': ('nombre',)}
 
 
@@ -29,15 +29,15 @@ class FormacionInline(admin.TabularInline):
 
 @admin.register(Psicologo)
 class PsicologoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'publicado')
-    list_filter = ('pais', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'orientaciones', 'publicos')
+    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'publicado', 'destacado')
+    list_filter = ('pais', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp')
     filter_horizontal = ('orientaciones', 'publicos')
     inlines = [FormacionInline]
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'publicos')}),
-        ('Pago y publicación', {'fields': ('suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago')}),
+        ('Pago y publicación', {'fields': ('suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago', 'destacado')}),
     )
 
     @admin.display(boolean=True)

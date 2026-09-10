@@ -175,6 +175,72 @@ class BuscadorYDetalleTests(TestCase):
         self.assertContains(resp, '<html lang="es">')
 
 
+class PaisHomeTests(TestCase):
+    """Home por país (2026-09-09): /<pais>/ ya no es el buscador directo,
+    es una landing con destacados + CTA al buscador (que se mudó a
+    /<pais>/buscar/, mismo nombre de URL 'buscador_pais' de siempre)."""
+
+    def setUp(self):
+        Pais.objects.all().delete()
+        self.pais = Pais.objects.create(
+            nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True,
+        )
+        self.usuario1 = User.objects.create_user('destacada@example.com', password='ClaveSegura123')
+        self.usuario2 = User.objects.create_user('comun@example.com', password='ClaveSegura123')
+        self.usuario3 = User.objects.create_user('nopub@example.com', password='ClaveSegura123')
+        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+
+        self.destacada = Psicologo.objects.create(
+            usuario=self.usuario1, pais=self.pais, nombre='Destacada Test', matricula='1',
+            whatsapp='51999999991', bio='Bio', foto='psicologos/test.jpg',
+            suscripcion_activa=True, publicado_por_usuario=True, destacado=True,
+        )
+        self.destacada.orientaciones.add(self.orientacion)
+        self.comun = Psicologo.objects.create(
+            usuario=self.usuario2, pais=self.pais, nombre='Común Test', matricula='2',
+            whatsapp='51999999992', bio='Bio', foto='psicologos/test.jpg',
+            suscripcion_activa=True, publicado_por_usuario=True, destacado=False,
+        )
+        self.comun.orientaciones.add(self.orientacion)
+        self.sin_publicar = Psicologo.objects.create(
+            usuario=self.usuario3, pais=self.pais, nombre='Sin Publicar Test', matricula='3',
+            whatsapp='51999999993', destacado=True,
+        )
+
+    def test_home_pais_muestra_destacados_publicados_pero_no_los_no_publicados(self):
+        resp = self.client.get(reverse('pais_home', args=['peru']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Destacada Test')
+        self.assertNotContains(resp, 'Sin Publicar Test')
+
+    def test_home_pais_completa_con_publicados_comunes_si_faltan_destacados(self):
+        # Solo hay 1 destacado publicado -- el resto del cupo de 6 se
+        # completa con publicados comunes, no se queda con una sola tarjeta.
+        resp = self.client.get(reverse('pais_home', args=['peru']))
+        self.assertContains(resp, 'Común Test')
+
+    def test_home_pais_tiene_cta_al_buscador_completo(self):
+        resp = self.client.get(reverse('pais_home', args=['peru']))
+        self.assertContains(resp, reverse('buscador_pais', args=['peru']))
+
+    def test_home_pais_inactivo_da_404(self):
+        Pais.objects.create(nombre='Chile', slug='chile', codigo_iso='CL', bandera_emoji='🇨🇱', moneda='CLP', activo=False)
+        resp = self.client.get(reverse('pais_home', args=['chile']))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_home_pais_externo_redirige_afuera(self):
+        Pais.objects.create(
+            nombre='Argentina', slug='argentina', codigo_iso='AR', bandera_emoji='🇦🇷', moneda='ARS',
+            activo=True, es_externo=True, url_externa='https://atencionpsi.com.ar',
+        )
+        resp = self.client.get(reverse('pais_home', args=['argentina']))
+        self.assertRedirects(resp, 'https://atencionpsi.com.ar', fetch_redirect_response=False)
+
+    def test_hub_y_switcher_apuntan_al_home_no_al_buscador(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, reverse('pais_home', args=['peru']))
+
+
 class SEOTecnicoTests(TestCase):
     def setUp(self):
         # Ídem PsicologoPublicacionTests: aislar del país sembrado por la

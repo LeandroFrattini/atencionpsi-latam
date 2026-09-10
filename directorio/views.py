@@ -1,3 +1,5 @@
+import random
+
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import EmailMessage
@@ -79,6 +81,49 @@ def contacto(request):
         'contacto_email': settings.CONTACTO_EMAIL,
         'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
     })
+
+
+def pais_home(request, pais_slug):
+    # Landing por país (2026-09-09): antes /peru/ ERA el buscador directo,
+    # pero para un mercado nuevo con pocos profesionales cargados, caer de
+    # una en una grilla de filtros semivacía da mala primera impresión --
+    # atencionpsi.com.ar ya resuelve esto con un home propio + "Profesionales
+    # destacados" antes del buscador, mismo patrón acá.
+    try:
+        pais = Pais.objects.get(slug=pais_slug, activo=True)
+    except Pais.DoesNotExist:
+        raise Http404('País no disponible todavía')
+
+    if pais.es_externo:
+        return redirect(pais.url_externa)
+
+    return render(request, 'directorio/home_pais.html', {
+        'pais': pais,
+        'psicologos_destacados': _elegidos_para_home(pais),
+        'total_publicados': len([p for p in pais.psicologos.all() if p.publicado]),
+    })
+
+
+def _elegidos_para_home(pais, cantidad=6):
+    """Hasta `cantidad` psicólogos publicados de ese país para el home,
+    siempre en orden aleatorio. Los marcados `destacado` entran primero (si
+    hay más que `cantidad`, se eligen al azar entre ellos); el resto de los
+    lugares se completa al azar con el resto de los publicados. Mismo
+    criterio que `_seis_para_home` en profesionales/views.py de
+    atencionpsi.com.ar."""
+    publicados = [p for p in pais.psicologos.all().prefetch_related('orientaciones', 'publicos', 'tipos_sesion') if p.publicado]
+    destacados = [p for p in publicados if p.destacado]
+    random.shuffle(destacados)
+    elegidos = destacados[:cantidad]
+
+    if len(elegidos) < cantidad:
+        usados = {p.id for p in elegidos}
+        resto = [p for p in publicados if p.id not in usados]
+        random.shuffle(resto)
+        elegidos += resto[:cantidad - len(elegidos)]
+
+    random.shuffle(elegidos)
+    return elegidos
 
 
 def buscador_pais(request, pais_slug):

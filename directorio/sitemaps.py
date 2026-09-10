@@ -16,7 +16,7 @@ class PaisesSitemap(Sitemap):
     def location(self, item):
         if item == 'hub':
             return reverse('hub')
-        return reverse('buscador_pais', args=[item])
+        return reverse('pais_home', args=[item])
 
 
 class PsicologosSitemap(Sitemap):

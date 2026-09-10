@@ -1,0 +1,13 @@
+{% comment %}
+hreflang: le dice a Google que esta página tiene una versión equivalente
+por cada otro país activo -- incluye Argentina, que apunta afuera a
+atencionpsi.com.ar (es_externo). Sin esto, Google puede terminar
+mostrándole a alguien en Chile el resultado de Perú. El home de cada país
+(pais_home) es el destino, porque es la página de entrada real para ese
+país -- las URLs tienen que ser absolutas (con dominio), por eso se arman
+con request.scheme/get_host en vez de solo {% url %}.
+{% endcomment %}
+{% for pa in paises_activos %}
+<link rel="alternate" hreflang="es-{{ pa.codigo_iso }}" href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% url 'pais_home' pa.slug %}{% endif %}">
+{% endfor %}
+<link rel="alternate" hreflang="x-default" href="{{ request.scheme }}://{{ request.get_host }}{% url 'hub' %}">

@@ -176,6 +176,12 @@ class Psicologo(models.Model):
     # de tener el cobro automático andando -- ver plan de captación.
     exento_de_pago = models.BooleanField('Exenta de pago (fundadora)', default=False)
 
+    # Mismo patrón que atencionpsi.com.ar: curación manual desde el admin
+    # para la sección "Psicólogos destacados" del home de cada país -- no
+    # depende del plan pagado (todavía no hay distinción de plan real en el
+    # sistema, ver Pais.precio_premium).
+    destacado = models.BooleanField('Destacado en el home', default=False)
+
     fecha_alta = models.DateTimeField(auto_now_add=True)
     # Se completa cuando dLocal confirma el primer pago (o al marcar
     # exento_de_pago a mano) -- de acá salen los 24hs para el recordatorio
