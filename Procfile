@@ -1,0 +1,1 @@
+web: gunicorn atencionpsi_latam.wsgi

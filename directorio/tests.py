@@ -11,6 +11,10 @@ from .models import Formacion, Orientacion, Pais, Psicologo
 
 class PsicologoPublicacionTests(TestCase):
     def setUp(self):
+        # La migración 0006 siembra los países reales (incluido 'peru') para
+        # que producción no arranque vacía -- acá se pisan para que cada test
+        # arme su propio fixture aislado, sin depender de ese dato sembrado.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.orientacion = Orientacion.objects.create(nombre='Cognitivo Conductual (TCC)')
         self.usuario = User.objects.create_user('ana@example.com', password='ClaveSegura123')
@@ -68,6 +72,9 @@ class PsicologoPublicacionTests(TestCase):
 
 class BuscadorYDetalleTests(TestCase):
     def setUp(self):
+        # Ídem PsicologoPublicacionTests: aislar del país sembrado por la
+        # migración 0006 para no chocar con el slug 'peru'.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(
             nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN',
             activo=True, etiqueta_matricula='N° de Colegiatura (CPsP)',
@@ -170,6 +177,9 @@ class BuscadorYDetalleTests(TestCase):
 
 class SEOTecnicoTests(TestCase):
     def setUp(self):
+        # Ídem PsicologoPublicacionTests: aislar del país sembrado por la
+        # migración 0006 para no chocar con el slug 'peru'.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario_publicado = User.objects.create_user('pub2@example.com', password='ClaveSegura123')
         self.usuario_sin_publicar = User.objects.create_user('nopub2@example.com', password='ClaveSegura123')
