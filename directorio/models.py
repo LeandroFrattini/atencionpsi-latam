@@ -46,18 +46,20 @@ class Pais(models.Model):
         help_text='Convención de mercado: en Perú se acostumbra publicar el costo de la sesión en el perfil, en otros países no'
     )
 
-    # Dos planes reales (2026-09-09): Básico (perfil publicado en el
-    # buscador) y Premium (Básico + agenda de turnos online + difusión en el
-    # Instagram de Atención Psi de ese país). Precios en moneda local, sin
-    # decimales -- así se cargan en los tres países activos hoy. En 0 para
-    # los países que todavía no tienen plan definido (inactivos o externos).
+    # Dos planes reales (2026-09-09): Básico (perfil publicado y optimizado
+    # para Google) y Premium (Básico + agenda de turnos online + el perfil
+    # entra en la pauta paga de atencionpsi.lat que se promociona en ese
+    # país -- no es una cuenta de Instagram separada por país). Precios en
+    # moneda local, sin decimales -- así se cargan en los tres países
+    # activos hoy. En 0 para los que todavía no tienen plan (inactivos o
+    # externos).
     precio_basico = models.PositiveIntegerField(
         'Precio Plan Básico (moneda local)', default=0,
         help_text='En la moneda de este país, sin decimales. Ej: 49 (soles), 590 (pesos uruguayos)'
     )
     precio_premium = models.PositiveIntegerField(
         'Precio Plan Premium (moneda local)', default=0,
-        help_text='Básico + agenda de turnos online + difusión en el Instagram de Atención Psi del país'
+        help_text='Básico + agenda de turnos online + entra en la pauta paga de atencionpsi.lat en ese país'
     )
 
     class Meta:
@@ -74,6 +76,17 @@ class Pais(models.Model):
         -- en Windows los emoji de bandera a veces se ven como el código de
         país en texto plano en lugar de la bandera."""
         return f'img/flags/{self.codigo_iso.lower()}.svg'
+
+    @property
+    def ciudad_ejemplo(self):
+        """Ciudad de referencia para el copy de marketing del Plan Básico
+        (2026-09-09): "te van a encontrar buscando 'psicólogo en Lima'" pega
+        más que un genérico "en tu país" -- la capital/ciudad más grande de
+        cada uno, la que la gente realmente escribe en Google."""
+        return {
+            'peru': 'Lima', 'uruguay': 'Montevideo', 'chile': 'Santiago',
+            'argentina': 'Buenos Aires', 'colombia': 'Bogotá', 'mexico': 'Ciudad de México',
+        }.get(self.slug, self.nombre)
 
 
 class Orientacion(models.Model):

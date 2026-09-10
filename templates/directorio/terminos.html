@@ -10,6 +10,7 @@
     <section class="terminos-seccion">
         <h2>1. Qué es Atención Psi</h2>
         <p>Atención Psi es un directorio online que conecta a pacientes con psicólogos y psicólogas independientes, habilitados para ejercer en su país (Perú, Uruguay y Chile, con más países en camino). Atención Psi <strong>no presta servicios de salud mental ni de psicoterapia</strong>: cada profesional listado ejerce por su cuenta, bajo su propia matrícula, colegiatura o habilitación profesional, y es el único responsable de la atención que brinda.</p>
+        <p><strong>Atención Psi no es una red de derivaciones:</strong> no asignamos pacientes a un profesional en particular ni cobramos comisión por derivación. Nuestro servicio es de <strong>publicidad y marketing digital</strong> -- ayudamos a que el perfil de cada profesional llegue a más gente que está buscando un psicólogo en su país, pero quién contacta a quién lo decide el paciente, filtrando y eligiendo libremente en el buscador.</p>
     </section>
 
     <section class="terminos-seccion">
@@ -39,12 +40,12 @@
                 <div class="terminos-plan">
                     <p class="terminos-plan-nombre">Plan Básico</p>
                     <p class="terminos-plan-precio">{{ pais.simbolo_moneda }} {{ pais.precio_basico|miles }} <span>/ mes</span></p>
-                    <p class="terminos-plan-incluye">Perfil publicado en el buscador de {{ pais.nombre }}.</p>
+                    <p class="terminos-plan-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando "psicólogo en {{ pais.ciudad_ejemplo }}".</p>
                 </div>
                 <div class="terminos-plan terminos-plan-premium">
                     <p class="terminos-plan-nombre">Plan Premium</p>
                     <p class="terminos-plan-precio">{{ pais.simbolo_moneda }} {{ pais.precio_premium|miles }} <span>/ mes</span></p>
-                    <p class="terminos-plan-incluye">Todo lo del Básico, más agenda de reserva de turnos online y difusión en el Instagram de Atención Psi {{ pais.nombre }}.</p>
+                    <p class="terminos-plan-incluye">Todo lo del Básico, más agenda de reserva de turnos online y perfil destacado en la difusión paga de Atención Psi en {{ pais.nombre }}.</p>
                 </div>
             </div>
         </div>

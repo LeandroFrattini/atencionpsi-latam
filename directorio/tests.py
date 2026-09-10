@@ -247,6 +247,12 @@ class TerminosYFooterTests(TestCase):
         self.assertContains(resp, 'CUIL')
         self.assertNotContains(resp, 'Completar')
 
+    def test_terminos_aclara_que_no_es_una_red_de_derivaciones(self):
+        # Pedido explícito 2026-09-09: dejar claro que el servicio es
+        # publicidad/marketing digital, no una red que asigna pacientes.
+        resp = self.client.get(reverse('terminos'))
+        self.assertContains(resp, 'no es una red de derivaciones')
+
     def test_terminos_muestra_los_dos_planes_de_cada_pais_activo(self):
         # Los países sembrados por la migración 0006/0008 (Perú, Uruguay,
         # Chile activos y con precio) tienen que aparecer cada uno con sus

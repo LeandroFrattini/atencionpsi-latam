@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='pais',
             name='precio_premium',
-            field=models.PositiveIntegerField(default=0, help_text='Básico + agenda de turnos online + difusión en el Instagram de Atención Psi del país', verbose_name='Precio Plan Premium (moneda local)'),
+            field=models.PositiveIntegerField(default=0, help_text='Básico + agenda de turnos online + entra en la pauta paga de atencionpsi.lat en ese país', verbose_name='Precio Plan Premium (moneda local)'),
         ),
     ]
