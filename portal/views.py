@@ -42,6 +42,7 @@ def registro(request, pais_slug):
                 nombre=form.cleaned_data['nombre'],
                 whatsapp=form.cleaned_data['whatsapp'],
                 matricula='',
+                terminos_aceptados_en=timezone.now(),
             )
             # Se crea el usuario directo (sin pasar por authenticate()), así
             # que hay que decirle a login() qué backend usar explícitamente
@@ -55,6 +56,10 @@ def registro(request, pais_slug):
     return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
 
 
+def _dlocal_go_conectado():
+    return bool(settings.DLOCAL_GO_API_KEY and settings.DLOCAL_GO_SECRET_KEY)
+
+
 @login_required
 def checkout(request):
     psicologo = request.user.psicologo
@@ -63,19 +68,27 @@ def checkout(request):
     # TODO: acá va la integración real con dLocal Go -- crear la suscripción
     # vía su API y redirigir a request a la URL de pago que devuelva, con un
     # return_url que apunte de vuelta a esta misma vista. Bloqueado hasta
-    # tener la API key/secret. Mientras tanto, en DEBUG se puede simular el
-    # pago para probar el resto del flujo end to end.
-    return render(request, 'portal/checkout.html', {'psicologo': psicologo, 'debug': settings.DEBUG})
+    # tener la API key/secret (DLOCAL_GO_API_KEY / DLOCAL_GO_SECRET_KEY).
+    # Mientras esas variables no estén las dos seteadas -- lo que también es
+    # el estado en producción hoy -- se muestra el checkout en modo de
+    # prueba (elegís plan, "pagás" simulado, se activa la suscripción). El
+    # día que se carguen las credenciales reales en Render, este bloque deja
+    # de mostrarse solo: hay que reemplazarlo por la integración real antes.
+    return render(request, 'portal/checkout.html', {
+        'psicologo': psicologo,
+        'integracion_pendiente': not _dlocal_go_conectado(),
+    })
 
 
 @login_required
 def simular_pago(request):
-    if not settings.DEBUG:
+    if _dlocal_go_conectado():
         raise Http404()
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
-    request.user.psicologo.activar_suscripcion(dlocal_subscription_id='SIMULADO-DEV')
-    messages.success(request, 'Pago simulado con éxito (solo disponible en desarrollo).')
+    plan = request.POST.get('plan', 'basico')
+    request.user.psicologo.activar_suscripcion(dlocal_subscription_id='SIMULADO-DEV', plan=plan)
+    messages.success(request, 'Suscripción activada en modo de prueba.')
     return redirect('portal_dashboard')
 
 

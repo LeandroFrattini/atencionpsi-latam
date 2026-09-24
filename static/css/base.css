@@ -364,6 +364,24 @@ main {
 }
 .portal-error { color: #c1467a; font-size: 0.8rem; margin: 0; }
 .portal-field-ayuda { color: var(--texto-tenue); font-size: 0.78rem; margin: 0; }
+
+/* Checkbox suelto (ej: "acepto términos"): fila horizontal, no columna */
+.portal-field:has(input[type="checkbox"]) {
+    flex-direction: row; align-items: flex-start; gap: 9px;
+}
+.portal-field:has(input[type="checkbox"]) input { margin-top: 3px; width: auto; }
+.portal-field:has(input[type="checkbox"]) label { font-weight: 400; }
+.portal-field:has(input[type="checkbox"]) a { color: var(--verde-oscuro); text-decoration: underline; }
+
+/* Honeypot antispam: invisible para una persona, presente para un bot que
+   llena todos los inputs de un formulario. Ver directorio/forms.py. */
+.hp-trampa,
+label[for="id_sitio_web"] {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px; height: 1px;
+    overflow: hidden;
+}
 .portal-formacion-fila { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .portal-formacion-fila input[type="text"] { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--borde); }
 .portal-check-eliminar { font-size: 0.78rem; color: var(--texto-tenue); white-space: nowrap; }
@@ -542,6 +560,17 @@ main {
     font-size: 0.85rem !important; color: var(--texto-secundario); margin: 0 !important; line-height: 1.5 !important;
 }
 
+/* Placas de plan seleccionables (checkout) -- mismo look que las de
+   Términos/Registro, pero clickeables como radio. */
+.placa-precio-radio {
+    display: block; cursor: pointer; position: relative;
+    border-width: 2px; transition: border-color 0.15s ease;
+}
+.placa-precio-radio input[type="radio"] { position: absolute; top: 16px; right: 16px; width: 18px; height: 18px; accent-color: var(--verde-oscuro); }
+.placa-precio-radio:has(input:checked) { border-color: var(--verde-oscuro); }
+.placa-precio-radio span { display: block; }
+.placa-precio-radio .placa-precio-monto span { display: inline; }
+
 /* Footer */
 .footer {
     border-top: 1px solid var(--borde); margin-top: 48px; padding: 28px 5%;
@@ -648,3 +677,22 @@ main {
     .portal-tabla { display: block; overflow-x: auto; white-space: nowrap; }
     .portal-datos > div { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* Banner de cookies (solo aparece si hay GA4 configurado, ver base.html) */
+.cookie-banner {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 40;
+    max-width: 640px; margin: 0 auto;
+    background: #fff; border: 1px solid var(--borde); border-radius: 14px;
+    padding: 18px 20px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+}
+.cookie-banner p { margin: 0; font-size: 0.85rem; color: var(--texto-secundario); flex: 1; min-width: 200px; }
+.cookie-banner a { color: var(--verde-oscuro); text-decoration: underline; }
+.cookie-banner-botones { display: flex; gap: 8px; flex-shrink: 0; }
+.cookie-banner .btn-primario, .cookie-banner .btn-secundario { padding: 8px 16px; font-size: 0.85rem; }
+
+/* Página 404 */
+.error-pagina { max-width: 480px; margin: 40px auto; text-align: center; }
+.error-codigo { font-family: 'Playfair Display', Georgia, serif; font-size: 4.5rem; font-weight: 700; color: var(--verde-suave); margin: 0; line-height: 1; }
+.error-pagina h1 { font-size: 1.5rem; color: var(--texto-titulo); margin: 4px 0 12px; }
+.error-pagina .portal-acciones { justify-content: center; margin-top: 20px; }

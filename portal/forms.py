@@ -1,16 +1,37 @@
+import io
+
 from django import forms
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.forms import inlineformset_factory
+from django.urls import reverse
+from django.utils.html import format_html
+from PIL import Image, ImageOps
 
+from directorio.forms import HoneypotMixin
 from directorio.models import Formacion, Psicologo
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
-class RegistroForm(forms.Form):
+class RegistroForm(HoneypotMixin, forms.Form):
     nombre = forms.CharField(label='Nombre y apellido', max_length=150)
     email = forms.EmailField(label='Email')
     whatsapp = forms.CharField(label='WhatsApp', max_length=30)
     password = forms.CharField(label='Contraseña', widget=forms.PasswordInput, min_length=8)
+    # dLocal Go pidió consentimiento explícito, no implícito por el solo
+    # hecho de registrarse -- checkbox propio, sin marcar por defecto.
+    acepto_terminos = forms.BooleanField(
+        required=True,
+        error_messages={'required': 'Tenés que aceptar los Términos y la Política de Privacidad para crear tu cuenta.'},
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['acepto_terminos'].label = format_html(
+            'Leí y acepto los <a href="{}" target="_blank" rel="noopener">Términos y Condiciones</a> '
+            'y la <a href="{}" target="_blank" rel="noopener">Política de Privacidad</a>.',
+            reverse('terminos'), reverse('privacidad'),
+        )
 
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
@@ -65,6 +86,33 @@ class PerfilForm(forms.ModelForm):
         self.fields['sesiones_atendidas'].choices = (
             [('', 'Preferís no decir por ahora')] + Psicologo.SESIONES_CHOICES
         )
+
+    def clean_foto(self):
+        """Redimensiona y comprime la foto recién subida (no la ya guardada,
+        esa ya pasó por acá una vez) -- un celular moderno sube fotos de
+        varios MB, y eso pesa la carga de cada página del buscador."""
+        foto = self.cleaned_data.get('foto')
+        if foto and hasattr(foto, 'file'):
+            foto = _comprimir_foto(foto)
+        return foto
+
+
+def _comprimir_foto(archivo, lado_maximo=1200, calidad=82):
+    archivo.seek(0)
+    imagen = ImageOps.exif_transpose(Image.open(archivo))
+    if imagen.mode not in ('RGB', 'L'):
+        imagen = imagen.convert('RGB')
+    ancho, alto = imagen.size
+    lado_mayor = max(ancho, alto)
+    if lado_mayor > lado_maximo:
+        factor = lado_maximo / lado_mayor
+        imagen = imagen.resize((round(ancho * factor), round(alto * factor)), Image.LANCZOS)
+    buffer = io.BytesIO()
+    imagen.save(buffer, format='JPEG', quality=calidad, optimize=True)
+    tamano = buffer.tell()
+    buffer.seek(0)
+    nombre = archivo.name.rsplit('.', 1)[0] + '.jpg'
+    return InMemoryUploadedFile(buffer, 'ImageField', nombre, 'image/jpeg', tamano, None)
 
 
 FormacionFormSet = inlineformset_factory(

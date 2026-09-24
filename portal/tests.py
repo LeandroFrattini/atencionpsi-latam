@@ -1,10 +1,13 @@
 import datetime
+import io
 
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from directorio.models import Orientacion, Pais, Psicologo, Publico
 from turnos.models import DisponibilidadSemanal, Paciente, TipoSesion, Turno
@@ -16,26 +19,40 @@ class RegistroTests(TestCase):
         Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
 
+    def _datos_registro(self, **extra):
+        datos = dict(
+            nombre='Nueva Psicóloga', email='nueva@example.com',
+            whatsapp='51988888888', password='ClaveSegura123', acepto_terminos='on',
+        )
+        datos.update(extra)
+        return datos
+
     def test_registro_crea_cuenta_y_manda_a_checkout(self):
-        resp = self.client.post(reverse('portal_registro', args=['peru']), {
-            'nombre': 'Nueva Psicóloga',
-            'email': 'nueva@example.com',
-            'whatsapp': '51988888888',
-            'password': 'ClaveSegura123',
-        })
+        resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
         self.assertRedirects(resp, reverse('portal_checkout'))
         self.assertTrue(User.objects.filter(username='nueva@example.com').exists())
         psicologo = Psicologo.objects.get(usuario__username='nueva@example.com')
         self.assertEqual(psicologo.pais, self.pais)
         self.assertFalse(psicologo.suscripcion_activa)
+        self.assertIsNotNone(psicologo.terminos_aceptados_en)
 
     def test_no_deja_registrar_email_repetido(self):
         User.objects.create_user('repetido@example.com', password='ClaveSegura123')
-        resp = self.client.post(reverse('portal_registro', args=['peru']), {
-            'nombre': 'Otra', 'email': 'repetido@example.com', 'whatsapp': '51988888888', 'password': 'ClaveSegura123',
-        })
+        resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(
+            nombre='Otra', email='repetido@example.com',
+        ))
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Psicologo.objects.filter(nombre='Otra').exists())
+
+    def test_no_deja_registrar_sin_aceptar_terminos(self):
+        resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(acepto_terminos=''))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+
+    def test_honeypot_completo_descarta_el_registro_como_spam(self):
+        resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(sitio_web='http://spam.example'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
 
 
 class SimularPagoTests(TestCase):
@@ -47,16 +64,17 @@ class SimularPagoTests(TestCase):
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
         self.client.force_login(self.usuario)
 
-    @override_settings(DEBUG=True)
-    def test_simular_pago_activa_suscripcion_en_debug(self):
-        resp = self.client.post(reverse('portal_simular_pago'))
+    @override_settings(DLOCAL_GO_API_KEY='', DLOCAL_GO_SECRET_KEY='')
+    def test_simular_pago_activa_suscripcion_mientras_dlocal_no_este_conectado(self):
+        resp = self.client.post(reverse('portal_simular_pago'), {'plan': 'premium'})
         self.assertRedirects(resp, reverse('portal_dashboard'))
         self.psicologo.refresh_from_db()
         self.assertTrue(self.psicologo.suscripcion_activa)
         self.assertIsNotNone(self.psicologo.fecha_pago_confirmado)
+        self.assertEqual(self.psicologo.plan, 'premium')
 
-    @override_settings(DEBUG=False)
-    def test_simular_pago_no_existe_fuera_de_debug(self):
+    @override_settings(DLOCAL_GO_API_KEY='key-real', DLOCAL_GO_SECRET_KEY='secret-real')
+    def test_simular_pago_no_existe_con_dlocal_ya_conectado(self):
         resp = self.client.post(reverse('portal_simular_pago'))
         self.assertEqual(resp.status_code, 404)
 
@@ -159,6 +177,22 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         antes = Publico.objects.count()
         self._post_perfil()
         self.assertEqual(Publico.objects.count(), antes)
+
+    def test_foto_grande_se_comprime_al_subirla(self):
+        buf = io.BytesIO()
+        Image.new('RGB', (2000, 1500), (120, 150, 120)).save(buf, format='JPEG')
+        buf.seek(0)
+        foto = SimpleUploadedFile('grande.jpg', buf.read(), content_type='image/jpeg')
+
+        resp = self._post_perfil(foto=foto)
+        self.assertEqual(resp.status_code, 302)
+        self.psicologo.refresh_from_db()
+
+        self.assertTrue(self.psicologo.foto.name.endswith('.jpg'))
+        with self.psicologo.foto.open('rb') as f:
+            imagen = Image.open(f)
+            imagen.load()
+        self.assertLessEqual(max(imagen.size), 1200)
 
 
 class AgendaPortalTests(TestCase):

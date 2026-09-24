@@ -1,18 +1,37 @@
 {% extends 'base.html' %}
+{% load precio_tags %}
 {% block title %}Activar suscripción | Atención Psi{% endblock %}
 {% block content %}
-<div class="portal-card">
-    <h1>Un último paso: activar tu suscripción</h1>
-    <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa. Te vamos a redirigir a la pasarela de pago.</p>
+<div class="portal-card portal-card-ancho">
+    <h1>Un último paso: elegí tu plan</h1>
+    <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa.</p>
 
-    {% if debug %}
+    {% if integracion_pendiente %}
         <div class="portal-dev-box">
-            <p><strong>Modo desarrollo:</strong> la integración real con dLocal todavía no está conectada.</p>
-            <form method="post" action="{% url 'portal_simular_pago' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn-primario">Simular pago exitoso (solo dev)</button>
-            </form>
+            <p>
+                <strong>Cobro en modo de prueba.</strong> Todavía estamos terminando de habilitar el cobro
+                automático con dLocal Go. Mientras tanto podés elegir tu plan y activar la suscripción para
+                conocer la plataforma -- no se te va a cobrar nada por esto.
+            </p>
         </div>
+        <form method="post" action="{% url 'portal_simular_pago' %}" class="portal-form">
+            {% csrf_token %}
+            <div class="placas-precio">
+                <label class="placa-precio placa-precio-radio">
+                    <input type="radio" name="plan" value="basico" checked>
+                    <span class="placa-precio-nombre">Plan Básico</span>
+                    <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_basico|miles }} <span>/ mes</span></span>
+                    <span class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando "psicólogo en {{ psicologo.pais.ciudad_ejemplo }}".</span>
+                </label>
+                <label class="placa-precio placa-precio-premium placa-precio-radio">
+                    <input type="radio" name="plan" value="premium">
+                    <span class="placa-precio-nombre">Plan Premium</span>
+                    <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_premium|miles }} <span>/ mes</span></span>
+                    <span class="placa-precio-incluye">Todo lo del Básico + agenda de turnos online + perfil destacado en la difusión paga de Atención Psi en {{ psicologo.pais.nombre }}.</span>
+                </label>
+            </div>
+            <button type="submit" class="btn-primario">Confirmar suscripción (modo de prueba)</button>
+        </form>
     {% else %}
         <p class="portal-lead-sm">Estamos preparando tu pago...</p>
     {% endif %}

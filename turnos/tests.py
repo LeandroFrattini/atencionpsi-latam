@@ -103,6 +103,18 @@ class WizardReservaTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('psico@example.com', mail.outbox[0].to)
 
+    def test_honeypot_completo_no_deja_avanzar_a_confirmar(self):
+        self._avanzar_hasta_horario()
+        self.client.post(reverse('reserva_horario', args=['peru', self.psicologo.pk]), {
+            'fecha': self.lunes.isoformat(), 'hora': '09:00',
+        })
+        resp = self.client.post(reverse('reserva_datos', args=['peru', self.psicologo.pk]), {
+            'nombres': 'Bot', 'apellidos': 'Spam', 'telefono': '1', 'email': 'bot@example.com',
+            'sitio_web': 'http://spam.example',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Turno.objects.filter(email='bot@example.com').exists())
+
     def test_no_puede_saltear_pasos(self):
         resp = self.client.get(reverse('reserva_datos', args=['peru', self.psicologo.pk]))
         # No sigue el 302 en cascada (horario -> modalidad -> tipo, porque

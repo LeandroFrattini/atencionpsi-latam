@@ -305,6 +305,25 @@ class ContactoTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_honeypot_completo_descarta_como_spam(self):
+        resp = self.client.post(reverse('contacto'), {
+            'nombre': 'Bot', 'email': 'bot@example.com', 'mensaje': 'spam',
+            'sitio_web': 'http://spam.example',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class PrivacidadTests(TestCase):
+    def test_pagina_de_privacidad_carga_y_linkea_desde_el_footer(self):
+        resp = self.client.get(reverse('privacidad'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Política de Privacidad')
+
+    def test_footer_linkea_a_privacidad(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, reverse('privacidad'))
+
 
 class TerminosYFooterTests(TestCase):
     def test_terminos_muestra_el_dato_legal_real(self):

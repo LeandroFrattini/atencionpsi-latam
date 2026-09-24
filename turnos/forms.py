@@ -1,7 +1,9 @@
 from django import forms
 
+from directorio.forms import HoneypotMixin
 
-class ReservaDatosForm(forms.Form):
+
+class ReservaDatosForm(HoneypotMixin, forms.Form):
     nombres = forms.CharField(label='Nombres', max_length=100)
     apellidos = forms.CharField(label='Apellidos', max_length=100)
     telefono = forms.CharField(label='Teléfono', max_length=30)
