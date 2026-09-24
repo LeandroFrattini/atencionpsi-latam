@@ -49,7 +49,7 @@
                     </summary>
                     <div class="pais-switcher-menu">
                         {% for pa in paises_activos %}
-                            <a href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{% url 'buscador_pais' pa.slug %}{% endif %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}">
+                            <a href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{% url 'pais_home' pa.slug %}{% endif %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}">
                                 <img src="{% static pa.bandera_svg %}" alt="" class="bandera-icono"> {{ pa.nombre }}
                             </a>
                         {% endfor %}

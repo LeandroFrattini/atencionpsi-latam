@@ -21,6 +21,8 @@ def _proximo_dia_semana(dia_semana):
 
 class DisponibilidadTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
@@ -61,6 +63,8 @@ class DisponibilidadTests(TestCase):
 
 class WizardReservaTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.orientacion = Orientacion.objects.create(nombre='TCC')
         self.usuario = User.objects.create_user('psico@example.com', email='psico@example.com', password='ClaveSegura123')

@@ -21,7 +21,8 @@
 
 <div class="portal-card">
     <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Sumate a Atención Psi {{ pais.nombre }}</h1>
-    <p class="portal-lead">Creá tu cuenta, armá tu perfil y publicalo cuando esté listo. El próximo paso después de esto es la suscripción mensual.</p>
+    <p class="portal-lead">Creá tu cuenta, armá tu perfil y publicalo cuando esté listo. El próximo paso después de esto es elegir uno de estos dos planes:</p>
+    {% include 'directorio/_placas_precio.html' %}
     <form method="post" class="portal-form">
         {% csrf_token %}
         {% for field in form %}

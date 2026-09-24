@@ -1,0 +1,17 @@
+{% load precio_tags %}
+{% comment %}
+Placas de precio de los 2 planes de un país. Espera `pais` en el contexto.
+Reutilizado en el registro de profesionales y en Términos y Condiciones.
+{% endcomment %}
+<div class="placas-precio">
+    <div class="placa-precio">
+        <p class="placa-precio-nombre">Plan Básico</p>
+        <p class="placa-precio-monto">{{ pais.simbolo_moneda }} {{ pais.precio_basico|miles }} <span>/ mes</span></p>
+        <p class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando <strong>"psicólogo en {{ pais.ciudad_ejemplo }}"</strong>.</p>
+    </div>
+    <div class="placa-precio placa-precio-premium">
+        <p class="placa-precio-nombre">Plan Premium</p>
+        <p class="placa-precio-monto">{{ pais.simbolo_moneda }} {{ pais.precio_premium|miles }} <span>/ mes</span></p>
+        <p class="placa-precio-incluye">Todo lo del Básico + agenda de turnos online (tus pacientes reservan solos) + tu perfil destacado en la difusión paga de Atención Psi en {{ pais.nombre }}.</p>
+    </div>
+</div>

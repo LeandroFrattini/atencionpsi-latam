@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}Encontrá tu psicólogo ideal en {{ pais.nombre }}: perfiles verificados con matrícula habilitante, turnos online y contacto directo por WhatsApp. Sin intermediarios.{% endblock %}
+{% block og_title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block og_description %}Perfiles de psicólogos verificados en {{ pais.nombre }}, con matrícula habilitante y contacto directo por WhatsApp.{% endblock %}
+{% block extra_head %}
+{% include 'directorio/_hreflang.html' %}
+{% endblock %}
+{% block content %}
+<div class="hub-hero">
+    <img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono home-hero-bandera">
+    <h1>Encontrá tu psicólogo en {{ pais.nombre }}</h1>
+    <p>Perfiles verificados, filtrados por ciudad, modalidad y orientación. Contacto directo por WhatsApp, sin intermediarios.</p>
+    {% if total_publicados %}
+        <p class="hub-stat-confianza">{{ total_publicados }} psicólogo{{ total_publicados|pluralize }} publicado{{ total_publicados|pluralize }} en {{ pais.nombre }}</p>
+    {% endif %}
+    <a href="{% url 'buscador_pais' pais.slug %}" class="btn-primario home-hero-cta">Ver todos los psicólogos</a>
+</div>
+
+{% if psicologos_destacados %}
+<section class="home-destacados">
+    <h2 class="home-destacados-titulo">Psicólogos destacados en {{ pais.nombre }}</h2>
+    <div class="psicologos-grid">
+        {% for p in psicologos_destacados %}
+            {% include 'directorio/_psicologo_card.html' %}
+        {% endfor %}
+    </div>
+    <a href="{% url 'buscador_pais' pais.slug %}" class="ver-todos-link">Ver todos los psicólogos en {{ pais.nombre }} &rarr;</a>
+</section>
+{% endif %}
+{% endblock %}

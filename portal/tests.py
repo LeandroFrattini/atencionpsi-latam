@@ -12,6 +12,8 @@ from turnos.models import DisponibilidadSemanal, Paciente, TipoSesion, Turno
 
 class RegistroTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
 
     def test_registro_crea_cuenta_y_manda_a_checkout(self):
@@ -38,6 +40,8 @@ class RegistroTests(TestCase):
 
 class SimularPagoTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
@@ -59,6 +63,8 @@ class SimularPagoTests(TestCase):
 
 class PublicarDespublicarTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.orientacion = Orientacion.objects.create(nombre='Sistémica')
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
@@ -92,6 +98,8 @@ class PublicarDespublicarTests(TestCase):
 
 class EditarPerfilPublicoNuevoTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(
@@ -302,6 +310,8 @@ class PacientesPortalTests(TestCase):
 
 class RecordatoriosCommandTests(TestCase):
     def setUp(self):
+        # Aísla del país que la migración 0006 siembra para producción.
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
 
     def _psicologo(self, email, **overrides):

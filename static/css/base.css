@@ -125,6 +125,17 @@ main {
 }
 .hub-hero p { color: var(--texto-secundario); font-size: 1.08rem; }
 
+/* Home por país */
+.home-hero-bandera { width: 40px; height: 27px; border-radius: 5px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.home-hero-cta { display: inline-block; margin-top: 22px; }
+.home-destacados { margin-bottom: 48px; }
+.home-destacados-titulo { font-size: 1.5rem; color: var(--texto-titulo); text-align: center; margin-bottom: 24px; }
+.ver-todos-link {
+    display: block; text-align: center; margin-top: 28px;
+    color: var(--verde-oscuro); font-weight: 700; font-size: 0.95rem;
+}
+.ver-todos-link:hover { text-decoration: underline; }
+
 .paises-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -503,6 +514,33 @@ main {
 .terminos-seccion h2 { font-size: 1.1rem; color: var(--verde-oscuro); margin-bottom: 10px; }
 .terminos-seccion p, .terminos-seccion li { color: var(--texto-secundario); line-height: 1.6; font-size: 0.95rem; }
 .terminos-seccion ul { padding-left: 20px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.terminos-planes-pais { margin-top: 22px; }
+.terminos-planes-pais h3 { display: flex; align-items: center; font-size: 1rem; color: var(--texto-titulo); margin-bottom: 10px; }
+.terminos-planes-pais .bandera-icono { width: 24px; height: 16px; border-radius: 2px; margin-right: 8px; }
+
+/* Placas de precio (usadas acá y en el alta de profesionales) */
+.terminos-planes, .placas-precio { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px; }
+@media (max-width: 560px) { .terminos-planes, .placas-precio { grid-template-columns: 1fr; } }
+.terminos-plan, .placa-precio {
+    border: 1px solid var(--borde); border-radius: 12px; padding: 18px;
+    background: var(--crema);
+}
+.terminos-plan-premium, .placa-precio-premium {
+    border-color: var(--verde-medio); background: var(--verde-suave);
+}
+.terminos-plan-nombre, .placa-precio-nombre {
+    font-weight: 700; color: var(--texto-titulo); font-size: 0.95rem; margin: 0 0 4px;
+}
+.terminos-plan-precio, .placa-precio-monto {
+    font-size: 1.5rem; font-weight: 700; color: var(--verde-oscuro); margin: 0 0 8px;
+}
+.terminos-plan-precio span, .placa-precio-monto span {
+    font-size: 0.8rem; font-weight: 500; color: var(--texto-tenue);
+}
+.terminos-plan-incluye, .placa-precio-incluye {
+    font-size: 0.85rem !important; color: var(--texto-secundario); margin: 0 !important; line-height: 1.5 !important;
+}
 
 /* Footer */
 .footer {
