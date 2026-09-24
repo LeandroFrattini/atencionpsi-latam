@@ -163,6 +163,7 @@ class EditarPerfilPublicoNuevoTests(TestCase):
 
 class AgendaPortalTests(TestCase):
     def setUp(self):
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
@@ -209,6 +210,7 @@ class AgendaPortalTests(TestCase):
 
 class TurnosPortalTests(TestCase):
     def setUp(self):
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
@@ -255,6 +257,7 @@ class TurnosPortalTests(TestCase):
 
 class PacientesPortalTests(TestCase):
     def setUp(self):
+        Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519')
