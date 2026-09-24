@@ -172,6 +172,16 @@ class Psicologo(models.Model):
     dlocal_subscription_id = models.CharField(max_length=100, blank=True)
     publicado_por_usuario = models.BooleanField('Publicado por el profesional', default=False)
 
+    PLAN_CHOICES = [
+        ('basico', 'Básico'),
+        ('premium', 'Premium'),
+    ]
+    # Elegido en el checkout -- todavía no habilita/deshabilita nada por sí
+    # solo (ver comentario de `destacado` más abajo), pero de acá sale qué le
+    # cobra dLocal Go y es la base para diferenciar funcionalidad más
+    # adelante (ej: agenda de turnos solo Premium).
+    plan = models.CharField('Plan contratado', max_length=10, choices=PLAN_CHOICES, default='basico')
+
     # Excepción para las profesionales "fundadoras" reclutadas a pulmón antes
     # de tener el cobro automático andando -- ver plan de captación.
     exento_de_pago = models.BooleanField('Exenta de pago (fundadora)', default=False)
@@ -181,6 +191,11 @@ class Psicologo(models.Model):
     # depende del plan pagado (todavía no hay distinción de plan real en el
     # sistema, ver Pais.precio_premium).
     destacado = models.BooleanField('Destacado en el home', default=False)
+
+    # Consentimiento explícito pedido por dLocal Go en el registro -- queda
+    # la fecha como registro de cuándo se aceptó, no solo el hecho de que se
+    # tildó el checkbox alguna vez.
+    terminos_aceptados_en = models.DateTimeField('Términos aceptados el', null=True, blank=True)
 
     fecha_alta = models.DateTimeField(auto_now_add=True)
     # Se completa cuando dLocal confirma el primer pago (o al marcar
@@ -208,16 +223,19 @@ class Psicologo(models.Model):
             self.fecha_pago_confirmado = timezone.now()
         super().save(*args, **kwargs)
 
-    def activar_suscripcion(self, dlocal_subscription_id=''):
+    def activar_suscripcion(self, dlocal_subscription_id='', plan=''):
         """Llamado por el webhook de dLocal cuando confirma el primer pago
-        (y, en dev, por el botón de "simular pago"). Idempotente: si ya
-        estaba activa no pisa fecha_pago_confirmado de nuevo."""
+        (y, mientras esa integración no esté lista, por el checkout
+        simulado). Idempotente: si ya estaba activa no pisa
+        fecha_pago_confirmado de nuevo."""
         from django.utils import timezone
         if not self.suscripcion_activa:
             self.suscripcion_activa = True
             self.fecha_pago_confirmado = timezone.now()
         if dlocal_subscription_id:
             self.dlocal_subscription_id = dlocal_subscription_id
+        if plan in dict(self.PLAN_CHOICES):
+            self.plan = plan
         self.save()
 
     @property
