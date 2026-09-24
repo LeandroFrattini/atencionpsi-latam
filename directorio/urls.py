@@ -6,6 +6,7 @@ urlpatterns = [
     path('', views.hub, name='hub'),
     path('faq/', views.faq, name='faq'),
     path('terminos/', views.terminos, name='terminos'),
+    path('privacidad/', views.privacidad, name='privacidad'),
     path('contacto/', views.contacto, name='contacto'),
     path('<slug:pais_slug>/', views.pais_home, name='pais_home'),
     path('<slug:pais_slug>/buscar/', views.buscador_pais, name='buscador_pais'),

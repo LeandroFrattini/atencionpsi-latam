@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Página no encontrada | Atención Psi{% endblock %}
+{% block robots %}noindex, follow{% endblock %}
+{% block content %}
+<div class="error-pagina">
+    <p class="error-codigo">404</p>
+    <h1>Esta página no existe</h1>
+    <p class="portal-lead">El link puede estar roto o la página se movió. Probá desde acá:</p>
+    <div class="portal-acciones">
+        <a href="{% url 'hub' %}" class="btn-primario">Ir al inicio</a>
+        <a href="{% url 'contacto' %}" class="btn-secundario">Avisarnos del problema</a>
+    </div>
+</div>
+{% endblock %}

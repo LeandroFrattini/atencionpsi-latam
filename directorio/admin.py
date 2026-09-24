@@ -29,16 +29,17 @@ class FormacionInline(admin.TabularInline):
 
 @admin.register(Psicologo)
 class PsicologoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'publicado', 'destacado')
-    list_filter = ('pais', 'modalidad', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'publicos')
+    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'publicado', 'destacado')
+    list_filter = ('pais', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp')
     filter_horizontal = ('orientaciones', 'publicos')
     inlines = [FormacionInline]
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'publicos')}),
-        ('Pago y publicación', {'fields': ('suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago', 'destacado')}),
+        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago', 'destacado', 'terminos_aceptados_en')}),
     )
+    readonly_fields = ('terminos_aceptados_en',)
 
     @admin.display(boolean=True)
     def publicado(self, obj):

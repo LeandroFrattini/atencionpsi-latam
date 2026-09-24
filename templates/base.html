@@ -19,16 +19,24 @@
     <meta property="og:title" content="{% block og_title %}Atención Psi{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay y Chile.{% endblock %}">
     {% comment %}
-    Sin imagen de OG por defecto todavía -- no hay un banner genérico
-    diseñado. Cada página puede sobreescribir este bloque con su propia
-    meta og:image, por ejemplo la foto del profesional en el perfil.
+    Imagen de OG por defecto (wordmark de marca) -- cada página puede
+    sobreescribir este bloque con la suya propia, ej. la foto del
+    profesional en el perfil (ver detalle_psicologo.html).
     {% endcomment %}
-    {% block og_image %}{% endblock %}
+    {% block og_image %}
+        <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-default.png' %}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+    {% endblock %}
     <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/favicon-16.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=11">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=12">
     {% block json_ld %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
@@ -77,6 +85,7 @@
         <span class="footer-links">
             <a href="{% url 'faq' %}">Preguntas frecuentes</a>
             <a href="{% url 'terminos' %}">Términos y Condiciones</a>
+            <a href="{% url 'privacidad' %}">Política de Privacidad</a>
             <a href="{% url 'contacto' %}">Contacto</a>
         </span>
         {% if footer_instagram_url or footer_facebook_url %}
@@ -94,5 +103,54 @@
         </span>
         {% endif %}
     </footer>
+    {% if ga4_measurement_id %}
+        {% comment %}
+        Banner de cookies -- solo aparece si hay analítica configurada (si
+        no, el sitio no pone ninguna cookie que no sea estrictamente
+        necesaria, y pedir consentimiento para nada es solo fricción). El
+        script de GA4 no se carga hasta que la persona toca "Aceptar": así
+        no se manda ningún dato a Google sin consentimiento previo.
+        {% endcomment %}
+        <div id="cookie-banner" class="cookie-banner" hidden>
+            <p>Usamos cookies de analítica para entender cómo se usa el sitio y mejorarlo. Podés ver el detalle en la <a href="{% url 'privacidad' %}">Política de Privacidad</a>.</p>
+            <div class="cookie-banner-botones">
+                <button type="button" id="cookie-rechazar" class="btn-secundario">Rechazar</button>
+                <button type="button" id="cookie-aceptar" class="btn-primario">Aceptar</button>
+            </div>
+        </div>
+        <script>
+        (function () {
+            var CLAVE = 'atencionpsi_cookies';
+            var valor = localStorage.getItem(CLAVE);
+
+            function activarGA4() {
+                var s = document.createElement('script');
+                s.async = true;
+                s.src = 'https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id }}';
+                document.head.appendChild(s);
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = function () { dataLayer.push(arguments); };
+                gtag('js', new Date());
+                gtag('config', '{{ ga4_measurement_id }}');
+            }
+
+            if (valor === 'aceptado') {
+                activarGA4();
+            } else if (valor !== 'rechazado') {
+                var banner = document.getElementById('cookie-banner');
+                banner.hidden = false;
+                document.getElementById('cookie-aceptar').addEventListener('click', function () {
+                    localStorage.setItem(CLAVE, 'aceptado');
+                    banner.hidden = true;
+                    activarGA4();
+                });
+                document.getElementById('cookie-rechazar').addEventListener('click', function () {
+                    localStorage.setItem(CLAVE, 'rechazado');
+                    banner.hidden = true;
+                });
+            }
+        })();
+        </script>
+    {% endif %}
 </body>
 </html>

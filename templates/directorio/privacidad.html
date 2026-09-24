@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Política de Privacidad | Atención Psi{% endblock %}
+{% block meta_description %}Política de Privacidad de Atención Psi: qué datos pedimos, para qué los usamos, con quién los compartimos y cómo ejercer tus derechos.{% endblock %}
+{% block content %}
+<div class="terminos">
+    <h1>Política de Privacidad</h1>
+    <p class="terminos-fecha">Última actualización: {% now "d/m/Y" %}</p>
+
+    <section class="terminos-seccion">
+        <h2>1. Qué datos pedimos</h2>
+        <p>Según cómo uses Atención Psi, pedimos:</p>
+        <ul>
+            <li><strong>Si reservás un turno como paciente:</strong> nombre, apellido, teléfono, email, edad (opcional) y el motivo de consulta que quieras contarnos (opcional). Se los pasamos directo al profesional que elegiste, para que sepa quién le escribe.</li>
+            <li><strong>Si te registrás como profesional:</strong> nombre, email, WhatsApp y contraseña al crear la cuenta; después, para publicar tu perfil, además tu matrícula/colegiatura, foto, formación, orientación, ciudad y modalidad de atención.</li>
+            <li><strong>Si nos escribís por el formulario de contacto:</strong> nombre, email y tu mensaje.</li>
+        </ul>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>2. Para qué los usamos</h2>
+        <ul>
+            <li>Mostrar tu perfil público (si sos profesional) o confirmarte el turno reservado (si sos paciente).</li>
+            <li>Mandarte los mails operativos del servicio: confirmación de turno, aviso al profesional de una nueva reserva, recordatorios de suscripción o de perfil incompleto, y las respuestas a tus consultas de contacto.</li>
+            <li>Procesar el pago de la suscripción de los profesionales (ver más abajo quién procesa eso realmente).</li>
+            <li>Prevenir spam y uso abusivo del sitio.</li>
+        </ul>
+        <p>No usamos tus datos para nada más que esto: no los vendemos ni los cedemos con fines publicitarios de terceros.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>3. Con quién los compartimos</h2>
+        <ul>
+            <li><strong>El profesional que elegiste</strong> (si reservaste un turno): recibe tus datos de contacto y motivo de consulta para poder atenderte.</li>
+            <li><strong>Supabase</strong> (almacenamiento): ahí se guardan las fotos de perfil de los profesionales.</li>
+            <li><strong>Brevo</strong> (envío de mails): por ahí salen los mails transaccionales del sitio (confirmaciones, recordatorios, contacto).</li>
+            <li><strong>dLocal Go</strong> (pasarela de pago): procesa el cobro de la suscripción de los profesionales. <strong>Atención Psi nunca ve ni guarda el número de tarjeta ni ningún otro dato de pago</strong> -- eso lo maneja dLocal Go directamente, bajo sus propias políticas de seguridad (PCI-DSS).</li>
+        </ul>
+        <p>No compartimos tus datos con nadie más, salvo que la ley nos obligue.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>4. Cuánto tiempo los conservamos</h2>
+        <p>Mientras tu cuenta o tu turno reservado tengan relevancia para el servicio. Si sos profesional, tus datos quedan mientras tu cuenta esté activa; si la das de baja, podés pedirnos que la eliminemos (ver punto 6). Los datos de un turno se conservan para que el profesional pueda llevar el historial de sus pacientes en su cuenta.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>5. Cookies</h2>
+        <p>El sitio usa las cookies estrictamente necesarias para funcionar (mantener tu sesión iniciada, protección contra ataques). Si en algún momento activamos analítica de tráfico (por ejemplo, Google Analytics), vas a ver un aviso pidiendo tu consentimiento antes de que se activen esas cookies adicionales.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>6. Tus derechos</h2>
+        <p>Podés pedirnos en cualquier momento acceder a tus datos, corregirlos o eliminarlos, escribiéndonos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a> o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Vamos a responderte a la brevedad.</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>7. Responsable de los datos</h2>
+        <p>{{ terminos_datos_legales|default:"[Completar: persona física o jurídica, nombre legal / razón social, y número de documento o identificación fiscal]" }}</p>
+    </section>
+
+    <section class="terminos-seccion">
+        <h2>8. Más información</h2>
+        <p>Esta política se complementa con los <a href="{% url 'terminos' %}">Términos y Condiciones</a> de uso del sitio.</p>
+    </section>
+</div>
+{% endblock %}

@@ -18,7 +18,6 @@ Notas para arrancar a trabajar en otra máquina (Windows / macOS / Linux).
 # 1. Traer el código
 git clone https://github.com/LeandroFrattini/atencionpsi-latam.git
 cd atencionpsi-latam
-git checkout portal-agenda-pacientes      # rama donde está el portal (agenda / turnos / pacientes)
 
 # 2. Entorno virtual con Python 3.12
 py -3.12 -m venv venv                      # Windows
@@ -65,9 +64,29 @@ Otros profesionales de demo: `martin.rodriguez@demo.atencionpsi.lat`,
   (recordatorios, aviso de reserva, formulario de contacto) se imprimen en la
   terminal del `runserver`, no se mandan.
 - **`SECRET_KEY`** tiene un default de desarrollo; no hace falta setear nada.
-- **dLocal Go** todavía no está integrado de verdad. En `DEBUG` hay un botón de
-  "simular pago" en el checkout para probar el flujo completo.
+- **dLocal Go** todavía no está integrado de verdad. Mientras `DLOCAL_GO_API_KEY` y
+  `DLOCAL_GO_SECRET_KEY` no estén las dos seteadas en el entorno (hoy tampoco lo están
+  en producción), el checkout de `/portal/` muestra un modo de prueba: se elige un
+  plan y se "paga" simulado, para que dLocal Go pueda revisar el flujo completo de
+  alta antes de entregar las credenciales reales. El día que se carguen esas dos
+  variables en Render, ese modo desaparece solo -- hay que tener la integración real
+  lista antes de cargarlas.
+- **GA4** (`GA4_MEASUREMENT_ID`) vacío por defecto: sin ese valor, ni el script de
+  Google Analytics ni el banner de cookies aparecen. Se activan los dos juntos apenas
+  se carga el ID de una propiedad de GA4 real.
 - La carpeta `.claude/` está en `.gitignore` (config local de la herramienta, no se versiona).
+
+## Variables de entorno de producción (Render)
+
+| Variable | Para qué |
+|---|---|
+| `RENDER` | La setea Render sola; activa Postgres, HTTPS forzado, S3/Supabase y el mail por SMTP |
+| `SECRET_KEY` | Clave de Django |
+| `DATABASE_URL` | Conexión a Postgres |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_STORAGE_BUCKET_NAME` / `AWS_S3_SUBDOMAIN` | Storage de fotos en Supabase (protocolo S3) |
+| `BREVO_SMTP_LOGIN` / `BREVO_SMTP_KEY` | Envío de mails transaccionales |
+| `DLOCAL_GO_API_KEY` / `DLOCAL_GO_SECRET_KEY` | Integración real de pagos -- mientras falten, el checkout queda en modo de prueba |
+| `GA4_MEASUREMENT_ID` | Opcional. Activa Google Analytics 4 + el banner de cookies |
 
 ## Tests
 

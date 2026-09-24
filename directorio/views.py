@@ -49,6 +49,13 @@ def terminos(request):
     })
 
 
+def privacidad(request):
+    return render(request, 'directorio/privacidad.html', {
+        'contacto_email': settings.CONTACTO_EMAIL,
+        'terminos_datos_legales': settings.TERMINOS_DATOS_LEGALES,
+    })
+
+
 def contacto(request):
     enviado = False
     if request.method == 'POST':

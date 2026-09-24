@@ -106,6 +106,7 @@ TEMPLATES = [
                 'directorio.context_processors.paises_activos',
                 'directorio.context_processors.stats_globales',
                 'directorio.context_processors.footer_contexto',
+                'directorio.context_processors.analytics_contexto',
             ],
         },
     },
@@ -193,8 +194,17 @@ INSTAGRAM_URL = ''
 FACEBOOK_URL = ''
 
 # dLocal Go -- credenciales de suscripciones (se completan cuando estén listas).
+# Mientras las dos no estén seteadas, el checkout de /portal/ muestra un
+# modo de prueba (ver portal/views.py::_dlocal_go_conectado) en vez de
+# fallar -- así dLocal Go puede revisar el flujo completo de alta antes de
+# entregar las credenciales reales.
 DLOCAL_GO_API_KEY = os.environ.get('DLOCAL_GO_API_KEY', '')
 DLOCAL_GO_SECRET_KEY = os.environ.get('DLOCAL_GO_SECRET_KEY', '')
+
+# Google Analytics 4 -- vacío hasta que exista una propiedad creada. El
+# banner de cookies (ver footer en templates/base.html) y el script de GA4
+# solo se activan si esto tiene un valor.
+GA4_MEASUREMENT_ID = os.environ.get('GA4_MEASUREMENT_ID', '')
 
 # EXTRAS
 WHITENOISE_MANIFEST_STRICT = False

@@ -31,3 +31,9 @@ def footer_contexto(request):
         'footer_instagram_url': settings.INSTAGRAM_URL,
         'footer_facebook_url': settings.FACEBOOK_URL,
     }
+
+
+def analytics_contexto(request):
+    """Si no hay GA4_MEASUREMENT_ID seteado, ni el banner de cookies ni el
+    script de analítica aparecen (ver templates/base.html)."""
+    return {'ga4_measurement_id': settings.GA4_MEASUREMENT_ID}
