@@ -1,11 +1,12 @@
 from django.db import migrations
 
-# dLocal Go pidió auditar el sitio sin el link a atencionpsi.com.ar en el
-# medio (2026-10-01): como Argentina está marcada "es_externo", la bandera
-# del hub y del selector de país mandan afuera, a un proyecto totalmente
-# aparte -- y un auditor manual que la toca termina revisando otro sitio sin
-# darse cuenta. Se desactiva (no se borra) mientras dura la revisión; se
-# puede reactivar con un update o desde /admin/ apenas dLocal Go confirme.
+# Decisión 2026-10-01: por ahora mostrar solo los países donde la expansión
+# está realmente activa (Perú, Uruguay, Chile) -- Argentina, al estar
+# marcada "es_externo", su bandera manda afuera a atencionpsi.com.ar, un
+# proyecto totalmente aparte, y eso además complicó la auditoría manual de
+# dLocal Go (un revisor que la toca termina mirando otro sitio sin darse
+# cuenta). Se desactiva (no se borra) hasta que se retome la expansión ahí
+# de verdad; se reactiva con un update o desde /admin/ cuando corresponda.
 
 
 def desactivar_argentina(apps, schema_editor):

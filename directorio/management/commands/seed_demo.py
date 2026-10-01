@@ -53,8 +53,8 @@ PAISES = [
          activo=False, orden=5, bandera_emoji='\U0001F1E8\U0001F1F4'),
     dict(nombre='Argentina', slug='argentina', codigo_iso='AR', moneda='ARS', simbolo_moneda='$',
          etiqueta_matricula='N° de Matrícula', muestra_precio_sesion=False,
-         # Desactivada (2026-10-01): dLocal Go pidió auditar el sitio sin el
-         # link a atencionpsi.com.ar en el medio. Reactivar cuando confirmen.
+         # Desactivada (2026-10-01): por ahora solo se muestran los países
+         # con expansión activa de verdad (Perú, Uruguay, Chile).
          activo=False, orden=6, bandera_emoji='\U0001F1E6\U0001F1F7',
          es_externo=True, url_externa='https://atencionpsi.com.ar'),
 ]
