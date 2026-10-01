@@ -1,5 +1,7 @@
+from functools import wraps
+
 from django.conf import settings
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
@@ -133,7 +135,29 @@ def _dlocal_go_conectado():
     return bool(settings.DLOCAL_GO_API_KEY and settings.DLOCAL_GO_SECRET_KEY)
 
 
-@login_required
+def psicologo_required(view_func):
+    """Como @login_required, pero además exige que la cuenta logueada
+    tenga un Psicologo asociado -- todas las vistas de acá abajo hacen
+    request.user.psicologo de entrada. Sin esto, cualquier cuenta logueada
+    sin perfil (ej: un superusuario creado por createsuperuser para entrar
+    a /admin/, que nunca pasó por el registro público) tira un 500 en vez
+    de un error entendible (bug real, visto en producción 2026-10-01)."""
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not hasattr(request.user, 'psicologo'):
+            logout(request)
+            messages.error(
+                request,
+                'Esa cuenta no tiene un perfil de profesional asociado '
+                '(¿es una cuenta de administración?). Iniciá sesión con tu cuenta de psicólogo/a.'
+            )
+            return redirect('portal_login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@psicologo_required
 def checkout(request):
     psicologo = request.user.psicologo
     if psicologo.suscripcion_activa or psicologo.exento_de_pago:
@@ -153,7 +177,7 @@ def checkout(request):
     })
 
 
-@login_required
+@psicologo_required
 def simular_pago(request):
     if _dlocal_go_conectado():
         raise Http404()
@@ -165,7 +189,7 @@ def simular_pago(request):
     return redirect('portal_dashboard')
 
 
-@login_required
+@psicologo_required
 def dashboard(request):
     psicologo = request.user.psicologo
     ahora = timezone.now()
@@ -180,7 +204,7 @@ def dashboard(request):
     })
 
 
-@login_required
+@psicologo_required
 def editar_perfil(request):
     psicologo = request.user.psicologo
     if request.method == 'POST':
@@ -215,7 +239,7 @@ def editar_perfil(request):
     return render(request, 'portal/editar_perfil.html', {'p': psicologo, 'form': form, 'formset': formset})
 
 
-@login_required
+@psicologo_required
 def publicar(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -229,7 +253,7 @@ def publicar(request):
     return redirect('portal_dashboard')
 
 
-@login_required
+@psicologo_required
 def despublicar(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -244,7 +268,7 @@ def despublicar(request):
 # AGENDA -- tipos de sesión, disponibilidad semanal y días que no atiende.
 # Las tres cosas se editan en una sola página con un solo "Guardar".
 # =========================================================================
-@login_required
+@psicologo_required
 def agenda(request):
     psicologo = request.user.psicologo
 
@@ -285,7 +309,7 @@ _ACCIONES_TURNO = {
 }
 
 
-@login_required
+@psicologo_required
 def turnos_lista(request):
     psicologo = request.user.psicologo
     ahora = timezone.now()
@@ -298,7 +322,7 @@ def turnos_lista(request):
     })
 
 
-@login_required
+@psicologo_required
 def turno_detalle(request, pk):
     psicologo = request.user.psicologo
     turno = get_object_or_404(Turno.objects.select_related('tipo_sesion', 'paciente'),
@@ -313,7 +337,7 @@ def turno_detalle(request, pk):
     return render(request, 'portal/turno_detalle.html', {'p': psicologo, 't': turno})
 
 
-@login_required
+@psicologo_required
 def turno_accion(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -335,7 +359,7 @@ def turno_accion(request, pk):
 # =========================================================================
 # PACIENTES
 # =========================================================================
-@login_required
+@psicologo_required
 def pacientes_lista(request):
     psicologo = request.user.psicologo
     q = request.GET.get('q', '').strip()
@@ -349,7 +373,7 @@ def pacientes_lista(request):
     })
 
 
-@login_required
+@psicologo_required
 def paciente_nuevo(request):
     psicologo = request.user.psicologo
     if request.method == 'POST':
@@ -367,7 +391,7 @@ def paciente_nuevo(request):
     })
 
 
-@login_required
+@psicologo_required
 def paciente_detalle(request, pk):
     psicologo = request.user.psicologo
     paciente = get_object_or_404(Paciente, pk=pk, psicologo=psicologo)
@@ -389,7 +413,7 @@ def paciente_detalle(request, pk):
     })
 
 
-@login_required
+@psicologo_required
 def paciente_eliminar(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])

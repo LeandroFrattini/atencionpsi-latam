@@ -131,6 +131,21 @@ class VerificacionEmailTests(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
 
+class CuentaSinPsicologoTests(TestCase):
+    """Bug visto en producción 2026-10-01: un superusuario creado con
+    createsuperuser (para entrar a /admin/, nunca pasó por el registro
+    público) no tiene Psicologo asociado -- entrar a /portal/ con esa
+    cuenta logueada tiraba 500 en vez de explicar qué pasó."""
+
+    def test_superusuario_sin_psicologo_no_rompe_el_portal(self):
+        admin = User.objects.create_superuser('admin@example.com', 'admin@example.com', 'ClaveSegura123')
+        self.client.force_login(admin)
+        resp = self.client.get(reverse('portal_dashboard'))
+        self.assertRedirects(resp, reverse('portal_login'))
+        # Como no tiene perfil, se desloguea -- una segunda visita ya no cuenta como logueado.
+        self.assertFalse(self.client.session.get('_auth_user_id'))
+
+
 class SimularPagoTests(TestCase):
     def setUp(self):
         # Aísla del país que la migración 0006 siembra para producción.
