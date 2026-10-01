@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 
 from django.conf import settings
@@ -27,6 +28,8 @@ from .forms import (
     RegistroForm,
     TipoSesionFormSet,
 )
+
+logger = logging.getLogger(__name__)
 
 _LOGIN_BACKEND = 'directorio.auth_backends.EmailCaseInsensitiveBackend'
 
@@ -80,7 +83,19 @@ def registro(request, pais_slug):
                 matricula='',
                 terminos_aceptados_en=timezone.now(),
             )
-            _enviar_verificacion(request, usuario)
+            try:
+                _enviar_verificacion(request, usuario)
+            except Exception:
+                # El envío depende del SMTP de Brevo -- si falla, la cuenta ya
+                # existe (sin eso no hay forma de que llegue a confirmarla
+                # nunca), pero no tiene que tirar un 500 en pleno registro.
+                logger.exception('No se pudo enviar el mail de verificación a %s', usuario.email)
+                messages.error(
+                    request,
+                    f'Tu cuenta se creó, pero hubo un problema mandando el mail de confirmación. '
+                    f'Escribinos a {settings.CONTACTO_EMAIL} para activarla.'
+                )
+                return redirect('portal_login')
             return render(request, 'portal/verificar_enviado.html', {'email': usuario.email})
     else:
         form = RegistroForm()
@@ -125,8 +140,12 @@ def reenviar_verificacion(request):
     email = request.POST.get('email', '').strip().lower()
     usuario = User.objects.filter(username__iexact=email, is_active=False).select_related('psicologo').first()
     if usuario is not None:
-        _enviar_verificacion(request, usuario)
-    # Mismo mensaje exista o no la cuenta -- no delatar qué emails están registrados.
+        try:
+            _enviar_verificacion(request, usuario)
+        except Exception:
+            logger.exception('No se pudo reenviar el mail de verificación a %s', usuario.email)
+    # Mismo mensaje exista o no la cuenta (y exista o no haya fallado el
+    # envío) -- no delatar qué emails están registrados.
     messages.success(request, 'Si ese email tiene una cuenta pendiente de confirmar, te reenviamos el link.')
     return redirect('portal_verificar_enviado')
 

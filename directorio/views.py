@@ -1,3 +1,4 @@
+import logging
 import random
 
 from django.conf import settings
@@ -8,6 +9,8 @@ from django.shortcuts import redirect, render
 
 from .forms import ContactoForm
 from .models import Orientacion, Pais, Psicologo, Publico
+
+logger = logging.getLogger(__name__)
 
 
 def robots_txt(request):
@@ -66,20 +69,32 @@ def contacto(request):
             # esté verificado), así que el email de quien escribe va como
             # reply_to para poder responderle directo desde el cliente de
             # mail de la dueña sin tener que copiar y pegar la dirección.
-            EmailMessage(
-                subject=f"Contacto desde atencionpsi.lat -- {form.cleaned_data['nombre']}",
-                body=(
-                    f"Nombre: {form.cleaned_data['nombre']}\n"
-                    f"Email: {form.cleaned_data['email']}\n\n"
-                    f"{form.cleaned_data['mensaje']}"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[settings.CONTACTO_EMAIL],
-                reply_to=[form.cleaned_data['email']],
-            ).send()
-            messages.success(request, 'Mensaje enviado, te vamos a responder a la brevedad.')
-            enviado = True
-            form = ContactoForm()
+            try:
+                EmailMessage(
+                    subject=f"Contacto desde atencionpsi.lat -- {form.cleaned_data['nombre']}",
+                    body=(
+                        f"Nombre: {form.cleaned_data['nombre']}\n"
+                        f"Email: {form.cleaned_data['email']}\n\n"
+                        f"{form.cleaned_data['mensaje']}"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[settings.CONTACTO_EMAIL],
+                    reply_to=[form.cleaned_data['email']],
+                ).send()
+            except Exception:
+                # El envío depende del SMTP de Brevo -- si falla (credenciales
+                # mal cargadas, Brevo caído, etc.) no tiene que tirar un 500,
+                # sino avisar que no se pudo mandar y dejar un canal alternativo.
+                logger.exception('No se pudo enviar el mail de contacto')
+                messages.error(
+                    request,
+                    f'Hubo un problema enviando tu mensaje. Probá de nuevo en unos minutos, '
+                    f'o escribinos directo a {settings.CONTACTO_EMAIL}.'
+                )
+            else:
+                messages.success(request, 'Mensaje enviado, te vamos a responder a la brevedad.')
+                enviado = True
+                form = ContactoForm()
     else:
         form = ContactoForm()
 

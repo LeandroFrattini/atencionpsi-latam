@@ -1,4 +1,5 @@
 import datetime
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -312,6 +313,17 @@ class ContactoTests(TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_si_falla_el_envio_no_tira_500(self):
+        # Reproduce lo que pasó en producción 2026-10-01: Brevo sin
+        # credenciales válidas hacía que el envío tirara una excepción y
+        # el formulario de contacto (y el registro) devolvían un 500.
+        with mock.patch('directorio.views.EmailMessage.send', side_effect=Exception('SMTP caído')):
+            resp = self.client.post(reverse('contacto'), {
+                'nombre': 'Ana', 'email': 'ana@example.com', 'mensaje': 'Hola.',
+            })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Hubo un problema enviando tu mensaje')
 
 
 class PrivacidadTests(TestCase):

@@ -1,6 +1,7 @@
 import datetime
 import io
 import re
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -66,6 +67,15 @@ class RegistroTests(TestCase):
         resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(sitio_web='http://spam.example'))
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+
+    def test_si_falla_el_envio_de_verificacion_no_tira_500(self):
+        # Reproduce lo que pasó en producción 2026-10-01: Brevo sin
+        # credenciales válidas hacía que /portal/<pais>/registro/ tirara 500
+        # en vez de avisar que la cuenta se creó pero no se pudo confirmar.
+        with mock.patch('portal.views.send_mail', side_effect=Exception('SMTP caído')):
+            resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
+        self.assertRedirects(resp, reverse('portal_login'))
+        self.assertTrue(User.objects.filter(username='nueva@example.com').exists())
 
 
 class VerificacionEmailTests(TestCase):

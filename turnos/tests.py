@@ -163,3 +163,13 @@ class WizardReservaTests(TestCase):
         self._reservar('09:50', 'JUAN@example.com')  # mismo mail, otra capitalización
         self.assertEqual(Paciente.objects.filter(psicologo=self.psicologo).count(), 1)
         self.assertEqual(Paciente.objects.get(psicologo=self.psicologo).turnos.count(), 2)
+
+    def test_si_falla_el_aviso_por_mail_el_turno_queda_confirmado_igual(self):
+        # Reproduce el mismo tipo de falla que rompía el registro y el
+        # contacto: si Brevo falla, el turno ya está guardado y la persona
+        # tiene que ver la confirmación, no un 500.
+        from unittest import mock
+        with mock.patch('turnos.views.send_mail', side_effect=Exception('SMTP caído')):
+            resp = self._reservar('09:00', 'juan@example.com')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Turno.objects.filter(email='juan@example.com').exists())

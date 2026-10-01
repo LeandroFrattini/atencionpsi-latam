@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from django.contrib import messages
 from django.core.mail import send_mail
@@ -12,6 +13,8 @@ from directorio.models import Pais, Psicologo
 from .disponibilidad import fecha_larga, fechas_horizonte, slot_disponible, slots_para_fecha
 from .forms import ReservaDatosForm
 from .models import Paciente, TipoSesion, Turno
+
+logger = logging.getLogger(__name__)
 
 PASOS = [
     ('tipo', 'Tipo'), ('modalidad', 'Modalidad'), ('horario', 'Horario'),
@@ -258,7 +261,14 @@ def paso_confirmar(request, pais_slug, pk):
             )
 
         del request.session[_session_key(psicologo)]
-        _avisar_por_mail(turno)
+        try:
+            _avisar_por_mail(turno)
+        except Exception:
+            # El turno ya está creado y confirmado -- si falla el aviso por
+            # mail (Brevo caído, credenciales mal cargadas), igual se
+            # muestra la confirmación: lo contrario sería un 500 después de
+            # una reserva que en realidad sí se guardó.
+            logger.exception('No se pudo avisar por mail el turno %s', turno.pk)
         return render(request, 'turnos/confirmado.html', {'pais': pais, 'p': psicologo, 'turno': turno})
 
     return render(request, 'turnos/paso_confirmar.html', {
