@@ -2,11 +2,16 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
+from django.core.mail import send_mail
 from django.db.models import Count, Max
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from directorio.models import Orientacion, Pais, Psicologo, Publico
 from turnos.models import Paciente, Turno
@@ -21,6 +26,29 @@ from .forms import (
     TipoSesionFormSet,
 )
 
+_LOGIN_BACKEND = 'directorio.auth_backends.EmailCaseInsensitiveBackend'
+
+
+def _enviar_verificacion(request, usuario):
+    """Manda el link de confirmación de email. El token es el mismo
+    mecanismo que usa Django para "olvidé mi contraseña" (PasswordResetTokenGenerator):
+    queda atado al hash de la contraseña y a last_login, así que se invalida
+    solo apenas se usa una vez (login() actualiza last_login)."""
+    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+    token = default_token_generator.make_token(usuario)
+    url = request.build_absolute_uri(reverse('portal_verificar_email', args=[uid, token]))
+    send_mail(
+        subject='Confirmá tu email -- Atención Psi',
+        message=(
+            f'Hola {usuario.psicologo.nombre},\n\n'
+            f'Para activar tu cuenta y poder publicar tu perfil en Atención Psi, confirmá tu email entrando a este link:\n\n'
+            f'{url}\n\n'
+            f'Si no creaste esta cuenta, ignorá este mensaje.\n'
+        ),
+        from_email=None,
+        recipient_list=[usuario.email],
+    )
+
 
 def registro(request, pais_slug):
     pais = get_object_or_404(Pais, slug=pais_slug, activo=True)
@@ -31,10 +59,16 @@ def registro(request, pais_slug):
     if request.method == 'POST':
         form = RegistroForm(request.POST)
         if form.is_valid():
+            # is_active=False hasta que confirme el mail -- si no, cualquiera
+            # se registra con un email ajeno o inventado y nunca se entera.
+            # Lo bloquea solo: tanto AuthenticationForm (login de /portal/)
+            # como los dos backends de auth chequean is_active antes de
+            # dejar entrar.
             usuario = User.objects.create_user(
                 username=form.cleaned_data['email'],
                 email=form.cleaned_data['email'],
                 password=form.cleaned_data['password'],
+                is_active=False,
             )
             Psicologo.objects.create(
                 usuario=usuario,
@@ -44,16 +78,55 @@ def registro(request, pais_slug):
                 matricula='',
                 terminos_aceptados_en=timezone.now(),
             )
-            # Se crea el usuario directo (sin pasar por authenticate()), así
-            # que hay que decirle a login() qué backend usar explícitamente
-            # -- si no, falla porque hay dos backends configurados (axes +
-            # el de email case-insensitive).
-            login(request, usuario, backend='directorio.auth_backends.EmailCaseInsensitiveBackend')
-            return redirect('portal_checkout')
+            _enviar_verificacion(request, usuario)
+            return render(request, 'portal/verificar_enviado.html', {'email': usuario.email})
     else:
         form = RegistroForm()
 
     return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
+
+
+def verificar_enviado(request):
+    """Accesible directo (no solo recién registrado) para quien vuelve a
+    buscar el formulario de reenvío sin tener que recordar su mail en la URL."""
+    return render(request, 'portal/verificar_enviado.html', {'email': None})
+
+
+def verificar_email(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        usuario = User.objects.select_related('psicologo').get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        usuario = None
+
+    if usuario is None:
+        return render(request, 'portal/verificar_invalido.html')
+
+    if usuario.is_active:
+        # Ya se había confirmado (ej: tocó el link dos veces) -- no es un error.
+        messages.info(request, 'Tu email ya estaba confirmado. Iniciá sesión para continuar.')
+        return redirect('portal_login')
+
+    if not default_token_generator.check_token(usuario, token):
+        return render(request, 'portal/verificar_invalido.html')
+
+    usuario.is_active = True
+    usuario.save(update_fields=['is_active'])
+    login(request, usuario, backend=_LOGIN_BACKEND)
+    messages.success(request, '¡Listo, tu email quedó confirmado!')
+    return redirect('portal_checkout')
+
+
+def reenviar_verificacion(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    email = request.POST.get('email', '').strip().lower()
+    usuario = User.objects.filter(username__iexact=email, is_active=False).select_related('psicologo').first()
+    if usuario is not None:
+        _enviar_verificacion(request, usuario)
+    # Mismo mensaje exista o no la cuenta -- no delatar qué emails están registrados.
+    messages.success(request, 'Si ese email tiene una cuenta pendiente de confirmar, te reenviamos el link.')
+    return redirect('portal_verificar_enviado')
 
 
 def _dlocal_go_conectado():

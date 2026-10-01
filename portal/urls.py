@@ -2,11 +2,17 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
+from .forms import LoginForm
 
 urlpatterns = [
     path('<slug:pais_slug>/registro/', views.registro, name='portal_registro'),
-    path('login/', auth_views.LoginView.as_view(template_name='portal/login.html'), name='portal_login'),
+    path('login/', auth_views.LoginView.as_view(template_name='portal/login.html', authentication_form=LoginForm), name='portal_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='portal_logout'),
+
+    # Confirmación de email
+    path('verificar/enviado/', views.verificar_enviado, name='portal_verificar_enviado'),
+    path('verificar/reenviar/', views.reenviar_verificacion, name='portal_reenviar_verificacion'),
+    path('verificar/<uidb64>/<token>/', views.verificar_email, name='portal_verificar_email'),
     path('checkout/', views.checkout, name='portal_checkout'),
     path('checkout/simular-pago/', views.simular_pago, name='portal_simular_pago'),
     path('', views.dashboard, name='portal_dashboard'),

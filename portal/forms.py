@@ -1,6 +1,7 @@
 import io
 
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.forms import inlineformset_factory
@@ -11,6 +12,20 @@ from PIL import Image, ImageOps
 from directorio.forms import HoneypotMixin
 from directorio.models import Formacion, Psicologo
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
+
+
+class LoginForm(AuthenticationForm):
+    # El mensaje default de Django para cuenta inactiva es genérico y en
+    # inglés -- acá "inactiva" siempre significa "todavía no confirmó el
+    # email" (ver portal/views.py::registro), así que el mensaje lo dice
+    # directo en vez de un "cuenta inactiva" que no explica qué hacer.
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        'inactive': (
+            'Todavía no confirmaste tu email. Revisá tu correo (y la carpeta de spam) '
+            'o pedí que te reenviemos el link desde la página de registro.'
+        ),
+    }
 
 
 class RegistroForm(HoneypotMixin, forms.Form):

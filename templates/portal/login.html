@@ -3,7 +3,7 @@
 {% block content %}
 <div class="portal-card">
     <h1>Ingresar a tu cuenta</h1>
-    {% if form.errors %}<p class="portal-error">Usuario o contraseña incorrectos.</p>{% endif %}
+    {% if form.non_field_errors %}<p class="portal-error">{{ form.non_field_errors.0 }}</p>{% endif %}
     <form method="post" class="portal-form">
         {% csrf_token %}
         <div class="portal-field">
@@ -16,5 +16,6 @@
         </div>
         <button type="submit" class="btn-primario">Ingresar</button>
     </form>
+    <a href="{% url 'portal_verificar_enviado' %}" class="portal-lead-sm">¿No confirmaste tu email todavía?</a>
 </div>
 {% endblock %}

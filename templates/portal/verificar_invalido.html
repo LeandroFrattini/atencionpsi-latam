@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Link no válido | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Este link ya no es válido</h1>
+    <p class="portal-lead">Puede que ya hayas confirmado tu cuenta antes, o que el link haya caducado. Pedí uno nuevo acá:</p>
+    <form method="post" action="{% url 'portal_reenviar_verificacion' %}" class="portal-form">
+        {% csrf_token %}
+        <div class="portal-field">
+            <label for="id_email_reenvio">Tu email</label>
+            <input type="email" name="email" id="id_email_reenvio" required>
+        </div>
+        <button type="submit" class="btn-primario">Reenviar link de confirmación</button>
+    </form>
+    <a href="{% url 'portal_login' %}" class="portal-lead-sm">&larr; Ya confirmé, quiero iniciar sesión</a>
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 import datetime
 import io
+import re
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -27,14 +28,26 @@ class RegistroTests(TestCase):
         datos.update(extra)
         return datos
 
-    def test_registro_crea_cuenta_y_manda_a_checkout(self):
+    def test_registro_crea_cuenta_inactiva_y_manda_a_confirmar_email(self):
         resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
-        self.assertRedirects(resp, reverse('portal_checkout'))
-        self.assertTrue(User.objects.filter(username='nueva@example.com').exists())
-        psicologo = Psicologo.objects.get(usuario__username='nueva@example.com')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'nueva@example.com')
+        usuario = User.objects.get(username='nueva@example.com')
+        self.assertFalse(usuario.is_active)
+        psicologo = Psicologo.objects.get(usuario=usuario)
         self.assertEqual(psicologo.pais, self.pais)
         self.assertFalse(psicologo.suscripcion_activa)
         self.assertIsNotNone(psicologo.terminos_aceptados_en)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('nueva@example.com', mail.outbox[0].to)
+        self.assertIn('/portal/verificar/', mail.outbox[0].body)
+
+    def test_cuenta_sin_confirmar_no_puede_iniciar_sesion(self):
+        self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
+        resp = self.client.post(reverse('portal_login'), {'username': 'nueva@example.com', 'password': 'ClaveSegura123'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'no confirmaste tu email')
+        self.assertFalse(self.client.session.get('_auth_user_id'))
 
     def test_no_deja_registrar_email_repetido(self):
         User.objects.create_user('repetido@example.com', password='ClaveSegura123')
@@ -53,6 +66,69 @@ class RegistroTests(TestCase):
         resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(sitio_web='http://spam.example'))
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+
+
+class VerificacionEmailTests(TestCase):
+    def setUp(self):
+        Pais.objects.all().delete()
+        self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
+        self.client.post(reverse('portal_registro', args=['peru']), {
+            'nombre': 'Nueva Psicóloga', 'email': 'nueva@example.com',
+            'whatsapp': '51988888888', 'password': 'ClaveSegura123', 'acepto_terminos': 'on',
+        })
+        self.usuario = User.objects.get(username='nueva@example.com')
+
+    def _link_del_mail(self):
+        match = re.search(r'/portal/verificar/\S+/\S+/', mail.outbox[-1].body)
+        return match.group(0)
+
+    def test_link_valido_activa_la_cuenta_y_loguea(self):
+        resp = self.client.get(self._link_del_mail())
+        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.is_active)
+        self.assertTrue(self.client.session.get('_auth_user_id'))
+
+    def test_tocar_el_link_dos_veces_la_segunda_manda_a_login(self):
+        link = self._link_del_mail()
+        self.client.get(link)
+        self.client.logout()
+        resp = self.client.get(link, follow=True)
+        self.assertRedirects(resp, reverse('portal_login'))
+
+    def test_token_invalido_muestra_pagina_para_reenviar(self):
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        uid = urlsafe_base64_encode(force_bytes(self.usuario.pk))
+        resp = self.client.get(reverse('portal_verificar_email', args=[uid, 'token-invalido']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'no es válido')
+        self.usuario.refresh_from_db()
+        self.assertFalse(self.usuario.is_active)
+
+    def test_uid_inexistente_muestra_pagina_para_reenviar(self):
+        resp = self.client.get(reverse('portal_verificar_email', args=['aaaa', 'token-invalido']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'no es válido')
+
+    def test_reenviar_a_cuenta_pendiente_manda_mail_nuevo(self):
+        mail.outbox.clear()
+        resp = self.client.post(reverse('portal_reenviar_verificacion'), {'email': 'nueva@example.com'})
+        self.assertRedirects(resp, reverse('portal_verificar_enviado'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('nueva@example.com', mail.outbox[0].to)
+
+    def test_reenviar_a_email_inexistente_no_manda_nada_pero_no_lo_delata(self):
+        resp = self.client.post(reverse('portal_reenviar_verificacion'), {'email': 'no-existe@example.com'})
+        self.assertRedirects(resp, reverse('portal_verificar_enviado'))
+        self.assertEqual(len(mail.outbox), 1)  # solo el del registro en setUp
+
+    def test_reenviar_a_cuenta_ya_confirmada_no_manda_nada(self):
+        self.client.get(self._link_del_mail())
+        self.client.logout()
+        mail.outbox.clear()
+        self.client.post(reverse('portal_reenviar_verificacion'), {'email': 'nueva@example.com'})
+        self.assertEqual(len(mail.outbox), 0)
 
 
 class SimularPagoTests(TestCase):

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Confirmá tu email | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Revisá tu correo</h1>
+    {% if email %}
+        <p class="portal-lead">Te mandamos un link de confirmación a <strong>{{ email }}</strong>. Entrá ahí para activar tu cuenta y poder publicar tu perfil.</p>
+    {% else %}
+        <p class="portal-lead">Cuando te registrás te mandamos un link de confirmación por mail. Entrá ahí para activar tu cuenta.</p>
+    {% endif %}
+    <p class="portal-lead-sm">Puede tardar unos minutos en llegar, o revisá la carpeta de spam.</p>
+
+    <h2 class="portal-subtitulo">¿Seguís sin recibirlo?</h2>
+    <form method="post" action="{% url 'portal_reenviar_verificacion' %}" class="portal-form">
+        {% csrf_token %}
+        <div class="portal-field">
+            <label for="id_email_reenvio">Tu email</label>
+            <input type="email" name="email" id="id_email_reenvio" required>
+        </div>
+        <button type="submit" class="btn-secundario">Reenviar link de confirmación</button>
+    </form>
+</div>
+{% endblock %}
