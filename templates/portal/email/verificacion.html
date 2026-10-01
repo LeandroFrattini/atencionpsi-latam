@@ -1,0 +1,60 @@
+{% comment %}
+Mail de confirmación de cuenta. HTML pensado para clientes de correo --
+estilos inline, sin flexbox/grid, fuentes websafe -- no se puede reusar
+directo el CSS del sitio porque los clientes de mail no lo soportan igual
+que un navegador. Misma paleta que static/css/base.css.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmá tu cuenta</title>
+</head>
+<body style="margin:0; padding:0; background-color:#fdfbf9; font-family:Arial, Helvetica, sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdfbf9; padding:32px 16px;">
+<tr>
+<td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:14px; overflow:hidden;">
+<tr>
+<td style="padding:36px 32px 8px; text-align:center;">
+<span style="font-family:Georgia,'Times New Roman',serif; font-size:26px; font-weight:bold;">
+<span style="color:#4a7c59;">Atención</span><span style="color:#e9a8a6;">Psi</span>
+</span>
+</td>
+</tr>
+<tr>
+<td style="padding:16px 32px 0;">
+<h1 style="font-family:Georgia,'Times New Roman',serif; font-size:21px; color:#222222; margin:0 0 18px; text-align:center;">Confirmá tu cuenta</h1>
+<p style="font-size:15px; line-height:1.6; color:#333333; margin:0 0 18px;">Hola {{ nombre }},</p>
+<p style="font-size:15px; line-height:1.6; color:#333333; margin:0 0 28px;">
+Gracias por sumarte a Atención Psi. Para activar tu cuenta y poder publicar tu perfil, confirmá tu email tocando este botón:
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding:0 32px 30px; text-align:center;">
+<a href="{{ url }}" style="display:inline-block; background-color:#4a7c59; color:#ffffff; text-decoration:none; font-weight:bold; font-size:15px; padding:14px 36px; border-radius:8px; font-family:Arial, Helvetica, sans-serif;">Confirmar mi email</a>
+</td>
+</tr>
+<tr>
+<td style="padding:0 32px 28px;">
+<p style="font-size:13px; line-height:1.5; color:#888888; margin:0 0 6px;">¿El botón no funciona? Copiá y pegá este link en tu navegador:</p>
+<p style="font-size:13px; line-height:1.5; margin:0; word-break:break-all;"><a href="{{ url }}" style="color:#4a7c59;">{{ url }}</a></p>
+</td>
+</tr>
+<tr>
+<td style="padding:20px 32px; border-top:1px solid #eeeeee; background-color:#fdfbf9;">
+<p style="font-size:12px; line-height:1.5; color:#888888; margin:0;">
+Si no creaste esta cuenta, ignorá este mensaje. Ante cualquier duda, escribinos a
+<a href="mailto:{{ contacto_email }}" style="color:#4a7c59;">{{ contacto_email }}</a>.
+</p>
+</td>
+</tr>
+</table>
+<p style="font-size:11px; color:#aaaaaa; margin:18px 0 0;">Atención Psi &middot; atencionpsi.lat</p>
+</td>
+</tr>
+</table>
+</body>
+</html>

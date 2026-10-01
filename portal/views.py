@@ -7,10 +7,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db.models import Count, Max
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
@@ -42,17 +43,16 @@ def _enviar_verificacion(request, usuario):
     uid = urlsafe_base64_encode(force_bytes(usuario.pk))
     token = default_token_generator.make_token(usuario)
     url = request.build_absolute_uri(reverse('portal_verificar_email', args=[uid, token]))
-    send_mail(
+    contexto = {'nombre': usuario.psicologo.nombre, 'url': url, 'contacto_email': settings.CONTACTO_EMAIL}
+
+    email = EmailMultiAlternatives(
         subject='Confirmá tu email -- Atención Psi',
-        message=(
-            f'Hola {usuario.psicologo.nombre},\n\n'
-            f'Para activar tu cuenta y poder publicar tu perfil en Atención Psi, confirmá tu email entrando a este link:\n\n'
-            f'{url}\n\n'
-            f'Si no creaste esta cuenta, ignorá este mensaje.\n'
-        ),
+        body=render_to_string('portal/email/verificacion.txt', contexto),
         from_email=None,
-        recipient_list=[usuario.email],
+        to=[usuario.email],
     )
+    email.attach_alternative(render_to_string('portal/email/verificacion.html', contexto), 'text/html')
+    email.send()
 
 
 def registro(request, pais_slug):

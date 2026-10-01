@@ -40,8 +40,15 @@ class RegistroTests(TestCase):
         self.assertFalse(psicologo.suscripcion_activa)
         self.assertIsNotNone(psicologo.terminos_aceptados_en)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('nueva@example.com', mail.outbox[0].to)
-        self.assertIn('/portal/verificar/', mail.outbox[0].body)
+        enviado = mail.outbox[0]
+        self.assertIn('nueva@example.com', enviado.to)
+        self.assertIn('/portal/verificar/', enviado.body)
+        # Viene con alternativa HTML (mismo link que la versión en texto plano).
+        self.assertEqual(len(enviado.alternatives), 1)
+        html, mimetype = enviado.alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertIn('/portal/verificar/', html)
+        self.assertIn('Nueva Psicóloga', html)
 
     def test_cuenta_sin_confirmar_no_puede_iniciar_sesion(self):
         self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
@@ -72,7 +79,7 @@ class RegistroTests(TestCase):
         # Reproduce lo que pasó en producción 2026-10-01: Brevo sin
         # credenciales válidas hacía que /portal/<pais>/registro/ tirara 500
         # en vez de avisar que la cuenta se creó pero no se pudo confirmar.
-        with mock.patch('portal.views.send_mail', side_effect=Exception('SMTP caído')):
+        with mock.patch('portal.views.EmailMultiAlternatives.send', side_effect=Exception('SMTP caído')):
             resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
         self.assertRedirects(resp, reverse('portal_login'))
         self.assertTrue(User.objects.filter(username='nueva@example.com').exists())
