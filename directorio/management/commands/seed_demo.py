@@ -37,21 +37,27 @@ DEMO_PASSWORD = 'DemoPsi12345'
 # comentarios en directorio.models.Pais.
 PAISES = [
     dict(nombre='Perú', slug='peru', codigo_iso='PE', moneda='PEN', simbolo_moneda='S/',
+         codigo_telefono='51',
          etiqueta_matricula='N° de Colegiatura (CPsP)', muestra_precio_sesion=True,
          activo=True, orden=1, bandera_emoji='\U0001F1F5\U0001F1EA'),
     dict(nombre='Uruguay', slug='uruguay', codigo_iso='UY', moneda='UYU', simbolo_moneda='$U',
+         codigo_telefono='598',
          etiqueta_matricula='N° de Matrícula (Colegio de Psicólogos del Uruguay)',
          muestra_precio_sesion=False, activo=True, orden=2, bandera_emoji='\U0001F1FA\U0001F1FE'),
     dict(nombre='Chile', slug='chile', codigo_iso='CL', moneda='CLP', simbolo_moneda='$',
+         codigo_telefono='56',
          etiqueta_matricula='N° de Registro (RNPI)', muestra_precio_sesion=False,
          activo=True, orden=3, bandera_emoji='\U0001F1E8\U0001F1F1'),
     dict(nombre='México', slug='mexico', codigo_iso='MX', moneda='MXN', simbolo_moneda='$',
+         codigo_telefono='52',
          etiqueta_matricula='N° de Cédula Profesional (SEP)', muestra_precio_sesion=False,
          activo=False, orden=4, bandera_emoji='\U0001F1F2\U0001F1FD'),
     dict(nombre='Colombia', slug='colombia', codigo_iso='CO', moneda='COP', simbolo_moneda='$',
+         codigo_telefono='57',
          etiqueta_matricula='N° de Tarjeta Profesional (COLPSIC)', muestra_precio_sesion=False,
          activo=False, orden=5, bandera_emoji='\U0001F1E8\U0001F1F4'),
     dict(nombre='Argentina', slug='argentina', codigo_iso='AR', moneda='ARS', simbolo_moneda='$',
+         codigo_telefono='54',
          etiqueta_matricula='N° de Matrícula', muestra_precio_sesion=False,
          # Desactivada (2026-10-01): por ahora solo se muestran los países
          # con expansión activa de verdad (Perú, Uruguay, Chile).

@@ -14,6 +14,10 @@ class Pais(models.Model):
     )
     moneda = models.CharField('Moneda', max_length=3, help_text='Código ISO de moneda, ej: PEN, UYU')
     simbolo_moneda = models.CharField('Símbolo de moneda', max_length=6, blank=True, help_text='Ej: S/, $U, $')
+    # Código de discado de WhatsApp (sin "+") -- lo necesita el generador de
+    # imágenes de Instagram para armar el teléfono con formato ("+51 9 ...")
+    # a partir del WhatsApp que cada profesional ya carga sin el prefijo.
+    codigo_telefono = models.CharField('Código telefónico de país', max_length=4, blank=True, help_text='Sin "+", ej: 51, 598, 56')
     activo = models.BooleanField(default=False, help_text='Recién se activa cuando el país está listo para mostrarse al público')
     orden = models.PositiveIntegerField(default=0)
 
@@ -213,6 +217,13 @@ class Psicologo(models.Model):
 
     def __str__(self):
         return f'{self.nombre} ({self.pais.codigo_iso})'
+
+    def whatsapp_limpio(self):
+        """Solo dígitos, sin espacios/guiones/paréntesis -- lo necesitan
+        tanto el link de wa.me del perfil público como el generador de
+        imágenes de Instagram (directorio/generador_imagenes.py)."""
+        import re
+        return re.sub(r'\D', '', self.whatsapp or '')
 
     def save(self, *args, **kwargs):
         # Si la marcan exenta a mano (fundadora) sin pasar por dLocal, igual

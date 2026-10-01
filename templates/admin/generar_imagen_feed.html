@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Generar posts de feed de Instagram – Admin{% endblock %}
+
+{% block content %}
+<h1>Generar posts de feed de Instagram</h1>
+
+<p>
+  Se va a generar el post de feed (1080 × 1350) de
+  <strong>{{ queryset.count }} profesional{% if queryset.count != 1 %}es{% endif %}</strong>,
+  con nombre, orientación, localidad y a quién atiende:
+</p>
+<ul>
+  {% for p in queryset %}
+    <li>{{ p.nombre }}</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+
+  {# Preservar los psicólogos seleccionados #}
+  {% for p in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ p.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="generar_imagen_feed_action">
+
+  <div style="margin-top:20px;">
+    <input
+      type="submit"
+      name="apply"
+      value="⬇ Generar y descargar ZIP"
+      class="default"
+      style="padding:10px 20px; font-size:14px;"
+    >
+    &nbsp;
+    <a href="../" style="margin-left:12px;">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

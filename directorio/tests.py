@@ -378,3 +378,106 @@ class TerminosYFooterTests(TestCase):
     def test_con_instagram_configurado_muestra_el_link_real(self):
         resp = self.client.get(reverse('hub'))
         self.assertContains(resp, 'https://instagram.com/atencionpsi')
+
+
+class GeneradorImagenesTests(TestCase):
+    """Generador de historias/posts de Instagram para el admin -- portado de
+    atencionpsi.com.ar (ver directorio/generador_imagenes.py)."""
+
+    def setUp(self):
+        Pais.objects.all().delete()
+        self.pais = Pais.objects.create(
+            nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪',
+            moneda='PEN', codigo_telefono='51', activo=True,
+        )
+        self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
+        self.orientacion = Orientacion.objects.create(nombre='TCC')
+        self.psicologo = Psicologo.objects.create(
+            usuario=self.usuario, pais=self.pais, nombre='Ana Test', matricula='1',
+            whatsapp='51987654321', ciudad='Lima', modalidad='ambas',
+        )
+        self.psicologo.orientaciones.add(self.orientacion)
+
+    def test_genera_historia_del_tamano_correcto(self):
+        from directorio.generador_imagenes import generar_imagen_story
+        img = generar_imagen_story(self.psicologo)
+        self.assertEqual(img.size, (1080, 1920))
+
+    def test_genera_feed_del_tamano_correcto(self):
+        from directorio.generador_imagenes import generar_imagen_feed
+        img = generar_imagen_feed(self.psicologo)
+        self.assertEqual(img.size, (1080, 1350))
+
+    def test_sin_foto_whatsapp_ni_publicos_no_rompe(self):
+        from directorio.generador_imagenes import generar_imagen_feed, generar_imagen_story
+        pelado = Psicologo.objects.create(
+            usuario=User.objects.create_user('pelado@example.com', password='ClaveSegura123'),
+            pais=self.pais, nombre='Sin Datos', matricula='2', whatsapp='',
+        )
+        self.assertEqual(generar_imagen_story(pelado).size, (1080, 1920))
+        self.assertEqual(generar_imagen_feed(pelado).size, (1080, 1350))
+
+    def test_telefono_manual_pisa_el_whatsapp_guardado(self):
+        from directorio.generador_imagenes import _formatear_telefono
+        # El propio psicólogo (whatsapp 51987654321) vs un número a mano --
+        # la vista le pasa el manual a generar_imagen_story cuando se completa
+        # el campo del admin, acá se valida el formateo en sí.
+        self.assertEqual(_formatear_telefono('987654321', '51'), '+51 9 98765-4321')
+        # Mismo número, pero ya con el código de país y el 9 cargados de
+        # entrada (como lo necesita el link de wa.me) -- no se tienen que
+        # duplicar en el texto final.
+        self.assertEqual(_formatear_telefono('51987654321', '51'), '+51 9 98765-4321')
+
+    @override_settings(INSTAGRAM_URL='')
+    def test_sin_instagram_configurado_no_lo_dibuja(self):
+        from directorio.generador_imagenes import _instagram_handle
+        self.assertEqual(_instagram_handle(), '')
+
+    @override_settings(INSTAGRAM_URL='https://instagram.com/atencionpsi')
+    def test_con_instagram_configurado_arma_el_handle(self):
+        from directorio.generador_imagenes import _instagram_handle
+        self.assertEqual(_instagram_handle(), '@atencionpsi')
+
+
+class GeneradorImagenesAdminActionTests(TestCase):
+    def setUp(self):
+        Pais.objects.all().delete()
+        self.pais = Pais.objects.create(
+            nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪',
+            moneda='PEN', codigo_telefono='51', activo=True,
+        )
+        self.psicologo = Psicologo.objects.create(
+            usuario=User.objects.create_user('psico@example.com', password='ClaveSegura123'),
+            pais=self.pais, nombre='Ana Test', matricula='1', whatsapp='51987654321',
+        )
+        self.admin = User.objects.create_superuser('admin@example.com', 'admin@example.com', 'ClaveSegura123')
+        self.client.force_login(self.admin)
+        self.changelist_url = reverse('admin:directorio_psicologo_changelist')
+
+    def test_generar_historia_muestra_pantalla_intermedia(self):
+        resp = self.client.post(self.changelist_url, {
+            'action': 'generar_imagenes_action',
+            '_selected_action': [self.psicologo.pk],
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Generar historias de Instagram')
+        self.assertContains(resp, 'Ana Test')
+
+    def test_generar_historia_con_apply_descarga_zip(self):
+        resp = self.client.post(self.changelist_url, {
+            'action': 'generar_imagenes_action',
+            '_selected_action': [self.psicologo.pk],
+            'apply': '1',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/zip')
+        self.assertIn('attachment', resp['Content-Disposition'])
+
+    def test_generar_feed_con_apply_descarga_zip(self):
+        resp = self.client.post(self.changelist_url, {
+            'action': 'generar_imagen_feed_action',
+            '_selected_action': [self.psicologo.pk],
+            'apply': '1',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/zip')

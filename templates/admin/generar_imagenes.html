@@ -1,0 +1,59 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Generar historias de Instagram – Admin{% endblock %}
+
+{% block content %}
+<h1>Generar historias de Instagram</h1>
+
+<p>
+  Se va a generar la historia (1080 × 1920) de
+  <strong>{{ queryset.count }} profesional{% if queryset.count != 1 %}es{% endif %}</strong>:
+</p>
+<ul>
+  {% for p in queryset %}
+    <li>{{ p.nombre }}</li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+
+  {# Preservar los psicólogos seleccionados #}
+  {% for p in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ p.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="generar_imagenes_action">
+
+  <div style="margin-top:20px; max-width:420px;">
+    <label for="id_telefono_manual" style="display:block; font-weight:bold; margin-bottom:4px;">
+      Número para la imagen (opcional)
+    </label>
+    <input
+      type="text"
+      id="id_telefono_manual"
+      name="telefono_manual"
+      placeholder="Ej: 51987654321"
+      style="width:100%; padding:8px; font-size:14px; box-sizing:border-box;"
+    >
+    <p class="help" style="margin-top:4px;">
+      Se formatea solo (no hace falta ponerle espacios ni guiones). Si lo dejás vacío,
+      se usa el número de WhatsApp que ya tiene cargado cada profesional.
+      {% if queryset.count > 1 %}Como seleccionaste más de un profesional, este número
+      se va a usar en todas las imágenes.{% endif %}
+    </p>
+  </div>
+
+  <div style="margin-top:20px;">
+    <input
+      type="submit"
+      name="apply"
+      value="⬇ Generar y descargar ZIP"
+      class="default"
+      style="padding:10px 20px; font-size:14px;"
+    >
+    &nbsp;
+    <a href="../" style="margin-left:12px;">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
