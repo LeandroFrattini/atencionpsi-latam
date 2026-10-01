@@ -145,6 +145,18 @@ class CuentaSinPsicologoTests(TestCase):
         # Como no tiene perfil, se desloguea -- una segunda visita ya no cuenta como logueado.
         self.assertFalse(self.client.session.get('_auth_user_id'))
 
+    def test_visitar_registro_logueado_sin_psicologo_no_rompe(self):
+        # registro() redirige directo a portal_dashboard si ya hay sesión
+        # iniciada -- con una cuenta sin Psicologo, esa cadena completa
+        # (registro -> dashboard -> psicologo_required) tiene que resolver
+        # en un 302 limpio, nunca un 500.
+        Pais.objects.all().delete()
+        Pais.objects.create(nombre='Chile', slug='chile', codigo_iso='CL', bandera_emoji='🇨🇱', moneda='CLP', activo=True)
+        admin = User.objects.create_superuser('admin2@example.com', 'admin2@example.com', 'ClaveSegura123')
+        self.client.force_login(admin)
+        resp = self.client.get(reverse('portal_registro', args=['chile']), follow=True)
+        self.assertRedirects(resp, reverse('portal_login'))
+
 
 class SimularPagoTests(TestCase):
     def setUp(self):
