@@ -85,6 +85,17 @@ def crear_plan(*, nombre, descripcion, pais_iso, moneda, monto, success_url, err
     })
 
 
+def listar_planes():
+    return _paginar('/subscription/plan/all')
+
+
+def actualizar_plan(plan_id, **campos):
+    """PATCH /subscription/plan/:id. Se pueden cambiar name, description,
+    amount, notification_url, back_url, success_url y error_url (no moneda,
+    país ni frecuencia)."""
+    return _request('PATCH', f'/subscription/plan/{plan_id}', json=campos)
+
+
 def listar_suscripciones(plan_id):
     return _paginar(f'/subscription/plan/{plan_id}/subscription/all')
 

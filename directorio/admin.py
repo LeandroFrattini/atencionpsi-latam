@@ -2,11 +2,15 @@ import zipfile
 from io import BytesIO
 
 from django.contrib import admin, messages
+from django.shortcuts import redirect
+from django.urls import path
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
-from . import dlocal_go
+from . import dlocal_go, planes_dlocal
 from .models import Ciudad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
@@ -64,9 +68,32 @@ class PlanDLocalAdmin(admin.ModelAdmin):
     acá se ven (con su link de pago) pero no se editan."""
     list_display = ('pais', 'plan', 'moneda', 'monto', 'dlocal_plan_id', 'activo')
     readonly_fields = [f.name for f in PlanDLocal._meta.fields]
+    # Agrega el botón "Importar planes desde dLocal Go" arriba de la lista.
+    change_list_template = 'admin/directorio/plandlocal/change_list.html'
 
     def has_add_permission(self, request):
         return False
+
+    def get_urls(self):
+        return [
+            path('importar/', self.admin_site.admin_view(self.importar_view), name='directorio_plandlocal_importar'),
+        ] + super().get_urls()
+
+    @method_decorator(require_POST)
+    def importar_view(self, request):
+        """Registra los planes que ya existen en dLocal Go (creados desde su
+        panel). Solo LEE de dLocal; lo único que escribe es esta tabla."""
+        try:
+            informe = planes_dlocal.importar_planes(aplicar=True)
+        except dlocal_go.DLocalError as e:
+            self.message_user(request, f'No se pudo hablar con dLocal Go: {e}', level=messages.ERROR)
+            return redirect('admin:directorio_plandlocal_changelist')
+        if not informe:
+            self.message_user(request, 'dLocal Go no tiene ningún plan creado todavía.', level=messages.WARNING)
+        for resultado, texto in informe:
+            nivel = messages.SUCCESS if resultado in ('registrado', 'actualizado', 'igual') else messages.WARNING
+            self.message_user(request, texto, level=nivel)
+        return redirect('admin:directorio_plandlocal_changelist')
 
 
 class FormacionInline(admin.TabularInline):

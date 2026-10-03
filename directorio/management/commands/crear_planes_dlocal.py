@@ -1,14 +1,8 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.urls import reverse
 
-from directorio import dlocal_go
+from directorio import dlocal_go, planes_dlocal
 from directorio.models import Pais, PlanDLocal, Psicologo
-
-DESCRIPCIONES = {
-    'basico': 'Perfil publicado y optimizado para Google en el buscador de Atención Psi {pais}.',
-    'premium': 'Perfil publicado, agenda de turnos online y difusión paga de Atención Psi en {pais}.',
-}
 
 
 class Command(BaseCommand):
@@ -17,7 +11,8 @@ class Command(BaseCommand):
         'activo, en moneda local, y guarda sus links de pago. Es seguro correrlo de nuevo: '
         'solo crea los que faltan. Dry-run por defecto: usar --apply para crearlos de verdad '
         '(OJO: crea planes REALES en la cuenta a la que apuntan las claves cargadas; con claves '
-        'de producción son planes de producción).'
+        'de producción son planes de producción). Si los planes ya se crearon desde el panel de '
+        'dLocal Go, usar importar_planes_dlocal en vez de este.'
     )
 
     def add_arguments(self, parser):
@@ -28,12 +23,11 @@ class Command(BaseCommand):
         if aplicar and not dlocal_go.conectado():
             raise CommandError('Faltan DLOCAL_GO_API_KEY / DLOCAL_GO_SECRET_KEY.')
 
-        site = settings.SITE_URL.rstrip('/')
-        self.stdout.write(f'API: {settings.DLOCAL_GO_API_BASE}   Sitio: {site}')
+        self.stdout.write(f'API: {settings.DLOCAL_GO_API_BASE}   Sitio: {settings.SITE_URL}')
         creados = 0
         for pais in Pais.objects.filter(activo=True, es_externo=False).order_by('orden'):
             for plan, etiqueta in Psicologo.PLAN_CHOICES:
-                monto = pais.precio_basico if plan == 'basico' else pais.precio_premium
+                monto = planes_dlocal.monto_plan(pais, plan)
                 prefijo = f'{pais.nombre} - Plan {etiqueta}: {pais.moneda} {monto}/mes'
                 if not monto:
                     self.stdout.write(f'  OMITIDO (sin precio cargado) {prefijo}')
@@ -45,15 +39,12 @@ class Command(BaseCommand):
                     self.stdout.write(f'  CREARÍA {prefijo}')
                     continue
                 respuesta = dlocal_go.crear_plan(
-                    nombre=f'Atención Psi {pais.nombre} - {etiqueta}',
-                    descripcion=DESCRIPCIONES[plan].format(pais=pais.nombre),
+                    nombre=planes_dlocal.nombre_plan(pais, plan),
+                    descripcion=planes_dlocal.descripcion_plan(pais, plan),
                     pais_iso=pais.codigo_iso,
                     moneda=pais.moneda,
                     monto=monto,
-                    success_url=site + reverse('portal_checkout_retorno'),
-                    error_url=site + reverse('portal_checkout') + '?error=1',
-                    back_url=site + reverse('portal_checkout'),
-                    notification_url=site + reverse('portal_dlocal_webhook'),
+                    **planes_dlocal.urls_del_plan(),
                 )
                 PlanDLocal.objects.create(
                     pais=pais, plan=plan, dlocal_plan_id=respuesta['id'], plan_token=respuesta['plan_token'],
