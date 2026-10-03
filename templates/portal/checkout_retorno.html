@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Confirmando tu pago | Atención Psi{% endblock %}
+{% block extra_head %}
+{% if seguir_esperando %}<meta http-equiv="refresh" content="6;url={% url 'portal_checkout_retorno' %}?n={{ siguiente }}">{% endif %}
+{% endblock %}
+{% block content %}
+<div class="portal-card">
+    {% if seguir_esperando %}
+        <h1>Estamos confirmando tu pago</h1>
+        <p class="portal-lead">Esto tarda unos segundos. No cierres esta página: se actualiza sola apenas dLocal Go nos confirme.</p>
+    {% else %}
+        <h1>Tu pago todavía no figura confirmado</h1>
+        <p class="portal-lead">Si ya pagaste, puede tardar unos minutos más en reflejarse: no hace falta que pagues de nuevo. Cuando se confirme, tu cuenta se activa sola.</p>
+        <p class="portal-lead-sm">Si pasa un rato y sigue igual, escribinos desde <a href="{% url 'contacto' %}">Contacto</a>.</p>
+        <a href="{% url 'portal_dashboard' %}" class="btn-primario">Ir a mi cuenta</a>
+    {% endif %}
+</div>
+{% endblock %}

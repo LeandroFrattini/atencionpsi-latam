@@ -6,6 +6,10 @@
     <h1>Un último paso: elegí tu plan</h1>
     <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa.</p>
 
+    {% if error_de_pago %}
+        <p class="portal-error">No pudimos procesar el pago. Podés intentarlo de nuevo con otra tarjeta, o escribirnos desde <a href="{% url 'contacto' %}">Contacto</a> y te ayudamos.</p>
+    {% endif %}
+
     {% if integracion_pendiente %}
         <div class="portal-dev-box">
             <p>
@@ -14,26 +18,33 @@
                 conocer la plataforma -- no se te va a cobrar nada por esto.
             </p>
         </div>
-        <form method="post" action="{% url 'portal_simular_pago' %}" class="portal-form">
-            {% csrf_token %}
-            <div class="placas-precio">
-                <label class="placa-precio placa-precio-radio">
-                    <input type="radio" name="plan" value="basico" checked>
-                    <span class="placa-precio-nombre">Plan Básico</span>
-                    <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_basico|miles }} <span>/ mes</span></span>
-                    <span class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando "psicólogo en {{ psicologo.pais.ciudad_ejemplo }}".</span>
-                </label>
-                <label class="placa-precio placa-precio-premium placa-precio-radio">
-                    <input type="radio" name="plan" value="premium">
-                    <span class="placa-precio-nombre">Plan Premium</span>
-                    <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_premium|miles }} <span>/ mes</span></span>
-                    <span class="placa-precio-incluye">Todo lo del Básico + agenda de turnos online + perfil destacado en la difusión paga de Atención Psi en {{ psicologo.pais.nombre }}.</span>
-                </label>
-            </div>
-            <button type="submit" class="btn-primario">Confirmar suscripción (modo de prueba)</button>
-        </form>
-    {% else %}
-        <p class="portal-lead-sm">Estamos preparando tu pago...</p>
     {% endif %}
+
+    <form method="post" action="{% if integracion_pendiente %}{% url 'portal_simular_pago' %}{% else %}{% url 'portal_checkout' %}{% endif %}" class="portal-form">
+        {% csrf_token %}
+        <div class="placas-precio">
+            <label class="placa-precio placa-precio-radio">
+                <input type="radio" name="plan" value="basico" checked{% if not integracion_pendiente and 'basico' not in planes_disponibles %} disabled{% endif %}>
+                <span class="placa-precio-nombre">Plan Básico</span>
+                <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_basico|miles }} <span>/ mes</span></span>
+                <span class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando "psicólogo en {{ psicologo.pais.ciudad_ejemplo }}".</span>
+            </label>
+            <label class="placa-precio placa-precio-premium placa-precio-radio">
+                <input type="radio" name="plan" value="premium"{% if not integracion_pendiente and 'premium' not in planes_disponibles %} disabled{% endif %}>
+                <span class="placa-precio-nombre">Plan Premium</span>
+                <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_premium|miles }} <span>/ mes</span></span>
+                <span class="placa-precio-incluye">Todo lo del Básico + agenda de turnos online + perfil destacado en la difusión paga de Atención Psi en {{ psicologo.pais.nombre }}.</span>
+            </label>
+        </div>
+
+        {% if integracion_pendiente %}
+            <button type="submit" class="btn-primario">Confirmar suscripción (modo de prueba)</button>
+        {% elif planes_disponibles %}
+            <p class="portal-lead-sm">Te llevamos a la página segura de dLocal Go para cargar los datos de tu tarjeta. La suscripción se renueva sola cada mes y la podés dar de baja cuando quieras escribiéndonos.</p>
+            <button type="submit" class="btn-primario">Ir a pagar</button>
+        {% else %}
+            <p class="portal-error">El cobro todavía no está disponible en {{ psicologo.pais.nombre }}. Escribinos desde <a href="{% url 'contacto' %}">Contacto</a> y te avisamos apenas esté listo.</p>
+        {% endif %}
+    </form>
 </div>
 {% endblock %}

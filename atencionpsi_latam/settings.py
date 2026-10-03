@@ -200,6 +200,19 @@ FACEBOOK_URL = ''
 # entregar las credenciales reales.
 DLOCAL_GO_API_KEY = os.environ.get('DLOCAL_GO_API_KEY', '')
 DLOCAL_GO_SECRET_KEY = os.environ.get('DLOCAL_GO_SECRET_KEY', '')
+# Las claves de prueba (sandbox) y las de producción son distintas y cada
+# entorno tiene su propio host de API. Por defecto producción; para probar
+# con claves de sandbox se pisa con la variable de entorno
+# DLOCAL_GO_API_BASE=https://api-sbx.dlocalgo.com/v1
+DLOCAL_GO_API_BASE = os.environ.get('DLOCAL_GO_API_BASE', 'https://api.dlocalgo.com/v1')
+# Dominio público: dLocal Go lo usa para volver al sitio después de pagar y
+# para avisar cada cobro (notification_url).
+SITE_URL = os.environ.get('SITE_URL', 'https://atencionpsi.lat')
+# Días que se espera, después de un cobro rechazado, antes de despublicar al
+# profesional. dLocal Go NO documenta cuántos reintentos hace por su cuenta
+# (hay que confirmarlo con su soporte) -- hasta saberlo, un rechazo suelto
+# no tiene que apagar el perfil de alguien que paga bien.
+DLOCAL_GO_DIAS_DE_GRACIA = 3
 
 # Google Analytics 4 -- vacío hasta que exista una propiedad creada. El
 # banner de cookies (ver footer en templates/base.html) y el script de GA4

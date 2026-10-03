@@ -6,7 +6,8 @@ from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
-from .models import Ciudad, Formacion, Orientacion, Pais, Psicologo, Publico
+from . import dlocal_go
+from .models import Ciudad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
 @admin.register(Pais)
@@ -57,6 +58,17 @@ class CiudadAdmin(ModeracionAdminMixin, admin.ModelAdmin):
     search_fields = ('nombre',)
 
 
+@admin.register(PlanDLocal)
+class PlanDLocalAdmin(admin.ModelAdmin):
+    """Los planes se crean con `manage.py crear_planes_dlocal --apply`, no a mano:
+    acá se ven (con su link de pago) pero no se editan."""
+    list_display = ('pais', 'plan', 'moneda', 'monto', 'dlocal_plan_id', 'activo')
+    readonly_fields = [f.name for f in PlanDLocal._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
 class FormacionInline(admin.TabularInline):
     model = Formacion
     extra = 1
@@ -72,10 +84,10 @@ class PsicologoAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'publicos')}),
-        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'exento_de_pago', 'destacado', 'terminos_aceptados_en')}),
+        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'destacado', 'terminos_aceptados_en')}),
     )
-    readonly_fields = ('terminos_aceptados_en',)
-    actions = ['generar_imagenes_action', 'generar_imagen_feed_action']
+    readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
+    actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action']
 
     @admin.display(boolean=True)
     def publicado(self, obj):
@@ -143,3 +155,39 @@ class PsicologoAdmin(admin.ModelAdmin):
         return TemplateResponse(request, 'admin/generar_imagen_feed.html', context)
 
     generar_imagen_feed_action.short_description = 'Generar post de feed de Instagram'
+
+    def dar_de_baja_dlocal_action(self, request, queryset):
+        """Cancela en dLocal Go la suscripción mensual (deja de cobrarse) y
+        despublica al profesional. Los Términos dicen que la baja se pide por
+        mail/WhatsApp, así que esto es lo que hace la dueña cuando se lo piden.
+        Pide confirmación porque cancela un cobro real y no se puede deshacer
+        desde acá (el profesional tendría que volver a suscribirse)."""
+        if 'apply' in request.POST:
+            for p in queryset:
+                plan = PlanDLocal.objects.filter(pais=p.pais, plan=p.plan).first()
+                if not (plan and p.dlocal_subscription_id.isdigit()):
+                    self.message_user(
+                        request, f'{p.nombre}: no tiene una suscripción real en dLocal Go (¿es de prueba o fundadora?).',
+                        level=messages.WARNING,
+                    )
+                    continue
+                try:
+                    dlocal_go.desactivar_suscripcion(plan.dlocal_plan_id, int(p.dlocal_subscription_id))
+                except dlocal_go.DLocalError as e:
+                    self.message_user(request, f'{p.nombre}: no se pudo dar de baja en dLocal Go ({e}).', level=messages.ERROR)
+                    continue
+                p.suscripcion_activa = False
+                p.save(update_fields=['suscripcion_activa'])
+                self.message_user(request, f'{p.nombre}: suscripción dada de baja y perfil despublicado.', level=messages.SUCCESS)
+            return None
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Dar de baja suscripciones en dLocal Go',
+            'queryset': queryset,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'media': self.media,
+        }
+        return TemplateResponse(request, 'admin/confirmar_baja_dlocal.html', context)
+
+    dar_de_baja_dlocal_action.short_description = 'Dar de baja la suscripción en dLocal Go (deja de cobrarse)'

@@ -1,5 +1,7 @@
+import json
 import logging
 from functools import wraps
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import login, logout
@@ -9,15 +11,17 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Count, Max
-from django.http import Http404, HttpResponseNotAllowed
+from django.http import Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.views.decorators.csrf import csrf_exempt
 
-from directorio.models import Ciudad, Orientacion, Pais, Psicologo, Publico
+from directorio import dlocal_go, suscripciones
+from directorio.models import Ciudad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
@@ -152,7 +156,7 @@ def reenviar_verificacion(request):
 
 
 def _dlocal_go_conectado():
-    return bool(settings.DLOCAL_GO_API_KEY and settings.DLOCAL_GO_SECRET_KEY)
+    return dlocal_go.conectado()
 
 
 def psicologo_required(view_func):
@@ -182,19 +186,97 @@ def checkout(request):
     psicologo = request.user.psicologo
     if psicologo.suscripcion_activa or psicologo.exento_de_pago:
         return redirect('portal_dashboard')
-    # TODO: acá va la integración real con dLocal Go -- crear la suscripción
-    # vía su API y redirigir a request a la URL de pago que devuelva, con un
-    # return_url que apunte de vuelta a esta misma vista. Bloqueado hasta
-    # tener la API key/secret (DLOCAL_GO_API_KEY / DLOCAL_GO_SECRET_KEY).
-    # Mientras esas variables no estén las dos seteadas -- lo que también es
-    # el estado en producción hoy -- se muestra el checkout en modo de
-    # prueba (elegís plan, "pagás" simulado, se activa la suscripción). El
-    # día que se carguen las credenciales reales en Render, este bloque deja
-    # de mostrarse solo: hay que reemplazarlo por la integración real antes.
+
+    conectado = _dlocal_go_conectado()
+    planes = {p.plan: p for p in PlanDLocal.objects.filter(pais=psicologo.pais, activo=True)} if conectado else {}
+
+    if request.method == 'POST' and conectado:
+        plan = request.POST.get('plan', '')
+        plan_dlocal = planes.get(plan)
+        if not plan_dlocal:
+            messages.error(
+                request,
+                'Ese plan todavía no está disponible para cobrar en tu país. Escribinos desde Contacto y lo resolvemos.',
+            )
+            return redirect('portal_checkout')
+        psicologo.plan = plan
+        psicologo.save(update_fields=['plan'])
+        # El link de pago es de dLocal Go (ahí se cargan los datos de la
+        # tarjeta, nunca pasan por este sitio). Se le adelanta el mail y se
+        # le pone un identificador propio -- el estado real del pago se
+        # confirma después contra la API (ver directorio/suscripciones.py),
+        # no por lo que traiga la redirección de vuelta.
+        return redirect(plan_dlocal.subscribe_url + '?' + urlencode({
+            'email': psicologo.usuario.email,
+            'external_id': suscripciones.external_id_de(psicologo),
+        }))
+
     return render(request, 'portal/checkout.html', {
         'psicologo': psicologo,
-        'integracion_pendiente': not _dlocal_go_conectado(),
+        # En producción con claves cargadas ya no corre el modo de prueba.
+        'integracion_pendiente': not conectado,
+        'planes_disponibles': set(planes),
+        'error_de_pago': request.GET.get('error') == '1',
     })
+
+
+@psicologo_required
+def checkout_retorno(request):
+    """A donde vuelve el profesional después de pagar en dLocal Go
+    (success_url del plan). No alcanza con que haya llegado acá: se consulta
+    la API y recién ahí se activa. Si dLocal todavía está procesando, la
+    página se recarga sola unos segundos."""
+    psicologo = request.user.psicologo
+    if _dlocal_go_conectado():
+        try:
+            suscripciones.sincronizar_psicologo(psicologo)
+        except dlocal_go.DLocalError:
+            logger.exception('No se pudo confirmar el pago del profesional %s al volver de dLocal Go', psicologo.pk)
+    psicologo.refresh_from_db()
+    if psicologo.suscripcion_activa:
+        messages.success(request, '¡Listo! Tu suscripción está activa. Ya podés completar tu perfil y publicarlo.')
+        return redirect('portal_dashboard')
+    try:
+        intento = int(request.GET.get('n', 0))
+    except ValueError:
+        intento = 0
+    return render(request, 'portal/checkout_retorno.html', {
+        'intento': intento, 'siguiente': intento + 1, 'seguir_esperando': intento < 10,
+    })
+
+
+@csrf_exempt
+def dlocal_webhook(request):
+    """Notificación de dLocal Go (solo trae {"payment_id": ...}, firmada).
+    No se confía en el contenido: se verifica la firma, se pide el pago a la
+    API y con el mail de quien pagó se sincroniza a ese profesional. Si algo
+    falla por culpa de dLocal/red se responde 502 a propósito: dLocal
+    reintenta cada 10 minutos (hasta 30 días) las respuestas que no son 200."""
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if not dlocal_go.firma_valida(request.body, request.headers.get('Authorization', '')):
+        return HttpResponse(status=403)
+    try:
+        payment_id = json.loads(request.body).get('payment_id')
+    except (ValueError, AttributeError):
+        return HttpResponse(status=400)
+    if not payment_id:
+        return HttpResponse(status=400)
+    try:
+        pago = dlocal_go.obtener_pago(payment_id)
+        email = ((pago.get('payer') or {}).get('email') or '').strip()
+        psicologo = (
+            Psicologo.objects.filter(usuario__email__iexact=email, exento_de_pago=False)
+            .select_related('usuario', 'pais').first() if email else None
+        )
+        if psicologo:
+            suscripciones.sincronizar_psicologo(psicologo)
+        else:
+            logger.warning('Notificación de dLocal Go del pago %s sin profesional asociado (mail %r)', payment_id, email)
+    except dlocal_go.DLocalError:
+        logger.exception('Falló el procesamiento de la notificación de dLocal Go (pago %s)', payment_id)
+        return HttpResponse(status=502)
+    return HttpResponse(status=200)
 
 
 @psicologo_required

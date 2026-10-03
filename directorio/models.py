@@ -218,6 +218,10 @@ class Psicologo(models.Model):
     # que alguien lo despublique a mano.
     suscripcion_activa = models.BooleanField(default=False)
     dlocal_subscription_id = models.CharField(max_length=100, blank=True)
+    # Desde cuándo viene rechazado el cobro mensual (None si está al día).
+    # Ver directorio/suscripciones.py: no se despublica de entrada, hay días
+    # de gracia (settings.DLOCAL_GO_DIAS_DE_GRACIA).
+    pago_declinado_desde = models.DateTimeField(null=True, blank=True)
     publicado_por_usuario = models.BooleanField('Publicado por el profesional', default=False)
 
     PLAN_CHOICES = [
@@ -360,3 +364,27 @@ class Formacion(models.Model):
 
     def __str__(self):
         return self.descripcion[:60]
+
+
+class PlanDLocal(models.Model):
+    """Un plan de suscripción creado en dLocal Go: uno por país y por nivel
+    (Básico/Premium), en la moneda local de ese país. Se crean una sola vez
+    con `manage.py crear_planes_dlocal --apply` y de acá sale el link de pago
+    (subscribe_url) al que se manda al profesional desde el checkout."""
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, related_name='planes_dlocal')
+    plan = models.CharField(max_length=10, choices=Psicologo.PLAN_CHOICES)
+    dlocal_plan_id = models.PositiveIntegerField('ID del plan en dLocal Go')
+    plan_token = models.CharField(max_length=100)
+    subscribe_url = models.URLField(max_length=300)
+    monto = models.PositiveIntegerField(help_text='Monto mensual con el que se creó, en moneda local')
+    moneda = models.CharField(max_length=3)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Plan en dLocal Go'
+        verbose_name_plural = 'Planes en dLocal Go'
+        constraints = [models.UniqueConstraint(fields=['pais', 'plan'], name='plan_dlocal_unico_por_pais')]
+
+    def __str__(self):
+        return f'{self.get_plan_display()} {self.pais.codigo_iso} ({self.moneda} {self.monto})'
