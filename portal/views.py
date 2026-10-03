@@ -17,7 +17,8 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
-from directorio.models import Orientacion, Pais, Psicologo, Publico
+from directorio.models import Ciudad, Orientacion, Pais, Psicologo, Publico
+from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
 from .forms import (
@@ -233,21 +234,39 @@ def editar_perfil(request):
             psicologo = form.save()
             formset.save()
 
-            nombre_nuevo = form.cleaned_data.get('publico_nuevo', '').strip()
-            if nombre_nuevo:
-                publico, _creado = Publico.objects.get_or_create(
-                    nombre__iexact=nombre_nuevo,
-                    defaults={'nombre': nombre_nuevo},
-                )
-                psicologo.publicos.add(publico)
+            # Lo escrito a mano no entra directo a la lista de todos: queda
+            # pendiente y lo ve solo este profesional hasta que se apruebe
+            # desde el admin (ver directorio/taxonomia.py).
+            pendientes = []
 
-            orientacion_nueva = form.cleaned_data.get('orientacion_nueva', '').strip()
-            if orientacion_nueva:
-                orientacion, _creada = Orientacion.objects.get_or_create(
-                    nombre__iexact=orientacion_nueva,
-                    defaults={'nombre': orientacion_nueva},
-                )
+            texto = form.cleaned_data.get('publico_nuevo', '')
+            publico, pendiente = buscar_o_proponer(Publico, texto, psicologo)
+            if publico:
+                psicologo.publicos.add(publico)
+                if pendiente:
+                    pendientes.append(f'el público "{publico.nombre}"')
+
+            texto = form.cleaned_data.get('orientacion_nueva', '')
+            orientacion, pendiente = buscar_o_proponer(Orientacion, texto, psicologo)
+            if orientacion:
                 psicologo.orientaciones.add(orientacion)
+                if pendiente:
+                    pendientes.append(f'la orientación "{orientacion.nombre}"')
+
+            texto = form.cleaned_data.get('ciudad_nueva', '')
+            ciudad, pendiente = buscar_o_proponer(Ciudad, texto, psicologo, pais=psicologo.pais)
+            if ciudad:
+                psicologo.ciudad = ciudad.nombre
+                psicologo.save(update_fields=['ciudad'])
+                if pendiente:
+                    pendientes.append(f'la ciudad "{ciudad.nombre}"')
+
+            if pendientes:
+                messages.info(
+                    request,
+                    'Recibimos tu propuesta: ' + ', '.join(pendientes) + '. La revisamos y, si corresponde, '
+                    'la sumamos a la lista; mientras tanto la ves solo vos y no se muestra en tu perfil público.',
+                )
 
             messages.success(request, 'Perfil actualizado.')
             return redirect('portal_dashboard')

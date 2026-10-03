@@ -10,7 +10,9 @@ from django.utils.html import format_html
 from PIL import Image, ImageOps
 
 from directorio.forms import HoneypotMixin
-from directorio.models import Formacion, Psicologo
+from django.db.models import Q
+
+from directorio.models import Ciudad, Formacion, Orientacion, Psicologo, Publico
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
@@ -55,24 +57,32 @@ class RegistroForm(HoneypotMixin, forms.Form):
         return email
 
 
+class _ChecksConPendientes(forms.ModelMultipleChoiceField):
+    """Casillas de orientaciones/públicos: lo que el profesional propuso a
+    mano y todavía no aprobó la dueña se ve marcado, solo en SU formulario."""
+
+    def label_from_instance(self, obj):
+        return obj.nombre if obj.aprobado else f'{obj.nombre} (pendiente de aprobación)'
+
+
 class PerfilForm(forms.ModelForm):
-    # No es un campo del modelo -- si el profesional escribe algo acá, la
-    # vista crea (o reusa si ya existe) un Publico nuevo y se lo agrega.
-    # Así la lista de "¿Para quién?" crece sola con lo que va apareciendo en
-    # cada país, en vez de que la dueña tenga que darlas de alta a mano en
-    # el admin antes de que alguien las pueda usar.
-    publico_nuevo = forms.CharField(
-        label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
-        help_text='Ej: "Adultos mayores", "Deportistas" -- se agrega a las opciones para todos'
+    # Campos que no son del modelo -- si el profesional escribe algo acá, la
+    # vista (portal/views.py::editar_perfil) crea una propuesta PENDIENTE (o
+    # reusa la que ya exista con ese nombre): la ve solo él hasta que la
+    # dueña la apruebe desde el admin, y recién ahí pasa a la lista de todos.
+    # `field_order` los deja pegados a la lista a la que corresponden (si no,
+    # Django los manda al final del formulario).
+    ciudad_nueva = forms.CharField(
+        label='¿Tu ciudad no está en la lista? Escribila acá', max_length=100, required=False,
+        help_text='La revisamos y la sumamos a la lista. Mientras tanto no se muestra en tu perfil público.'
     )
-    # Mismo patrón que publico_nuevo, para Orientación -- estaba asimétrico
-    # que "¿Para quién?" pudiera crecer sola y "Orientación" no. El form
-    # renderiza los campos declarados acá (no del modelo) al final, después
-    # de las dos listas de checkboxes -- por eso los labels tienen que
-    # aclarar a cuál lista corresponde cada uno, no alcanza con la posición.
     orientacion_nueva = forms.CharField(
         label='¿Tu orientación no está en la lista? Escribila acá', max_length=60, required=False,
-        help_text='Ej: "Gestalt", "EMDR" -- se agrega a las opciones para todos'
+        help_text='Ej: "Gestalt", "EMDR". La revisamos y, si corresponde, la sumamos para todos; mientras tanto la ves solo vos.'
+    )
+    publico_nuevo = forms.CharField(
+        label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
+        help_text='Ej: "Adultos mayores", "Deportistas". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
     )
 
     class Meta:
@@ -82,12 +92,22 @@ class PerfilForm(forms.ModelForm):
             'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
             'orientaciones', 'publicos',
         ]
+        field_classes = {
+            'orientaciones': _ChecksConPendientes,
+            'publicos': _ChecksConPendientes,
+        }
         widgets = {
             'orientaciones': forms.CheckboxSelectMultiple,
             'publicos': forms.CheckboxSelectMultiple,
             'bio': forms.Textarea(attrs={'rows': 4}),
             'docencia': forms.Textarea(attrs={'rows': 3}),
         }
+
+    field_order = [
+        'nombre', 'matricula', 'whatsapp', 'ciudad', 'ciudad_nueva', 'modalidad',
+        'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
+        'orientaciones', 'orientacion_nueva', 'publicos', 'publico_nuevo',
+    ]
 
     def __init__(self, *args, pais=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -100,6 +120,34 @@ class PerfilForm(forms.ModelForm):
         # en vez de una traducción global porque es la única del sitio.
         self.fields['sesiones_atendidas'].choices = (
             [('', 'Preferís no decir por ahora')] + Psicologo.SESIONES_CHOICES
+        )
+
+        psicologo = self.instance if self.instance.pk else None
+
+        # Orientaciones y públicos: las aprobadas, más las que propuso este
+        # profesional, más las que ya tiene tildadas (por si otra persona
+        # propuso lo mismo antes y se le reusó esa).
+        for campo, Modelo in (('orientaciones', Orientacion), ('publicos', Publico)):
+            visibles = Q(aprobado=True)
+            if psicologo:
+                visibles |= Q(propuesto_por=psicologo) | Q(psicologos=psicologo)
+            self.fields[campo].queryset = Modelo.objects.filter(visibles).distinct()
+
+        # Ciudad: desplegable con las del país en vez de texto libre.
+        opciones = [('', 'Elegí tu ciudad')]
+        ciudad_actual = (self.instance.ciudad or '').strip() if psicologo else ''
+        if pais:
+            visibles = Q(aprobado=True)
+            if psicologo:
+                visibles |= Q(propuesto_por=psicologo)
+            for c in Ciudad.objects.filter(visibles, pais=pais):
+                opciones.append((c.nombre, c.nombre if c.aprobado else f'{c.nombre} (pendiente de aprobación)'))
+        if ciudad_actual and ciudad_actual not in [v for v, _ in opciones]:
+            opciones.append((ciudad_actual, ciudad_actual))
+        self.fields['ciudad'] = forms.ChoiceField(
+            label='Ciudad', choices=opciones, required=False,
+            initial=ciudad_actual,
+            help_text='Si atendés solo online y no querés mostrar una ciudad, dejalo en blanco.',
         )
 
     def clean_foto(self):

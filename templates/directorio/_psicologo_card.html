@@ -20,10 +20,10 @@ contexto. Extraída del buscador para reutilizarla también en los
             <div class="psicologo-nombre">{{ p.nombre }}</div>
         </a>
 
-        {% if p.ciudad %}
+        {% if p.ciudad_publica %}
             <div class="psicologo-linea">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                {{ p.ciudad }}
+                {{ p.ciudad_publica }}
             </div>
         {% endif %}
 
@@ -36,15 +36,15 @@ contexto. Extraída del buscador para reutilizarla también en los
             {% endif %}
         </div>
 
-        {% if p.orientaciones.all %}
+        {% if p.orientaciones_publicas %}
             <div class="psicologo-orientacion">
-                {% for o in p.orientaciones.all %}{{ o.nombre }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+                {% for o in p.orientaciones_publicas %}{{ o.nombre }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
             </div>
         {% endif %}
 
-        {% if p.publicos.all %}
+        {% if p.publicos_publicos %}
             <div class="psicologo-chips">
-                {% for pu in p.publicos.all %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}
+                {% for pu in p.publicos_publicos %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}
             </div>
         {% endif %}
 

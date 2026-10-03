@@ -96,6 +96,16 @@ class Pais(models.Model):
 class Orientacion(models.Model):
     nombre = models.CharField(max_length=60, unique=True)
     orden = models.PositiveIntegerField(default=0)
+    # Lo que un profesional escribe a mano ("¿no está en la lista?") nace
+    # pendiente: lo ve solo él hasta que la dueña lo apruebe desde el admin
+    # (2026-10-02). Lo cargado por ella o sembrado por migración es aprobado.
+    aprobado = models.BooleanField(
+        default=True, help_text='Si está en False, lo propuso un profesional y solo lo ve él hasta que lo apruebes'
+    )
+    propuesto_por = models.ForeignKey(
+        'Psicologo', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        verbose_name='Propuesto por',
+    )
 
     class Meta:
         verbose_name = 'Orientación'
@@ -109,6 +119,13 @@ class Orientacion(models.Model):
 class Publico(models.Model):
     nombre = models.CharField(max_length=60, unique=True)
     orden = models.PositiveIntegerField(default=0)
+    aprobado = models.BooleanField(
+        default=True, help_text='Si está en False, lo propuso un profesional y solo lo ve él hasta que lo apruebes'
+    )
+    propuesto_por = models.ForeignKey(
+        'Psicologo', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        verbose_name='Propuesto por',
+    )
 
     class Meta:
         verbose_name = 'Público'
@@ -117,6 +134,33 @@ class Publico(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Ciudad(models.Model):
+    """Ciudades que el profesional puede elegir en su perfil, por país. Antes
+    era texto libre (Psicologo.ciudad) -- escribir a mano daba "Lima",
+    "lima " y "LIMA" como tres ciudades distintas en el filtro del buscador.
+    Psicologo.ciudad sigue guardando el nombre como texto (no es una FK), esta
+    tabla es la lista de opciones y de cuáles están aprobadas para mostrarse."""
+    pais = models.ForeignKey(Pais, on_delete=models.CASCADE, related_name='ciudades')
+    nombre = models.CharField(max_length=100)
+    orden = models.PositiveIntegerField(default=0)
+    aprobado = models.BooleanField(
+        default=True, help_text='Si está en False, la propuso un profesional y solo la ve él hasta que la apruebes'
+    )
+    propuesto_por = models.ForeignKey(
+        'Psicologo', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        verbose_name='Propuesta por',
+    )
+
+    class Meta:
+        verbose_name = 'Ciudad'
+        verbose_name_plural = 'Ciudades'
+        ordering = ['pais', 'orden', 'nombre']
+        constraints = [models.UniqueConstraint(fields=['pais', 'nombre'], name='ciudad_unica_por_pais')]
+
+    def __str__(self):
+        return f'{self.nombre} ({self.pais.codigo_iso})'
 
 
 class Psicologo(models.Model):
@@ -267,6 +311,36 @@ class Psicologo(models.Model):
     def perfil_completo(self):
         campos_obligatorios = [self.nombre, self.matricula, self.whatsapp, self.foto, self.bio]
         return all(campos_obligatorios) and self.orientaciones.exists()
+
+    # ── Lo que ve el público ──────────────────────────────────────────────
+    # Orientaciones, públicos y ciudad que el profesional escribió a mano
+    # quedan pendientes hasta que la dueña los apruebe -- mientras tanto solo
+    # los ve él (en su portal). Todo lo público (tarjetas, perfil, filtros,
+    # imágenes de Instagram) tiene que pasar por estas propiedades en vez de
+    # leer las relaciones directo. Se filtran en Python, no con .filter(), a
+    # propósito: así reusan el prefetch_related que ya hacen las vistas.
+
+    @property
+    def orientaciones_publicas(self):
+        return [o for o in self.orientaciones.all() if o.aprobado]
+
+    @property
+    def publicos_publicos(self):
+        return [pu for pu in self.publicos.all() if pu.aprobado]
+
+    @property
+    def ciudad_publica(self):
+        """La ciudad solo se oculta si hay una Ciudad pendiente con ese nombre
+        en el país -- un valor que no está en la tabla (cargado antes de que
+        existiera, o a mano desde el admin) se muestra como siempre."""
+        if not self.ciudad:
+            return ''
+        if not hasattr(self, '_ciudad_publica_cache'):
+            pendiente = Ciudad.objects.filter(
+                pais_id=self.pais_id, nombre__iexact=self.ciudad, aprobado=False,
+            ).exists()
+            self._ciudad_publica_cache = '' if pendiente else self.ciudad
+        return self._ciudad_publica_cache
 
 
 class Formacion(models.Model):

@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
-{% block title %}{{ p.nombre }}, Psicólogo/a en {{ p.ciudad }}{% if p.ciudad %}, {% endif %}{{ pais.nombre }} | Atención Psi{% endblock %}
-{% block meta_description %}{{ p.nombre }}{% if p.ciudad %}, psicólogo/a en {{ p.ciudad }}{% endif %} ({{ pais.nombre }}) &middot; {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.orientaciones.all %} &middot; {% for o in p.orientaciones.all %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Agendá tu turno o escribí por WhatsApp.{% endblock %}
+{% block title %}{{ p.nombre }}, Psicólogo/a en {{ p.ciudad_publica }}{% if p.ciudad_publica %}, {% endif %}{{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}{{ p.nombre }}{% if p.ciudad_publica %}, psicólogo/a en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}) &middot; {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Agendá tu turno o escribí por WhatsApp.{% endblock %}
 {% block og_title %}{{ p.nombre }} | Psicólogo/a en {{ pais.nombre }}{% endblock %}
-{% block og_description %}{{ pais.etiqueta_matricula }} {{ p.matricula }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}{% endblock %}
+{% block og_description %}{{ pais.etiqueta_matricula }} {{ p.matricula }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}{% endblock %}
 {% if p.foto %}
 {% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}">{% endblock %}
 {% endif %}
@@ -43,8 +43,8 @@
                 "value": "{{ p.get_sesiones_atendidas_display|escapejs }} sesiones"
             },
             {% endif %}
-            {% if p.ciudad %}
-            "address": {"@type": "PostalAddress", "addressLocality": "{{ p.ciudad|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
+            {% if p.ciudad_publica %}
+            "address": {"@type": "PostalAddress", "addressLocality": "{{ p.ciudad_publica|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
             {% endif %}
             "worksFor": {"@type": "Organization", "name": "Atención Psi"}
         }
@@ -60,7 +60,7 @@
         {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% endif %}
         <div>
             <h1>{{ p.nombre }}</h1>
-            <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad %} &middot; {{ p.ciudad }}{% endif %}</p>
+            <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}</p>
             <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
             {% if p.sesiones_atendidas %}
                 <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>

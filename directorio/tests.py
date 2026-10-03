@@ -17,7 +17,7 @@ class PsicologoPublicacionTests(TestCase):
         # arme su propio fixture aislado, sin depender de ese dato sembrado.
         Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
-        self.orientacion = Orientacion.objects.create(nombre='Cognitivo Conductual (TCC)')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='Cognitivo Conductual (TCC)')
         self.usuario = User.objects.create_user('ana@example.com', password='ClaveSegura123')
 
     def _psicologo_completo(self, **overrides):
@@ -80,7 +80,7 @@ class BuscadorYDetalleTests(TestCase):
             nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN',
             activo=True, etiqueta_matricula='N° de Colegiatura (CPsP)',
         )
-        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='Sistémica')
         self.usuario_publicado = User.objects.create_user('pub@example.com', password='ClaveSegura123')
         self.usuario_sin_publicar = User.objects.create_user('nopub@example.com', password='ClaveSegura123')
 
@@ -189,7 +189,7 @@ class PaisHomeTests(TestCase):
         self.usuario1 = User.objects.create_user('destacada@example.com', password='ClaveSegura123')
         self.usuario2 = User.objects.create_user('comun@example.com', password='ClaveSegura123')
         self.usuario3 = User.objects.create_user('nopub@example.com', password='ClaveSegura123')
-        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='Sistémica')
 
         self.destacada = Psicologo.objects.create(
             usuario=self.usuario1, pais=self.pais, nombre='Destacada Test', matricula='1',
@@ -250,7 +250,7 @@ class SEOTecnicoTests(TestCase):
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
         self.usuario_publicado = User.objects.create_user('pub2@example.com', password='ClaveSegura123')
         self.usuario_sin_publicar = User.objects.create_user('nopub2@example.com', password='ClaveSegura123')
-        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='Sistémica')
 
         self.publicado = Psicologo.objects.create(
             usuario=self.usuario_publicado, pais=self.pais, nombre='Publicada SEO',
@@ -391,7 +391,7 @@ class GeneradorImagenesTests(TestCase):
             moneda='PEN', codigo_telefono='51', activo=True,
         )
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
-        self.orientacion = Orientacion.objects.create(nombre='TCC')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='TCC')
         self.psicologo = Psicologo.objects.create(
             usuario=self.usuario, pais=self.pais, nombre='Ana Test', matricula='1',
             whatsapp='51987654321', ciudad='Lima', modalidad='ambas',

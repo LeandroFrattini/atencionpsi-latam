@@ -1,12 +1,12 @@
 import zipfile
 from io import BytesIO
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
-from .models import Formacion, Orientacion, Pais, Psicologo, Publico
+from .models import Ciudad, Formacion, Orientacion, Pais, Psicologo, Publico
 
 
 @admin.register(Pais)
@@ -16,16 +16,45 @@ class PaisAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('nombre',)}
 
 
+class ModeracionAdminMixin:
+    """Orientaciones, públicos y ciudades que un profesional propuso a mano
+    nacen con aprobado=False y solo los ve él (ver directorio/taxonomia.py).
+    Acá se revisan: "Aprobar" los pasa a la lista de todos; si no querés
+    alguno, borralo (se le saca al profesional que lo había propuesto)."""
+    list_filter = ('aprobado',)
+    actions = ['aprobar_seleccionados']
+
+    @admin.display(description='Profesionales que lo usan')
+    def usos(self, obj):
+        return obj.psicologos.count() if hasattr(obj, 'psicologos') else Psicologo.objects.filter(
+            pais=obj.pais, ciudad__iexact=obj.nombre).count()
+
+    @admin.action(description='Aprobar seleccionados (pasan a estar disponibles para todos)')
+    def aprobar_seleccionados(self, request, queryset):
+        cantidad = queryset.filter(aprobado=False).update(aprobado=True)
+        self.message_user(request, f'{cantidad} aprobado(s).', level=messages.SUCCESS)
+
+
 @admin.register(Orientacion)
-class OrientacionAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'orden')
+class OrientacionAdmin(ModeracionAdminMixin, admin.ModelAdmin):
+    list_display = ('nombre', 'aprobado', 'propuesto_por', 'usos', 'orden')
     list_editable = ('orden',)
+    search_fields = ('nombre',)
 
 
 @admin.register(Publico)
-class PublicoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'orden')
+class PublicoAdmin(ModeracionAdminMixin, admin.ModelAdmin):
+    list_display = ('nombre', 'aprobado', 'propuesto_por', 'usos', 'orden')
     list_editable = ('orden',)
+    search_fields = ('nombre',)
+
+
+@admin.register(Ciudad)
+class CiudadAdmin(ModeracionAdminMixin, admin.ModelAdmin):
+    list_display = ('nombre', 'pais', 'aprobado', 'propuesto_por', 'usos', 'orden')
+    list_filter = ('aprobado', 'pais')
+    list_editable = ('orden',)
+    search_fields = ('nombre',)
 
 
 class FormacionInline(admin.TabularInline):

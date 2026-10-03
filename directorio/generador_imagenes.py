@@ -552,7 +552,7 @@ def _datos_atencion(psicologo):
         modalidades = [psicologo.get_modalidad_display()]
     else:
         modalidades = []
-    ciudades = [psicologo.ciudad] if psicologo.ciudad else []
+    ciudades = [psicologo.ciudad_publica] if psicologo.ciudad_publica else []
     return modalidades, ciudades
 
 
@@ -717,7 +717,7 @@ def generar_imagen_story(psicologo, telefono_manual=None):
     draw.text((icono_web_cx + icono_web_d // 2 + 18, icono_web_cy), web_texto, font=f_burbuja_web, fill=BLANCO, anchor='lm')
 
     # ── Franja etaria: tipografía libre, se achica sola si la lista es larga ──
-    destinatarios = ', '.join(psicologo.publicos.values_list('nombre', flat=True))
+    destinatarios = ', '.join(pu.nombre for pu in psicologo.publicos_publicos)
     if destinatarios:
         eyebrow = 'ATIENDE A'
         f_eyebrow = _font('montserrat', 700, 24)
@@ -791,7 +791,7 @@ def generar_imagen_feed(psicologo):
 
     # ── Orientación, en itálica (mismo efecto "escrito a mano" que la
     # franja de a quién atiende) para que se lea distinto del nombre. ──
-    orientacion = ', '.join(psicologo.orientaciones.values_list('nombre', flat=True))
+    orientacion = ', '.join(o.nombre for o in psicologo.orientaciones_publicas)
     if orientacion:
         f_orient = _font('playfair', 500, 33)
         lineas_orient = _wrap(draw, orientacion, f_orient, FEED_W - 220)[:3]
@@ -848,7 +848,7 @@ def generar_imagen_feed(psicologo):
     _icono_globo(draw, icono_web_cx, icono_web_cy, icono_web_d * 0.42, BLANCO)
     draw.text((icono_web_cx + icono_web_d // 2 + 16, icono_web_cy), web_texto, font=f_burbuja_web, fill=BLANCO, anchor='lm')
 
-    destinatarios = ', '.join(psicologo.publicos.values_list('nombre', flat=True))
+    destinatarios = ', '.join(pu.nombre for pu in psicologo.publicos_publicos)
     if destinatarios:
         eyebrow = 'ATIENDE A'
         f_eyebrow = _font('montserrat', 700, 23)

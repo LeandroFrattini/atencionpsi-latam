@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from directorio.models import Orientacion, Pais, Psicologo, Publico
+from directorio.models import Ciudad, Orientacion, Pais, Psicologo, Publico
 from turnos.models import DisponibilidadSemanal, Paciente, TipoSesion, Turno
 
 
@@ -204,7 +204,7 @@ class PublicarDespublicarTests(TestCase):
         # Aísla del país que la migración 0006 siembra para producción.
         Pais.objects.all().delete()
         self.pais = Pais.objects.create(nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True)
-        self.orientacion = Orientacion.objects.create(nombre='Sistémica')
+        self.orientacion, _ = Orientacion.objects.get_or_create(nombre='Sistémica')
         self.usuario = User.objects.create_user('psico@example.com', password='ClaveSegura123')
         self.psicologo = Psicologo.objects.create(
             usuario=self.usuario, pais=self.pais, nombre='Psico', matricula='1', whatsapp='519',
@@ -255,27 +255,66 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         data.update(extra)
         return self.client.post(reverse('portal_editar_perfil'), data)
 
-    def test_publico_nuevo_crea_y_asocia(self):
-        self._post_perfil(publico_nuevo='Deportistas')
-        self.assertTrue(Publico.objects.filter(nombre='Deportistas').exists())
-        self.psicologo.refresh_from_db()
-        self.assertIn('Deportistas', [p.nombre for p in self.psicologo.publicos.all()])
+    def test_publico_nuevo_nace_pendiente_y_se_asocia_a_quien_lo_propuso(self):
+        self._post_perfil(publico_nuevo='Surfistas')
+        publico = Publico.objects.get(nombre='Surfistas')
+        self.assertFalse(publico.aprobado)
+        self.assertEqual(publico.propuesto_por, self.psicologo)
+        self.assertIn(publico, list(self.psicologo.publicos.all()))
 
     def test_publico_nuevo_reusa_uno_existente_sin_duplicar(self):
-        Publico.objects.create(nombre='Deportistas')
+        # 'Deportistas' ya viene en la lista base (migración 0015).
+        antes = Publico.objects.count()
         self._post_perfil(publico_nuevo='deportistas')  # distinta capitalización a propósito
-        self.assertEqual(Publico.objects.filter(nombre__iexact='Deportistas').count(), 1)
+        self.assertEqual(Publico.objects.count(), antes)
+        self.assertIn('Deportistas', [p.nombre for p in self.psicologo.publicos.all()])
 
-    def test_orientacion_nueva_crea_y_asocia(self):
-        self._post_perfil(orientacion_nueva='Gestalt')
-        self.assertTrue(Orientacion.objects.filter(nombre='Gestalt').exists())
-        self.psicologo.refresh_from_db()
-        self.assertIn('Gestalt', [o.nombre for o in self.psicologo.orientaciones.all()])
+    def test_publico_nuevo_reusa_aunque_cambien_las_tildes(self):
+        antes = Publico.objects.count()
+        self._post_perfil(publico_nuevo='ninos')  # la lista base tiene "Niños"
+        self.assertEqual(Publico.objects.count(), antes)
+
+    def test_orientacion_nueva_nace_pendiente_y_se_asocia(self):
+        self._post_perfil(orientacion_nueva='Biodanza')
+        orientacion = Orientacion.objects.get(nombre='Biodanza')
+        self.assertFalse(orientacion.aprobado)
+        self.assertEqual(orientacion.propuesto_por, self.psicologo)
+        self.assertIn(orientacion, list(self.psicologo.orientaciones.all()))
 
     def test_orientacion_nueva_reusa_una_existente_sin_duplicar(self):
-        Orientacion.objects.create(nombre='Gestalt')
-        self._post_perfil(orientacion_nueva='gestalt')  # distinta capitalización a propósito
-        self.assertEqual(Orientacion.objects.filter(nombre__iexact='Gestalt').count(), 1)
+        antes = Orientacion.objects.count()
+        self._post_perfil(orientacion_nueva='gestalt')  # ya viene en la lista base
+        self.assertEqual(Orientacion.objects.count(), antes)
+
+    def test_ciudad_nueva_nace_pendiente_y_no_se_muestra_en_lo_publico(self):
+        self._post_perfil(ciudad_nueva='Pisco Elqui')
+        ciudad = Ciudad.objects.get(pais=self.pais, nombre='Pisco Elqui')
+        self.assertFalse(ciudad.aprobado)
+        self.assertEqual(ciudad.propuesto_por, self.psicologo)
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.ciudad, 'Pisco Elqui')   # la ve él
+        self.assertEqual(self.psicologo.ciudad_publica, '')       # el público no
+
+    def test_ciudad_de_la_lista_se_guarda_y_se_muestra(self):
+        Ciudad.objects.create(pais=self.pais, nombre='Lima')
+        self._post_perfil(ciudad='Lima')
+        self.psicologo.refresh_from_db()
+        self.assertEqual(self.psicologo.ciudad_publica, 'Lima')
+
+    def test_aviso_de_propuesta_pendiente_al_guardar(self):
+        self._post_perfil(publico_nuevo='Surfistas')
+        resp = self.client.get(reverse('portal_dashboard'))
+        self.assertContains(resp, 'Recibimos tu propuesta')
+
+    def test_el_formulario_muestra_aprobadas_y_las_propias_pero_no_las_de_otros(self):
+        Publico.objects.create(nombre='Propio pendiente', aprobado=False, propuesto_por=self.psicologo)
+        otro_usuario = User.objects.create_user('otro@example.com', password='ClaveSegura123')
+        otro = Psicologo.objects.create(usuario=otro_usuario, pais=self.pais, nombre='Otro', matricula='2', whatsapp='520')
+        Publico.objects.create(nombre='Ajeno pendiente', aprobado=False, propuesto_por=otro)
+        resp = self.client.get(reverse('portal_editar_perfil'))
+        self.assertContains(resp, 'Propio pendiente (pendiente de aprobación)')
+        self.assertNotContains(resp, 'Ajeno pendiente')
+        self.assertContains(resp, 'Adultos')   # lista base aprobada
 
     def test_sesiones_atendidas_es_opcional_y_se_guarda(self):
         self._post_perfil(sesiones_atendidas='1000')

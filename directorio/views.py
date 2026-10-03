@@ -181,14 +181,14 @@ def buscador_pais(request, pais_slug):
     # ya achicado por los filtros de arriba.
     psicologos = [p for p in psicologos_qs.distinct() if p.publicado]
 
-    ciudades = sorted({p.ciudad for p in pais.psicologos.all() if p.publicado and p.ciudad})
+    ciudades = sorted({p.ciudad_publica for p in pais.psicologos.all() if p.publicado and p.ciudad_publica})
 
     return render(request, 'directorio/buscador.html', {
         'pais': pais,
         'psicologos': psicologos,
         'ciudades': ciudades,
-        'orientaciones_list': Orientacion.objects.all(),
-        'publicos_list': Publico.objects.all(),
+        'orientaciones_list': Orientacion.objects.filter(aprobado=True),
+        'publicos_list': Publico.objects.filter(aprobado=True),
     })
 
 

@@ -1,0 +1,16 @@
+{% extends "admin/index.html" %}
+{% load moderacion_tags %}
+
+{% block content %}
+{% propuestas_pendientes as pendientes %}
+{% if pendientes %}
+<div style="margin-bottom: 24px; padding: 16px 20px; background: #fff8e5; border: 1px solid #e6c765; border-radius: 6px;">
+    <strong>Propuestas de profesionales para revisar:</strong>
+    {% for p in pendientes %}
+        <a href="{{ p.url }}" class="button" style="margin-left: 10px;">{{ p.texto }}</a>
+    {% endfor %}
+    <p style="margin: 8px 0 0; color: #666;">Mientras no las apruebes, las ve solo el profesional que las escribió. Entrá, tildá las que quieras y usá la acción "Aprobar seleccionados".</p>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
