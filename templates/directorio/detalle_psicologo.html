@@ -53,9 +53,9 @@
 </script>
 {% endblock %}
 {% block content %}
-<a href="{% url 'buscador_pais' pais.slug %}" class="volver">&larr; Psicólogos en {{ pais.nombre }}</a>
-
 <div class="perfil">
+    <a href="{% url 'buscador_pais' pais.slug %}" class="volver">&larr; Psicólogos en {{ pais.nombre }}</a>
+
     <div class="perfil-header">
         {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% endif %}
         <div>

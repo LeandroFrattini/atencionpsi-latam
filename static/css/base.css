@@ -37,7 +37,10 @@ a { color: inherit; text-decoration: none; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 24px;
+    /* El logo y el menú se alinean con el borde del contenido (main: 1080px
+       centrado + 24px de padding) en vez de pegarse a los bordes de la
+       ventana -- en pantallas anchas se veía todo corrido para un costado. */
+    padding: 18px max(24px, calc((100% - 1080px) / 2 + 24px));
     border-bottom: 1px solid var(--borde);
     background: #fff;
     flex-shrink: 0;
@@ -80,6 +83,14 @@ a { color: inherit; text-decoration: none; }
     background: #fff; border: 1px solid var(--borde); border-radius: 12px;
     box-shadow: 0 12px 28px rgba(74,60,45,0.14);
     padding: 6px; min-width: 170px; z-index: 20;
+}
+/* En celular el menú de países se ancla al encabezado entero (no al botón):
+   el botón puede caer en cualquier lado de la fila y un menú anclado a él se
+   salía de la pantalla (se cortaba 10px contra el borde izquierdo). */
+@media (max-width: 640px) {
+    .topbar { position: relative; }
+    .pais-switcher { position: static; }
+    .pais-switcher-menu { left: 16px; right: 16px; top: calc(100% + 4px); min-width: 0; }
 }
 .pais-switcher-item {
     display: flex; align-items: center; gap: 8px;
@@ -306,7 +317,7 @@ main {
 
 /* Perfil individual */
 .volver { display: inline-block; margin-bottom: 20px; font-size: 0.85rem; color: var(--verde-oscuro); font-weight: 600; }
-.perfil { max-width: 640px; }
+.perfil { max-width: 640px; margin-left: auto; margin-right: auto; }
 .perfil-header { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 28px; }
 .perfil-foto {
     width: 108px; height: 108px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
@@ -333,13 +344,15 @@ main {
 /* Portal (cuentas de profesionales) */
 .portal-card {
     max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
     background: #fff;
     border: 1px solid var(--borde);
     border-radius: 14px;
     padding: 32px;
 }
 
-.registro-beneficios { max-width: 520px; margin-bottom: 20px; }
+.registro-beneficios { max-width: 520px; margin: 0 auto 20px; }
 .registro-beneficios-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .registro-beneficios-lista li {
     display: flex; align-items: flex-start; gap: 14px;
@@ -420,6 +433,8 @@ label[for="id_sitio_web"] {
 /* Wizard de reserva de turno */
 .wizard-card {
     max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
     background: #fff;
     border: 1px solid var(--borde);
     border-radius: 16px;
@@ -508,9 +523,9 @@ label[for="id_sitio_web"] {
 .wizard-confirmado h1 { font-size: 1.5rem; margin: 0 0 10px; }
 
 /* FAQ */
-.faq-head { margin-bottom: 36px; }
+.faq-head { max-width: 720px; margin: 0 auto 36px; }
 .faq-head h1 { font-size: 1.8rem; color: var(--texto-titulo); margin-bottom: 6px; }
-.faq-grupo { max-width: 720px; margin-bottom: 36px; }
+.faq-grupo { max-width: 720px; margin: 0 auto 36px; }
 .faq-grupo h2 { font-size: 1.2rem; color: var(--verde-oscuro); margin-bottom: 14px; }
 .faq-item {
     background: #fff; border: 1px solid var(--borde); border-radius: 12px;
@@ -525,7 +540,7 @@ label[for="id_sitio_web"] {
 .faq-item[open] summary::after { content: '−'; }
 
 /* Términos y Condiciones */
-.terminos { max-width: 720px; }
+.terminos { max-width: 720px; margin-left: auto; margin-right: auto; }
 .terminos h1 { font-size: 1.8rem; color: var(--texto-titulo); margin-bottom: 4px; }
 .terminos-fecha { color: var(--texto-tenue); font-size: 0.85rem; margin-bottom: 28px; }
 .terminos-seccion { margin-bottom: 26px; }
@@ -573,7 +588,8 @@ label[for="id_sitio_web"] {
 
 /* Footer */
 .footer {
-    border-top: 1px solid var(--borde); margin-top: 48px; padding: 28px 5%;
+    border-top: 1px solid var(--borde); margin-top: 48px;
+    padding: 28px max(5%, calc((100% - 1080px) / 2 + 24px));
     display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
     font-size: 0.85rem; color: var(--texto-tenue);
 }
