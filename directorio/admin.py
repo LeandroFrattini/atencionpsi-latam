@@ -3,7 +3,8 @@ from io import BytesIO
 
 from django.contrib import admin, messages
 from django.shortcuts import redirect
-from django.urls import path
+from django import forms
+from django.urls import path, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.contrib.admin import helpers
@@ -11,7 +12,7 @@ from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
 from . import dlocal_go, planes_dlocal
-from .models import Ciudad, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
+from .models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
 @admin.register(Pais)
@@ -71,6 +72,59 @@ class CiudadAdmin(ModeracionAdminMixin, admin.ModelAdmin):
     search_fields = ('nombre',)
 
 
+class GenerarCodigosForm(forms.Form):
+    pais = forms.ModelChoiceField(Pais.objects.all(), required=False, empty_label='Cualquier país', label='País')
+    cantidad = forms.IntegerField(min_value=1, max_value=200, initial=10, label='Cantidad de códigos')
+    meses_gratis = forms.IntegerField(min_value=1, max_value=24, initial=3, label='Meses gratis')
+    canjeable_hasta = forms.DateField(
+        required=False, label='Canjeable hasta', widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text='Último día para registrarse con el código (opcional)',
+    )
+    nota = forms.CharField(max_length=100, required=False, label='Nota (opcional)', help_text='Ej: "Perú, primera tanda"')
+
+
+@admin.register(CodigoFundador)
+class CodigoFundadorAdmin(admin.ModelAdmin):
+    """Códigos de fundador: N meses gratis al registrarse. El botón "Generar
+    códigos en lote" crea varios de una (uno por profesional) y muestra el
+    link de registro de cada uno, listo para pegar en el mensaje."""
+    list_display = ('codigo', 'pais', 'meses_gratis', 'usos_de_maximo', 'canjeable_hasta', 'activo', 'nota')
+    list_filter = ('pais', 'activo')
+    search_fields = ('codigo', 'nota')
+    change_list_template = 'admin/directorio/codigofundador/change_list.html'
+
+    @admin.display(description='Usos')
+    def usos_de_maximo(self, obj):
+        return f'{obj.usos}/{obj.usos_maximos}'
+
+    def get_urls(self):
+        return [
+            path('generar/', self.admin_site.admin_view(self.generar_view), name='directorio_codigofundador_generar'),
+        ] + super().get_urls()
+
+    def generar_view(self, request):
+        form = GenerarCodigosForm(request.POST or None)
+        creados = []
+        if request.method == 'POST' and form.is_valid():
+            datos = form.cleaned_data
+            for _ in range(datos['cantidad']):
+                creados.append(CodigoFundador.objects.create(
+                    pais=datos['pais'], meses_gratis=datos['meses_gratis'],
+                    canjeable_hasta=datos['canjeable_hasta'], nota=datos['nota'],
+                ))
+            self.message_user(request, f'{len(creados)} código(s) creados.', level=messages.SUCCESS)
+        filas = []
+        for c in creados:
+            slug = c.pais.slug if c.pais else Pais.objects.filter(es_externo=False, activo=True).values_list('slug', flat=True).first()
+            link = request.build_absolute_uri(reverse('portal_registro', args=[slug])) + f'?codigo={c.codigo}' if slug else ''
+            filas.append({'codigo': c.codigo, 'pais': c.pais, 'link': link})
+        contexto = {
+            **self.admin_site.each_context(request),
+            'title': 'Generar códigos de fundador', 'form': form, 'filas': filas, 'opts': self.model._meta,
+        }
+        return TemplateResponse(request, 'admin/directorio/codigofundador/generar.html', contexto)
+
+
 @admin.register(PlanDLocal)
 class PlanDLocalAdmin(admin.ModelAdmin):
     """Los planes se crean con `manage.py crear_planes_dlocal --apply`, no a mano:
@@ -112,7 +166,7 @@ class FormacionInline(admin.TabularInline):
 
 @admin.register(Psicologo)
 class PsicologoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'publicado', 'destacado')
+    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'gratis_hasta', 'publicado', 'destacado')
     list_filter = ('pais', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp')
     filter_horizontal = ('orientaciones', 'especialidades', 'publicos')
@@ -120,7 +174,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
-        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'destacado', 'terminos_aceptados_en')}),
+        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'destacado', 'terminos_aceptados_en')}),
     )
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action']

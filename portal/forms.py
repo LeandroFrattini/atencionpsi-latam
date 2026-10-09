@@ -12,7 +12,7 @@ from PIL import Image, ImageOps
 from directorio.forms import HoneypotMixin
 from django.db.models import Q
 
-from directorio.models import Ciudad, Especialidad, Formacion, Orientacion, Psicologo, Publico
+from directorio.models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Psicologo, Publico
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
@@ -35,6 +35,10 @@ class RegistroForm(HoneypotMixin, forms.Form):
     email = forms.EmailField(label='Email')
     whatsapp = forms.CharField(label='WhatsApp', max_length=30)
     password = forms.CharField(label='Contraseña', widget=forms.PasswordInput, min_length=8)
+    codigo_fundador = forms.CharField(
+        label='Código de fundador (si tenés uno)', max_length=30, required=False,
+        help_text='Si te invitamos a ser de los primeros, ingresá acá tu código para tener meses gratis.',
+    )
     # dLocal Go pidió consentimiento explícito, no implícito por el solo
     # hecho de registrarse -- checkbox propio, sin marcar por defecto.
     acepto_terminos = forms.BooleanField(
@@ -42,8 +46,9 @@ class RegistroForm(HoneypotMixin, forms.Form):
         error_messages={'required': 'Tenés que aceptar los Términos y la Política de Privacidad para crear tu cuenta.'},
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, pais=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.pais = pais
         self.fields['acepto_terminos'].label = format_html(
             'Leí y acepto los <a href="{}" target="_blank" rel="noopener">Términos y Condiciones</a> '
             'y la <a href="{}" target="_blank" rel="noopener">Política de Privacidad</a>.',
@@ -55,6 +60,19 @@ class RegistroForm(HoneypotMixin, forms.Form):
         if User.objects.filter(username__iexact=email).exists():
             raise forms.ValidationError('Ya existe una cuenta con ese email.')
         return email
+
+    def clean_codigo_fundador(self):
+        """Devuelve el CodigoFundador (o None si lo dejó vacío)."""
+        texto = (self.cleaned_data.get('codigo_fundador') or '').strip().upper()
+        if not texto:
+            return None
+        codigo = CodigoFundador.objects.filter(codigo=texto).select_related('pais').first()
+        if not codigo:
+            raise forms.ValidationError('No encontramos ese código. Revisalo o escribinos desde Contacto.')
+        motivo = codigo.motivo_de_rechazo(self.pais)
+        if motivo:
+            raise forms.ValidationError(motivo)
+        return codigo
 
 
 class _ChecksConPendientes(forms.ModelMultipleChoiceField):

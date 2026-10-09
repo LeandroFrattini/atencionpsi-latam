@@ -7,6 +7,7 @@ from django.utils import timezone
 from directorio.models import Psicologo
 
 VENTANA = datetime.timedelta(hours=24)
+AVISO_VENCIMIENTO = datetime.timedelta(days=7)
 
 
 class Command(BaseCommand):
@@ -28,6 +29,7 @@ class Command(BaseCommand):
         pendientes_pago = Psicologo.objects.filter(
             suscripcion_activa=False,
             exento_de_pago=False,
+            gratis_hasta__isnull=True,   # los fundadores no deben nada hasta que venza
             recordatorio_pago_enviado=False,
             fecha_alta__lte=limite,
         )
@@ -36,6 +38,14 @@ class Command(BaseCommand):
             recordatorio_perfil_enviado=False,
             fecha_pago_confirmado__isnull=False,
             fecha_pago_confirmado__lte=limite,
+        )
+
+        por_vencer = Psicologo.objects.filter(
+            suscripcion_activa=False,
+            exento_de_pago=False,
+            recordatorio_vencimiento_enviado=False,
+            gratis_hasta__gt=ahora,
+            gratis_hasta__lte=ahora + AVISO_VENCIMIENTO,
         )
 
         self.stdout.write(self.style.MIGRATE_HEADING('Recordatorio de pago pendiente'))
@@ -77,7 +87,26 @@ class Command(BaseCommand):
                 p.recordatorio_perfil_enviado = True
                 p.save(update_fields=['recordatorio_perfil_enviado'])
 
-        total = pendientes_pago.count() + pendientes_perfil.count()
+        self.stdout.write(self.style.MIGRATE_HEADING('Aviso de fin del período de fundador'))
+        for p in por_vencer:
+            self.stdout.write(f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- gratis hasta el {p.gratis_hasta:%d/%m}')
+            if aplicar:
+                send_mail(
+                    subject='Tu período gratis en Atención Psi está por terminar',
+                    message=(
+                        f'Hola {p.nombre},\n\n'
+                        f'Gracias por ser de los primeros profesionales de Atención Psi. Tu período gratis termina el '
+                        f'{p.gratis_hasta:%d/%m/%Y}. Para que tu perfil siga publicado después de esa fecha, '
+                        'activá tu suscripción desde tu cuenta: https://atencionpsi.lat/portal/checkout/\n\n'
+                        'Cualquier cosa, respondé este mail.'
+                    ),
+                    from_email=None,
+                    recipient_list=[p.usuario.email],
+                )
+                p.recordatorio_vencimiento_enviado = True
+                p.save(update_fields=['recordatorio_vencimiento_enviado'])
+
+        total = pendientes_pago.count() + pendientes_perfil.count() + por_vencer.count()
         if aplicar:
             self.stdout.write(self.style.SUCCESS(f'Listo, se mandaron {total} recordatorios.'))
         else:

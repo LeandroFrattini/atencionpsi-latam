@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
+from django.db import transaction
 from django.db.models import Count, Max
 from django.http import Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,7 +22,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt
 
 from directorio import dlocal_go, suscripciones
-from directorio.models import Ciudad, Especialidad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
+from directorio.models import Ciudad, CodigoFundador, Especialidad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
@@ -67,7 +68,7 @@ def registro(request, pais_slug):
         return redirect('portal_dashboard')
 
     if request.method == 'POST':
-        form = RegistroForm(request.POST)
+        form = RegistroForm(request.POST, pais=pais)
         if form.is_valid():
             # is_active=False hasta que confirme el mail -- si no, cualquiera
             # se registra con un email ajeno o inventado y nunca se entera.
@@ -80,7 +81,7 @@ def registro(request, pais_slug):
                 password=form.cleaned_data['password'],
                 is_active=False,
             )
-            Psicologo.objects.create(
+            psicologo = Psicologo.objects.create(
                 usuario=usuario,
                 pais=pais,
                 nombre=form.cleaned_data['nombre'],
@@ -88,6 +89,9 @@ def registro(request, pais_slug):
                 matricula='',
                 terminos_aceptados_en=timezone.now(),
             )
+            codigo = form.cleaned_data.get('codigo_fundador')
+            if codigo:
+                _canjear_codigo(request, psicologo, codigo, pais)
             try:
                 _enviar_verificacion(request, usuario)
             except Exception:
@@ -103,9 +107,22 @@ def registro(request, pais_slug):
                 return redirect('portal_login')
             return render(request, 'portal/verificar_enviado.html', {'email': usuario.email})
     else:
-        form = RegistroForm()
+        form = RegistroForm(pais=pais, initial={'codigo_fundador': request.GET.get('codigo', '').strip().upper()})
 
     return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
+
+
+def _canjear_codigo(request, psicologo, codigo, pais):
+    """Canjea el código de fundador con la fila bloqueada, para que dos
+    personas no puedan usar a la vez un código de un solo uso."""
+    with transaction.atomic():
+        bloqueado = CodigoFundador.objects.select_for_update().get(pk=codigo.pk)
+        motivo = bloqueado.motivo_de_rechazo(pais)
+        if motivo:
+            messages.warning(request, f'Tu cuenta se creó, pero el código no se pudo aplicar: {motivo}')
+            return
+        psicologo.canjear_codigo_fundador(bloqueado)
+    messages.success(request, f'Código aplicado: {bloqueado.meses_gratis} meses gratis.')
 
 
 def verificar_enviado(request):

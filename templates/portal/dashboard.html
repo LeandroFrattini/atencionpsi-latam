@@ -9,7 +9,7 @@
     <div class="portal-estado">
         {% if p.publicado %}
             <span class="portal-badge portal-badge-ok">Publicado — visible en el buscador de {{ p.pais.nombre }}</span>
-        {% elif not p.suscripcion_activa and not p.exento_de_pago %}
+        {% elif not p.tiene_acceso %}
             <span class="portal-badge portal-badge-warn">Suscripción pendiente</span>
         {% elif not p.perfil_completo %}
             <span class="portal-badge portal-badge-warn">Perfil incompleto</span>
@@ -19,7 +19,7 @@
     </div>
 
     <ul class="portal-checklist">
-        <li class="{% if p.suscripcion_activa or p.exento_de_pago %}ok{% endif %}">Suscripción activa</li>
+        <li class="{% if p.tiene_acceso %}ok{% endif %}">{% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}Período de fundador: gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}{% else %}Suscripción activa{% endif %}</li>
         <li class="{% if p.foto %}ok{% endif %}">Foto de perfil</li>
         <li class="{% if p.bio %}ok{% endif %}">Descripción</li>
         <li class="{% if p.matricula %}ok{% endif %}">{{ p.pais.etiqueta_matricula }}</li>
@@ -30,7 +30,7 @@
 
     <div class="portal-acciones">
         <a href="{% url 'portal_editar_perfil' %}" class="btn-secundario">Editar mi perfil</a>
-        {% if not p.suscripcion_activa and not p.exento_de_pago %}
+        {% if not p.tiene_acceso %}
             <a href="{% url 'portal_checkout' %}" class="btn-primario">Activar suscripción</a>
         {% elif p.publicado %}
             <form method="post" action="{% url 'portal_despublicar' %}" class="portal-inline-form">
@@ -44,6 +44,14 @@
             </form>
         {% endif %}
     </div>
+
+    {% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}
+        <p class="portal-aviso-fundador">
+            Sos de los primeros profesionales de Atención Psi: tenés tu perfil <strong>gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}</strong>.
+            Para seguir publicado después de esa fecha, activá tu suscripción cuando quieras desde
+            <a href="{% url 'portal_checkout' %}">acá</a>.
+        </p>
+    {% endif %}
 
     <div class="portal-resumen">
         <a href="{% url 'portal_turnos' %}" class="portal-resumen-item">

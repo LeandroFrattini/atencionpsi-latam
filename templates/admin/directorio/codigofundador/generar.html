@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Inicio</a> &rsaquo;
+  <a href="{% url 'admin:directorio_codigofundador_changelist' %}">Códigos de fundador</a> &rsaquo;
+  Generar en lote
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <p>Cada código sirve para <strong>una sola persona</strong> y le da los meses gratis que indiques desde el día que se registra.
+  El link de registro ya trae el código cargado: lo pegás en el mensaje y listo.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <fieldset class="module aligned">
+      {% for field in form %}
+        <div class="form-row">
+          {{ field.errors }}
+          {{ field.label_tag }} {{ field }}
+          {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="Generar códigos" class="default">
+    </div>
+  </form>
+
+  {% if filas %}
+    <h2>Códigos creados</h2>
+    <table class="codigos-generados">
+      <thead><tr><th>Código</th><th>País</th><th>Link de registro</th></tr></thead>
+      <tbody>
+        {% for f in filas %}
+          <tr>
+            <td>{{ f.codigo }}</td>
+            <td>{{ f.pais|default:"Cualquiera" }}</td>
+            <td>{{ f.link }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,8 +1,10 @@
 import re
+import secrets
 
 from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -211,6 +213,62 @@ class Ciudad(models.Model):
         super().save(*args, **kwargs)
 
 
+class CodigoFundador(models.Model):
+    """Código para los primeros profesionales ("fundadores"): al registrarse
+    con él tienen N meses gratis (`Psicologo.gratis_hasta`). Pasado ese plazo
+    el perfil se despublica solo, salvo que activen la suscripción. Se genera
+    uno por profesional (usos_maximos=1) para saber a quién se le dio y que no
+    circule."""
+    ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'   # sin 0/O/1/I: se dictan por WhatsApp
+
+    codigo = models.CharField(max_length=30, unique=True, blank=True, help_text='Vacío = se genera uno solo')
+    pais = models.ForeignKey(
+        Pais, null=True, blank=True, on_delete=models.CASCADE, related_name='codigos_fundador',
+        help_text='Vacío = vale en cualquier país',
+    )
+    meses_gratis = models.PositiveSmallIntegerField(default=3)
+    usos_maximos = models.PositiveSmallIntegerField(default=1)
+    canjeable_hasta = models.DateField(null=True, blank=True, help_text='Último día para registrarse con este código (vacío = sin límite)')
+    nota = models.CharField(max_length=120, blank=True, help_text='Para quién es (ej: nombre del profesional)')
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Código de fundador'
+        verbose_name_plural = 'Códigos de fundador'
+        ordering = ['-creado_en', 'codigo']
+
+    def __str__(self):
+        return self.codigo
+
+    @classmethod
+    def nuevo_texto(cls):
+        while True:
+            texto = 'FUNDADOR-' + ''.join(secrets.choice(cls.ALFABETO) for _ in range(6))
+            if not cls.objects.filter(codigo=texto).exists():
+                return texto
+
+    def save(self, *args, **kwargs):
+        self.codigo = (self.codigo or '').strip().upper() or self.nuevo_texto()
+        super().save(*args, **kwargs)
+
+    @property
+    def usos(self):
+        return self.psicologos.count()
+
+    def motivo_de_rechazo(self, pais=None):
+        """Texto para mostrarle al profesional si no se puede usar, o None."""
+        if not self.activo:
+            return 'Ese código ya no está activo.'
+        if self.canjeable_hasta and timezone.localdate() > self.canjeable_hasta:
+            return 'Ese código venció.'
+        if self.usos >= self.usos_maximos:
+            return 'Ese código ya fue utilizado.'
+        if self.pais_id and pais and self.pais_id != pais.pk:
+            return f'Ese código es para {self.pais.nombre}.'
+        return None
+
+
 class Psicologo(models.Model):
     MODALIDAD_CHOICES = [
         ('online', 'Online'),
@@ -287,6 +345,16 @@ class Psicologo(models.Model):
     # de tener el cobro automático andando -- ver plan de captación.
     exento_de_pago = models.BooleanField('Exenta de pago (fundadora)', default=False)
 
+    # Período gratis de los fundadores (ver CodigoFundador). A diferencia de
+    # exento_de_pago, que es para siempre, este vence: pasada la fecha, si no
+    # activó la suscripción, el perfil deja de publicarse.
+    codigo_fundador = models.ForeignKey(
+        'CodigoFundador', null=True, blank=True, on_delete=models.SET_NULL, related_name='psicologos',
+        verbose_name='Código de fundador usado',
+    )
+    gratis_hasta = models.DateTimeField('Gratis hasta', null=True, blank=True)
+    recordatorio_vencimiento_enviado = models.BooleanField(default=False)
+
     # Mismo patrón que atencionpsi.com.ar: curación manual desde el admin
     # para la sección "Psicólogos destacados" del home de cada país -- no
     # depende del plan pagado (todavía no hay distinción de plan real en el
@@ -346,12 +414,35 @@ class Psicologo(models.Model):
             self.plan = plan
         self.save()
 
+    def canjear_codigo_fundador(self, codigo):
+        """Le da el período gratis del código (desde ahora). No valida: eso lo
+        hace CodigoFundador.motivo_de_rechazo antes de llamar."""
+        from dateutil.relativedelta import relativedelta
+        ahora = timezone.now()
+        self.codigo_fundador = codigo
+        self.gratis_hasta = ahora + relativedelta(months=codigo.meses_gratis)
+        # Mismo criterio que exento_de_pago: sin esta fecha no se dispara el
+        # recordatorio de "completá tu perfil".
+        if not self.fecha_pago_confirmado:
+            self.fecha_pago_confirmado = ahora
+        self.save()
+
+    @property
+    def en_periodo_fundador(self):
+        return bool(self.gratis_hasta and self.gratis_hasta > timezone.now())
+
+    @property
+    def tiene_acceso(self):
+        """Pagó, está exenta o está dentro de su período gratis de fundador."""
+        return self.suscripcion_activa or self.exento_de_pago or self.en_periodo_fundador
+
     @property
     def puede_publicar(self):
-        """Cumple los requisitos para publicar (pagó o está exenta, y
-        completó el perfil) -- todavía no significa que esté visible: falta
-        que el profesional toque "Publicar"."""
-        return (self.suscripcion_activa or self.exento_de_pago) and self.perfil_completo
+        """Cumple los requisitos para publicar (tiene acceso y completó el
+        perfil) -- todavía no significa que esté visible: falta que el
+        profesional toque "Publicar". Al vencer el período de fundador esto
+        pasa a False solo y el perfil se despublica."""
+        return self.tiene_acceso and self.perfil_completo
 
     @property
     def publicado(self):
