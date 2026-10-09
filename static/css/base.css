@@ -712,3 +712,77 @@ label[for="id_sitio_web"] {
 .error-codigo { font-family: 'Playfair Display', Georgia, serif; font-size: 4.5rem; font-weight: 700; color: var(--verde-suave); margin: 0; line-height: 1; }
 .error-pagina h1 { font-size: 1.5rem; color: var(--texto-titulo); margin: 4px 0 12px; }
 .error-pagina .portal-acciones { justify-content: center; margin-top: 20px; }
+
+/* ---------- Perfil público rediseñado + páginas por ciudad/especialidad ---------- */
+.migas {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    font-size: 0.82rem; color: var(--texto-tenue); margin-bottom: 18px;
+}
+.migas a { color: var(--verde-oscuro); font-weight: 600; }
+.migas a:hover { text-decoration: underline; }
+.migas [aria-current="page"] { color: var(--texto-secundario); }
+
+.perfil-pagina { max-width: 980px; margin-left: auto; margin-right: auto; }
+.perfil-layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) 320px; column-gap: 32px; row-gap: 0; align-items: start;
+    grid-template-areas: "head aside" "body aside";
+}
+.perfil-area-head { grid-area: head; }
+.perfil-area-body { grid-area: body; }
+.perfil-area-aside { grid-area: aside; grid-row: 1 / span 2; }
+.perfil-principal { min-width: 0; }
+.perfil-pagina .perfil-header { margin-bottom: 24px; }
+.perfil-foto-vacia {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--verde-suave); color: var(--verde-oscuro);
+    font-family: 'Playfair Display', Georgia, serif; font-size: 2.4rem; font-weight: 700;
+}
+.perfil-eyebrow {
+    margin: 0 0 4px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--verde-oscuro);
+}
+.perfil-header-texto { min-width: 0; }
+.perfil-header-texto h1 { overflow-wrap: anywhere; }
+.perfil-tags h2 { font-size: 0.95rem; margin: 14px 0 8px; }
+.perfil-tags h2:first-child { margin-top: 0; }
+.perfil-chips { justify-content: flex-start; margin-top: 0; }
+.perfil-chips a.psicologo-chip:hover { background: #f4d9d6; }
+.psicologo-chip-verde { background: var(--verde-suave); color: var(--verde-oscuro); }
+.psicologo-chip-neutro { background: #f3f3f3; color: var(--texto-secundario); }
+.psicologo-chip small { font-weight: 500; opacity: 0.75; }
+
+.perfil-aside { position: sticky; top: 20px; }
+.perfil-aside-card {
+    background: #fff; border: 1px solid var(--borde); border-radius: 16px;
+    padding: 22px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+}
+.perfil-aside-card h2 { font-size: 1.1rem; margin: 0 0 12px; color: var(--texto-titulo); }
+.perfil-sesiones { list-style: none; margin: 0 0 18px; padding: 0; }
+.perfil-sesiones li {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--borde);
+}
+.perfil-sesiones li:last-child { border-bottom: 0; }
+.perfil-sesion-nombre { font-weight: 600; font-size: 0.92rem; }
+.perfil-sesion-nombre small { display: block; font-weight: 500; color: var(--texto-tenue); font-size: 0.78rem; }
+.perfil-sesion-precio { font-weight: 700; color: var(--verde-oscuro); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.perfil-aside-nota { color: var(--texto-secundario); font-size: 0.88rem; margin: 0 0 16px; }
+.perfil-acciones-aside { flex-direction: column; }
+.perfil-acciones-aside a { text-align: center; justify-content: center; }
+.perfil-otros { margin-top: 48px; }
+.perfil-otros h2 { font-size: 1.3rem; color: var(--texto-titulo); margin-bottom: 20px; }
+
+.landing-head { margin-bottom: 24px; }
+.landing-intro { color: var(--texto-secundario); max-width: 640px; line-height: 1.55; }
+.landing-enlaces { margin-top: 44px; }
+.landing-enlaces h2 { font-size: 1.15rem; color: var(--texto-titulo); margin-bottom: 12px; }
+.landing-chips { justify-content: flex-start; margin-top: 0; }
+.landing-chips a.psicologo-chip { padding: 8px 14px; }
+.landing-chips a.psicologo-chip:hover { filter: brightness(0.96); }
+
+@media (max-width: 860px) {
+    /* En el celular: identidad, luego precios y botones, luego el texto largo. */
+    .perfil-layout { grid-template-columns: 1fr; grid-template-areas: "head" "aside" "body"; row-gap: 20px; }
+    .perfil-area-aside { grid-row: auto; }
+    .perfil-aside { position: static; }
+}

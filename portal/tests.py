@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from directorio.models import Ciudad, Orientacion, Pais, Psicologo, Publico
+from directorio.models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
 from turnos.models import DisponibilidadSemanal, Paciente, TipoSesion, Turno
 
 
@@ -285,6 +285,19 @@ class EditarPerfilPublicoNuevoTests(TestCase):
         antes = Orientacion.objects.count()
         self._post_perfil(orientacion_nueva='gestalt')  # ya viene en la lista base
         self.assertEqual(Orientacion.objects.count(), antes)
+
+    def test_especialidad_nueva_nace_pendiente_y_se_asocia(self):
+        self._post_perfil(especialidad_nueva='Procrastinación')
+        especialidad = Especialidad.objects.get(nombre='Procrastinación')
+        self.assertFalse(especialidad.aprobado)
+        self.assertEqual(especialidad.propuesto_por, self.psicologo)
+        self.assertIn(especialidad, list(self.psicologo.especialidades.all()))
+
+    def test_especialidad_nueva_reusa_una_existente_ignorando_tildes(self):
+        antes = Especialidad.objects.count()
+        self._post_perfil(especialidad_nueva='depresion')  # la lista base tiene "Depresión"
+        self.assertEqual(Especialidad.objects.count(), antes)
+        self.assertIn('Depresión', [e.nombre for e in self.psicologo.especialidades.all()])
 
     def test_ciudad_nueva_nace_pendiente_y_no_se_muestra_en_lo_publico(self):
         self._post_perfil(ciudad_nueva='Pisco Elqui')

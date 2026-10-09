@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}{{ p.nombre }}, Psicólogo/a en {{ p.ciudad_publica }}{% if p.ciudad_publica %}, {% endif %}{{ pais.nombre }} | Atención Psi{% endblock %}
-{% block meta_description %}{{ p.nombre }}{% if p.ciudad_publica %}, psicólogo/a en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}) &middot; {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Agendá tu turno o escribí por WhatsApp.{% endblock %}
-{% block og_title %}{{ p.nombre }} | Psicólogo/a en {{ pais.nombre }}{% endblock %}
+{% load static precio_tags %}
+{% block title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}, {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}{{ p.nombre }}, psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}). {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.especialidades_publicas %} &middot; {% for e in p.especialidades_publicas|slice:":3" %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas|slice:":3" %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Reservá tu turno o escribí por WhatsApp.{% endblock %}
+{% block og_title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}{% endblock %}
 {% block og_description %}{{ pais.etiqueta_matricula }} {{ p.matricula }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}{% endblock %}
-{% if p.foto %}
-{% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}">{% endblock %}
-{% endif %}
+{% block og_image %}{% if p.foto %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}">{% endif %}{% endblock %}
 {% block json_ld %}
 <script type="application/ld+json">
 {
@@ -15,15 +14,16 @@
             "@type": "BreadcrumbList",
             "itemListElement": [
                 {"@type": "ListItem", "position": 1, "name": "Inicio", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'hub' %}"},
-                {"@type": "ListItem", "position": 2, "name": "Psicólogos en {{ pais.nombre }}", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'buscador_pais' pais.slug %}"},
-                {"@type": "ListItem", "position": 3, "name": "{{ p.nombre|escapejs }}"}
+                {"@type": "ListItem", "position": 2, "name": "Psicólogos en {{ pais.nombre|escapejs }}", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'buscador_pais' pais.slug %}"},
+                {% if ciudad_obj %}{"@type": "ListItem", "position": 3, "name": "{{ ciudad_obj.nombre|escapejs }}", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'psicologos_en_ciudad' pais.slug ciudad_obj.slug %}"},
+                {"@type": "ListItem", "position": 4, "name": "{{ p.nombre|escapejs }}"}{% else %}{"@type": "ListItem", "position": 3, "name": "{{ p.nombre|escapejs }}"}{% endif %}
             ]
         },
         {
             "@type": "Person",
             "name": "{{ p.nombre|escapejs }}",
             "jobTitle": "Psicólogo/a",
-            "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'detalle_psicologo' pais.slug p.pk %}",
+            "url": "{{ request.scheme }}://{{ request.get_host }}{{ p.url_publica }}",
             {% if p.foto %}"image": "{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}",{% endif %}
             {% if p.bio %}"description": "{{ p.bio|escapejs }}",{% endif %}
             "hasCredential": {
@@ -31,6 +31,9 @@
                 "credentialCategory": "{{ pais.etiqueta_matricula|escapejs }}",
                 "identifier": "{{ p.matricula|escapejs }}"
             },
+            {% if p.especialidades_publicas %}
+            "knowsAbout": [{% for e in p.especialidades_publicas %}"{{ e.nombre|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+            {% endif %}
             {% if formaciones %}
             "alumniOf": [
                 {% for f in formaciones %}{"@type": "EducationalOrganization", "name": "{{ f.descripcion|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
@@ -53,55 +56,114 @@
 </script>
 {% endblock %}
 {% block content %}
-<div class="perfil">
-    <a href="{% url 'buscador_pais' pais.slug %}" class="volver">&larr; Psicólogos en {{ pais.nombre }}</a>
+<div class="perfil-pagina">
+    <nav class="migas" aria-label="Ruta de navegación">
+        <a href="{% url 'buscador_pais' pais.slug %}">Psicólogos en {{ pais.nombre }}</a>
+        {% if ciudad_obj %}<span aria-hidden="true">/</span><a href="{% url 'psicologos_en_ciudad' pais.slug ciudad_obj.slug %}">{{ ciudad_obj.nombre }}</a>{% endif %}
+        <span aria-hidden="true">/</span><span aria-current="page">{{ p.nombre }}</span>
+    </nav>
 
-    <div class="perfil-header">
-        {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% endif %}
-        <div>
-            <h1>{{ p.nombre }}</h1>
-            <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}</p>
-            <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
-            {% if p.sesiones_atendidas %}
-                <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>
+    <div class="perfil-layout">
+        <header class="perfil-header perfil-area-head">
+                {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% else %}<div class="perfil-foto perfil-foto-vacia" aria-hidden="true">{{ p.nombre|slice:":1" }}</div>{% endif %}
+                <div class="perfil-header-texto">
+                    <p class="perfil-eyebrow">Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}</p>
+                    <h1>{{ p.nombre }}</h1>
+                    <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}, {{ pais.nombre }}{% endif %}</p>
+                    <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
+                    {% if p.sesiones_atendidas %}
+                        <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>
+                    {% endif %}
+                </div>
+        </header>
+
+        <div class="perfil-principal perfil-area-body">
+            {% if p.especialidades_publicas or p.orientaciones_publicas or p.publicos_publicos %}
+            <section class="perfil-seccion perfil-tags">
+                {% if p.especialidades_publicas %}
+                    <h2>Motivos de consulta</h2>
+                    <div class="psicologo-chips perfil-chips">
+                        {% for e in p.especialidades_publicas %}
+                            <a href="{% url 'psicologos_por_especialidad' pais.slug e.slug %}" class="psicologo-chip">{{ e.nombre }}</a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if p.orientaciones_publicas %}
+                    <h2>Enfoque terapéutico</h2>
+                    <div class="psicologo-chips perfil-chips">
+                        {% for o in p.orientaciones_publicas %}<span class="psicologo-chip psicologo-chip-verde">{{ o.nombre }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+                {% if p.publicos_publicos %}
+                    <h2>Atiende a</h2>
+                    <div class="psicologo-chips perfil-chips">
+                        {% for pu in p.publicos_publicos %}<span class="psicologo-chip psicologo-chip-neutro">{{ pu.nombre }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+            </section>
             {% endif %}
-            {% if pais.muestra_precio_sesion and p.precio_sesion %}
-                <p class="perfil-precio">Sesión: {{ pais.simbolo_moneda }} {{ p.precio_sesion }}</p>
+
+            {% if p.bio %}
+                <section class="perfil-seccion">
+                    <h2>Sobre mí</h2>
+                    <p>{{ p.bio|linebreaksbr }}</p>
+                </section>
+            {% endif %}
+
+            {% if formaciones %}
+                <section class="perfil-seccion">
+                    <h2>Formación</h2>
+                    <ol class="perfil-formacion">
+                        {% for f in formaciones %}<li>{{ f.descripcion }}</li>{% endfor %}
+                    </ol>
+                </section>
+            {% endif %}
+
+            {% if p.docencia %}
+                <section class="perfil-seccion">
+                    <h2>Docencia</h2>
+                    <p>{{ p.docencia|linebreaksbr }}</p>
+                </section>
             {% endif %}
         </div>
+
+        <aside class="perfil-aside perfil-area-aside" aria-label="Sesiones y contacto">
+            <div class="perfil-aside-card">
+                <h2>Sesiones</h2>
+                {% if sesiones %}
+                    <ul class="perfil-sesiones">
+                        {% for s in sesiones %}
+                            <li>
+                                <span class="perfil-sesion-nombre">{{ s.nombre }}<small>{{ s.duracion_min }} min</small></span>
+                                {% if s.precio %}<span class="perfil-sesion-precio">{{ pais.simbolo_moneda }} {{ s.precio|miles }}</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% elif pais.muestra_precio_sesion and p.precio_sesion %}
+                    <p class="perfil-precio">Sesión: {{ pais.simbolo_moneda }} {{ p.precio_sesion }}</p>
+                {% else %}
+                    <p class="perfil-aside-nota">Consultá valores y horarios directamente con el profesional.</p>
+                {% endif %}
+                <div class="perfil-acciones perfil-acciones-aside">
+                    {% if sesiones %}
+                        <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-primario">Reservar turno</a>
+                    {% endif %}
+                    <a href="https://wa.me/{{ p.whatsapp_limpio }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+                </div>
+            </div>
+        </aside>
     </div>
 
-    {% if p.bio %}
-        <section class="perfil-seccion">
-            <h2>Sobre mí</h2>
-            <p>{{ p.bio|linebreaksbr }}</p>
-        </section>
-    {% endif %}
-
-    {% if formaciones %}
-        <section class="perfil-seccion">
-            <h2>Formación</h2>
-            <ol class="perfil-formacion">
-                {% for f in formaciones %}<li>{{ f.descripcion }}</li>{% endfor %}
-            </ol>
-        </section>
-    {% endif %}
-
-    {% if p.docencia %}
-        <section class="perfil-seccion">
-            <h2>Docencia</h2>
-            <p>{{ p.docencia|linebreaksbr }}</p>
-        </section>
-    {% endif %}
-
-    <section class="perfil-seccion">
-        <h2>Contacto</h2>
-        <div class="perfil-acciones">
-            {% if p.tipos_sesion.exists %}
-                <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-primario">Reservar turno</a>
-            {% endif %}
-            <a href="https://wa.me/{{ p.whatsapp_limpio }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+    {% if otros_en_la_ciudad %}
+    <section class="perfil-otros">
+        <h2>Otros psicólogos en {{ p.ciudad_publica }}</h2>
+        <div class="psicologos-grid">
+            {% for p in otros_en_la_ciudad %}
+                {% include 'directorio/_psicologo_card.html' %}
+            {% endfor %}
         </div>
+        {% if ciudad_obj %}<a href="{% url 'psicologos_en_ciudad' pais.slug ciudad_obj.slug %}" class="ver-todos-link">Ver todos los psicólogos en {{ ciudad_obj.nombre }} &rarr;</a>{% endif %}
     </section>
+    {% endif %}
 </div>
 {% endblock %}

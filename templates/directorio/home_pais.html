@@ -18,6 +18,23 @@
     <a href="{% url 'buscador_pais' pais.slug %}" class="btn-primario home-hero-cta">Ver todos los psicólogos</a>
 </div>
 
+{% if ciudades_con_psicologos %}
+<section class="landing-enlaces">
+    <h2>Psicólogos por ciudad</h2>
+    <div class="psicologo-chips landing-chips">
+        {% for c, n in ciudades_con_psicologos %}<a href="{% url 'psicologos_en_ciudad' pais.slug c.slug %}" class="psicologo-chip psicologo-chip-verde">{{ c.nombre }} <small>({{ n }})</small></a>{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% if especialidades_con_psicologos %}
+<section class="landing-enlaces">
+    <h2>Psicólogos por motivo de consulta</h2>
+    <div class="psicologo-chips landing-chips">
+        {% for e, n in especialidades_con_psicologos %}<a href="{% url 'psicologos_por_especialidad' pais.slug e.slug %}" class="psicologo-chip">{{ e.nombre }} <small>({{ n }})</small></a>{% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% if psicologos_destacados %}
 <section class="home-destacados">
     <h2 class="home-destacados-titulo">Psicólogos destacados en {{ pais.nombre }}</h2>

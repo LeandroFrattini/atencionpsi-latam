@@ -16,7 +16,7 @@
         {
             "@type": "ListItem",
             "position": {{ forloop.counter }},
-            "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'detalle_psicologo' pais.slug p.pk %}"
+            "url": "{{ request.scheme }}://{{ request.get_host }}{{ p.url_publica }}"
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ]
@@ -53,6 +53,12 @@
         <option value="">Orientación</option>
         {% for o in orientaciones_list %}
             <option value="{{ o.pk }}" {% if request.GET.orientacion == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.nombre }}</option>
+        {% endfor %}
+    </select>
+    <select name="especialidad" onchange="this.form.submit()">
+        <option value="">Motivo de consulta</option>
+        {% for e in especialidades_list %}
+            <option value="{{ e.pk }}" {% if request.GET.especialidad == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nombre }}</option>
         {% endfor %}
     </select>
     <select name="publico" onchange="this.form.submit()">

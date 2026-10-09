@@ -1,5 +1,9 @@
+import re
+
 from django.contrib.auth.models import User
 from django.db import models
+from django.urls import reverse
+from django.utils.text import slugify
 
 
 class Pais(models.Model):
@@ -136,6 +140,40 @@ class Publico(models.Model):
         return self.nombre
 
 
+class Especialidad(models.Model):
+    """Temas de consulta ("Ansiedad", "Duelo", "Autoestima"...): lo que la gente
+    busca en Google ("psicólogo para ansiedad"). Es distinto de la Orientación
+    (el enfoque teórico: psicoanálisis, TCC...) y del Público (a quién atiende).
+    Misma moderación que las otras listas: lo que un profesional escribe a mano
+    nace pendiente y lo ve solo él hasta que se aprueba."""
+    nombre = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    orden = models.PositiveIntegerField(default=0)
+    aprobado = models.BooleanField(
+        default=True, help_text='Si está en False, la propuso un profesional y solo la ve él hasta que la apruebes'
+    )
+    propuesto_por = models.ForeignKey(
+        'Psicologo', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        verbose_name='Propuesta por',
+    )
+
+    class Meta:
+        verbose_name = 'Especialidad'
+        verbose_name_plural = 'Especialidades'
+        ordering = ['orden', 'nombre']
+
+    def __str__(self):
+        return self.nombre
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.nombre) or 'especialidad'
+            self.slug, n = base, 2
+            while Especialidad.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug, n = f'{base}-{n}', n + 1
+        super().save(*args, **kwargs)
+
+
 class Ciudad(models.Model):
     """Ciudades que el profesional puede elegir en su perfil, por país. Antes
     era texto libre (Psicologo.ciudad) -- escribir a mano daba "Lima",
@@ -152,6 +190,8 @@ class Ciudad(models.Model):
         'Psicologo', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
         verbose_name='Propuesta por',
     )
+    # Para la página "Psicólogos en <ciudad>" (/<país>/psicologos-en-<slug>/).
+    slug = models.SlugField(max_length=120, blank=True)
 
     class Meta:
         verbose_name = 'Ciudad'
@@ -161,6 +201,14 @@ class Ciudad(models.Model):
 
     def __str__(self):
         return f'{self.nombre} ({self.pais.codigo_iso})'
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.nombre) or 'ciudad'
+            self.slug, n = base, 2
+            while Ciudad.objects.filter(pais_id=self.pais_id, slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug, n = f'{base}-{n}', n + 1
+        super().save(*args, **kwargs)
 
 
 class Psicologo(models.Model):
@@ -207,6 +255,7 @@ class Psicologo(models.Model):
 
     orientaciones = models.ManyToManyField(Orientacion, blank=True, related_name='psicologos')
     publicos = models.ManyToManyField(Publico, blank=True, related_name='psicologos')
+    especialidades = models.ManyToManyField(Especialidad, blank=True, related_name='psicologos')
 
     # Pago y publicación -- a diferencia de atencionpsi.com.ar, acá nadie
     # aprueba el alta a mano. Pero a diferencia de lo que se pensó al
@@ -327,6 +376,23 @@ class Psicologo(models.Model):
     @property
     def orientaciones_publicas(self):
         return [o for o in self.orientaciones.all() if o.aprobado]
+
+    @property
+    def especialidades_publicas(self):
+        return [e for e in self.especialidades.all() if e.aprobado]
+
+    @property
+    def slug_url(self):
+        """Nombre sin el título ("Lic.", "Mg.", "Dr."...) + id, para una URL con
+        el nombre adentro (/peru/psicologo/maria-gonzales-3/). El id del final
+        es lo que identifica al perfil: si el nombre cambia, la URL vieja
+        redirige a la nueva en vez de dar 404."""
+        sin_titulo = re.sub(r'^\s*((lic|licda|mg|mag|dr|dra|ps|psic|psi|mgtr|mtro|mtra)\.?\s+)+', '', self.nombre or '', flags=re.I)
+        return f'{slugify(sin_titulo) or "psicologo"}-{self.pk}'
+
+    @property
+    def url_publica(self):
+        return reverse('perfil_psicologo', args=[self.pais.slug, self.slug_url])
 
     @property
     def publicos_publicos(self):

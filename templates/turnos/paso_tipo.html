@@ -21,7 +21,7 @@
     </div>
 
     <div class="wizard-nav">
-        <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="btn-secundario">&larr; Cancelar</a>
+        <a href="{{ p.url_publica }}" class="btn-secundario">&larr; Cancelar</a>
         <button type="submit" class="btn-primario">Siguiente &rarr;</button>
     </div>
 </form>

@@ -12,7 +12,7 @@ from PIL import Image, ImageOps
 from directorio.forms import HoneypotMixin
 from django.db.models import Q
 
-from directorio.models import Ciudad, Formacion, Orientacion, Psicologo, Publico
+from directorio.models import Ciudad, Especialidad, Formacion, Orientacion, Psicologo, Publico
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
@@ -80,6 +80,10 @@ class PerfilForm(forms.ModelForm):
         label='¿Tu orientación no está en la lista? Escribila acá', max_length=60, required=False,
         help_text='Ej: "Gestalt", "EMDR". La revisamos y, si corresponde, la sumamos para todos; mientras tanto la ves solo vos.'
     )
+    especialidad_nueva = forms.CharField(
+        label='¿El motivo de consulta que atendés no está en la lista? Escribilo acá', max_length=80, required=False,
+        help_text='Ej: "Procrastinación". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
+    )
     publico_nuevo = forms.CharField(
         label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
         help_text='Ej: "Adultos mayores", "Deportistas". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
@@ -90,14 +94,16 @@ class PerfilForm(forms.ModelForm):
         fields = [
             'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad',
             'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
-            'orientaciones', 'publicos',
+            'orientaciones', 'especialidades', 'publicos',
         ]
         field_classes = {
             'orientaciones': _ChecksConPendientes,
+            'especialidades': _ChecksConPendientes,
             'publicos': _ChecksConPendientes,
         }
         widgets = {
             'orientaciones': forms.CheckboxSelectMultiple,
+            'especialidades': forms.CheckboxSelectMultiple,
             'publicos': forms.CheckboxSelectMultiple,
             'bio': forms.Textarea(attrs={'rows': 4}),
             'docencia': forms.Textarea(attrs={'rows': 3}),
@@ -106,7 +112,7 @@ class PerfilForm(forms.ModelForm):
     field_order = [
         'nombre', 'matricula', 'whatsapp', 'ciudad', 'ciudad_nueva', 'modalidad',
         'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
-        'orientaciones', 'orientacion_nueva', 'publicos', 'publico_nuevo',
+        'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
 
     def __init__(self, *args, pais=None, **kwargs):
@@ -127,7 +133,7 @@ class PerfilForm(forms.ModelForm):
         # Orientaciones y públicos: las aprobadas, más las que propuso este
         # profesional, más las que ya tiene tildadas (por si otra persona
         # propuso lo mismo antes y se le reusó esa).
-        for campo, Modelo in (('orientaciones', Orientacion), ('publicos', Publico)):
+        for campo, Modelo in (('orientaciones', Orientacion), ('especialidades', Especialidad), ('publicos', Publico)):
             visibles = Q(aprobado=True)
             if psicologo:
                 visibles |= Q(propuesto_por=psicologo) | Q(psicologos=psicologo)

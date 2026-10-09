@@ -33,7 +33,42 @@ class PsicologosSitemap(Sitemap):
         return [p for p in qs if p.publicado]
 
     def location(self, obj):
-        return reverse('detalle_psicologo', args=[obj.pais.slug, obj.pk])
+        return obj.url_publica
 
     def lastmod(self, obj):
         return obj.fecha_pago_confirmado
+
+
+class CiudadesSitemap(Sitemap):
+    """Páginas /psicologos-en-<ciudad>/ -- solo las que tienen al menos un
+    profesional publicado (las vacías van en noindex y no se anuncian)."""
+    changefreq = 'weekly'
+    priority = 0.7
+
+    def items(self):
+        from .views import _ciudades_con_psicologos, _publicados
+        resultado = []
+        for pais in Pais.objects.filter(activo=True, es_externo=False):
+            resultado += [(pais, ciudad) for ciudad, _ in _ciudades_con_psicologos(pais, _publicados(pais))]
+        return resultado
+
+    def location(self, item):
+        pais, ciudad = item
+        return reverse('psicologos_en_ciudad', args=[pais.slug, ciudad.slug])
+
+
+class EspecialidadesSitemap(Sitemap):
+    """Páginas /psicologos-para-<especialidad>/, con la misma regla."""
+    changefreq = 'weekly'
+    priority = 0.7
+
+    def items(self):
+        from .views import _especialidades_con_psicologos, _publicados
+        resultado = []
+        for pais in Pais.objects.filter(activo=True, es_externo=False):
+            resultado += [(pais, e) for e, _ in _especialidades_con_psicologos(_publicados(pais))]
+        return resultado
+
+    def location(self, item):
+        pais, especialidad = item
+        return reverse('psicologos_por_especialidad', args=[pais.slug, especialidad.slug])

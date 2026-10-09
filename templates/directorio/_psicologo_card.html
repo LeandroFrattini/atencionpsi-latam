@@ -4,7 +4,7 @@ contexto. Extraída del buscador para reutilizarla también en los
 "Psicólogos destacados" del home de cada país.
 {% endcomment %}
 <div class="psicologo-card">
-    <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="psicologo-foto-wrap">
+    <a href="{{ p.url_publica }}" class="psicologo-foto-wrap">
         {% if p.foto %}
             <img src="{{ p.foto.url }}" alt="" class="psicologo-foto">
         {% else %}
@@ -16,7 +16,7 @@ contexto. Extraída del buscador para reutilizarla también en los
     </a>
 
     <div class="psicologo-card-body">
-        <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="psicologo-nombre-link">
+        <a href="{{ p.url_publica }}" class="psicologo-nombre-link">
             <div class="psicologo-nombre">{{ p.nombre }}</div>
         </a>
 
@@ -42,6 +42,12 @@ contexto. Extraída del buscador para reutilizarla también en los
             </div>
         {% endif %}
 
+        {% if p.especialidades_publicas %}
+            <div class="psicologo-chips">
+                {% for e in p.especialidades_publicas|slice:":3" %}<span class="psicologo-chip psicologo-chip-verde">{{ e.nombre }}</span>{% endfor %}
+            </div>
+        {% endif %}
+
         {% if p.publicos_publicos %}
             <div class="psicologo-chips">
                 {% for pu in p.publicos_publicos %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}
@@ -49,7 +55,7 @@ contexto. Extraída del buscador para reutilizarla también en los
         {% endif %}
 
         <div class="psicologo-card-botones">
-            <a href="{% url 'detalle_psicologo' pais.slug p.pk %}" class="btn-secundario-card">Ver perfil</a>
+            <a href="{{ p.url_publica }}" class="btn-secundario-card">Ver perfil</a>
             {% if p.tipos_sesion.all %}
                 <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-ver-perfil">Reservar turno</a>
             {% endif %}

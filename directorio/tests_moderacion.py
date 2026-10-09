@@ -104,7 +104,7 @@ class VisibilidadPublicaTests(TestCase):
         self.assertNotContains(resp, '>Pisco Elqui</option>')
 
     def test_el_perfil_publico_no_filtra_la_ciudad_pendiente(self):
-        resp = self.client.get(reverse('detalle_psicologo', args=['peru', self.psi.pk]))
+        resp = self.client.get(self.psi.url_publica)
         self.assertNotContains(resp, 'Pisco Elqui')
 
     def test_al_aprobar_pasa_a_verse_en_lo_publico(self):

@@ -108,7 +108,7 @@ class BuscadorYDetalleTests(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     def test_detalle_de_publicado_muestra_formacion_y_etiqueta_correcta(self):
-        resp = self.client.get(reverse('detalle_psicologo', args=['peru', self.publicado.pk]))
+        resp = self.client.get(self.publicado.url_publica)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Licenciada en Psicología. UNC')
         self.assertContains(resp, 'N° de Colegiatura (CPsP)')
@@ -156,12 +156,12 @@ class BuscadorYDetalleTests(TestCase):
         # tirando abajo el CSS, el canonical y los meta OG de esa página.
         # Usar siempre {% comment %}...{% endcomment %} para multilínea.
         for url in [reverse('hub'), reverse('buscador_pais', args=['peru']),
-                    reverse('detalle_psicologo', args=['peru', self.publicado.pk])]:
+                    self.publicado.url_publica]:
             resp = self.client.get(url)
             self.assertNotIn(b'{#', resp.content)
 
     def test_seo_completo_en_el_perfil_no_se_corta_el_head(self):
-        resp = self.client.get(reverse('detalle_psicologo', args=['peru', self.publicado.pk]))
+        resp = self.client.get(self.publicado.url_publica)
         contenido = resp.content.decode()
         self.assertIn('<meta name="description"', contenido)
         self.assertIn('<link rel="canonical"', contenido)
@@ -274,8 +274,8 @@ class SEOTecnicoTests(TestCase):
     def test_sitemap_solo_lista_publicados(self):
         resp = self.client.get('/sitemap.xml')
         contenido = resp.content.decode()
-        self.assertIn(f'/peru/p/{self.publicado.pk}/', contenido)
-        self.assertNotIn(f'/peru/p/{self.sin_publicar.pk}/', contenido)
+        self.assertIn(self.publicado.url_publica, contenido)
+        self.assertNotIn(self.sin_publicar.url_publica, contenido)
         # El hub y el buscador de cada país activo también tienen que estar.
         self.assertIn('<loc>http://testserver/</loc>', contenido)
         self.assertIn('<loc>http://testserver/peru/</loc>', contenido)

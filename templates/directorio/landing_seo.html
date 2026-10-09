@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+{% comment %}
+Página de aterrizaje para búsquedas tipo "psicólogo en Lima" o "psicólogo para
+ansiedad en Perú". Sin profesionales publicados queda en noindex (una página
+vacía no se indexa) y muestra un mensaje en vez de una lista.
+{% endcomment %}
+{% block robots %}{% if noindex %}noindex, follow{% else %}index, follow{% endif %}{% endblock %}
+{% block title %}{% if tipo == 'ciudad' %}Psicólogos en {{ titulo_zona }}, {{ pais.nombre }}{% else %}Psicólogos para {{ titulo_zona|lower }} en {{ pais.nombre }}{% endif %} | Atención Psi{% endblock %}
+{% block meta_description %}{% if tipo == 'ciudad' %}Psicólogos en {{ titulo_zona }} ({{ pais.nombre }}) con {{ pais.etiqueta_matricula }} verificada: perfiles, enfoque terapéutico, valores y turnos online o presenciales.{% else %}Psicólogos para {{ titulo_zona|lower }} en {{ pais.nombre }}: profesionales con {{ pais.etiqueta_matricula }}, perfiles detallados, turnos online y contacto directo por WhatsApp.{% endif %}{% endblock %}
+{% block og_title %}{% if tipo == 'ciudad' %}Psicólogos en {{ titulo_zona }}, {{ pais.nombre }}{% else %}Psicólogos para {{ titulo_zona|lower }} en {{ pais.nombre }}{% endif %}{% endblock %}
+{% block og_description %}Perfiles de psicólogos con matrícula habilitante, turnos online y contacto directo por WhatsApp.{% endblock %}
+{% block json_ld %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Inicio", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'hub' %}"},
+                {"@type": "ListItem", "position": 2, "name": "Psicólogos en {{ pais.nombre|escapejs }}", "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'buscador_pais' pais.slug %}"},
+                {"@type": "ListItem", "position": 3, "name": "{{ titulo_zona|escapejs }}"}
+            ]
+        }{% if psicologos %},
+        {
+            "@type": "ItemList",
+            "name": "{% if tipo == 'ciudad' %}Psicólogos en {{ titulo_zona|escapejs }}{% else %}Psicólogos para {{ titulo_zona|lower|escapejs }}{% endif %}",
+            "itemListElement": [
+                {% for p in psicologos %}
+                {"@type": "ListItem", "position": {{ forloop.counter }}, "url": "{{ request.scheme }}://{{ request.get_host }}{{ p.url_publica }}"}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }
+        {% endif %}
+    ]
+}
+</script>
+{% endblock %}
+{% block extra_head %}
+{% include 'directorio/_hreflang.html' %}
+{% endblock %}
+{% block content %}
+<nav class="migas" aria-label="Ruta de navegación">
+    <a href="{% url 'pais_home' pais.slug %}">{{ pais.nombre }}</a>
+    <span aria-hidden="true">/</span><a href="{% url 'buscador_pais' pais.slug %}">Psicólogos</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ titulo_zona }}</span>
+</nav>
+
+<div class="buscador-head landing-head">
+    <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo">
+        {% if tipo == 'ciudad' %}Psicólogos en {{ titulo_zona }}{% else %}Psicólogos para {{ titulo_zona|lower }} en {{ pais.nombre }}{% endif %}
+    </h1>
+    <p class="landing-intro">
+        {% if tipo == 'ciudad' %}
+            Profesionales de la psicología en {{ titulo_zona }}, {{ pais.nombre }}, con {{ pais.etiqueta_matricula }} verificada.
+        {% else %}
+            Profesionales de {{ pais.nombre }} que acompañan {{ titulo_zona|lower }}, con {{ pais.etiqueta_matricula }} verificada.
+        {% endif %}
+        Elegí por enfoque y modalidad, reservá un turno o escribile directo por WhatsApp.
+    </p>
+    {% if psicologos %}<p class="hub-stat-confianza">{{ psicologos|length }} psicólogo{{ psicologos|length|pluralize }} publicado{{ psicologos|length|pluralize }}</p>{% endif %}
+</div>
+
+<div class="psicologos-grid">
+    {% for p in psicologos %}
+        {% include 'directorio/_psicologo_card.html' %}
+    {% empty %}
+        <p class="sin-resultados">Todavía no hay psicólogos publicados {% if tipo == 'ciudad' %}en {{ titulo_zona }}{% else %}para {{ titulo_zona|lower }}{% endif %}. <a href="{% url 'buscador_pais' pais.slug %}">Ver todos los psicólogos en {{ pais.nombre }}</a>.</p>
+    {% endfor %}
+</div>
+
+{% if chips %}
+<section class="landing-enlaces">
+    <h2>{{ chips_titulo }}</h2>
+    <div class="psicologo-chips landing-chips">
+        {% for nombre, url, n in chips %}<a href="{{ url }}" class="psicologo-chip">{{ nombre }} <small>({{ n }})</small></a>{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% if otros %}
+<section class="landing-enlaces">
+    <h2>{{ otros_titulo }}</h2>
+    <div class="psicologo-chips landing-chips">
+        {% for nombre, url, n in otros %}<a href="{{ url }}" class="psicologo-chip psicologo-chip-verde">{{ nombre }} <small>({{ n }})</small></a>{% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

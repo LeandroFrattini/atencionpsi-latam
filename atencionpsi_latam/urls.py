@@ -4,12 +4,14 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
-from directorio.sitemaps import PaisesSitemap, PsicologosSitemap
+from directorio.sitemaps import CiudadesSitemap, EspecialidadesSitemap, PaisesSitemap, PsicologosSitemap
 from directorio.views import robots_txt
 
 sitemaps = {
     'paises': PaisesSitemap,
     'psicologos': PsicologosSitemap,
+    'ciudades': CiudadesSitemap,
+    'especialidades': EspecialidadesSitemap,
 }
 
 urlpatterns = [
