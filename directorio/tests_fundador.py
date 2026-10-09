@@ -1,5 +1,6 @@
 """Códigos de fundador: 3 meses gratis para los primeros profesionales."""
 import datetime
+import re
 from io import StringIO
 
 from dateutil.relativedelta import relativedelta
@@ -112,6 +113,15 @@ class RegistroConCodigoTests(_Base):
         self.assertIsNone(psi.gratis_hasta)
         self.assertFalse(psi.tiene_acceso)
 
+    def test_al_confirmar_el_email_con_codigo_aterriza_en_el_cartel_de_gratis(self):
+        c = CodigoFundador.objects.create(pais=self.peru)
+        self._registrar(c.codigo)
+        link = re.search(r'/portal/verificar/\S+/\S+/', mail.outbox[-1].body).group(0)
+        resp = self.client.get(link, follow=True)
+        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.assertContains(resp, 'Tenés gratis hasta el')
+        self.assertContains(resp, 'Continuar con tu perfil')
+
     def test_el_link_con_el_codigo_lo_trae_precargado(self):
         resp = self.client.get(reverse('portal_registro', args=['peru']) + '?codigo=fundador-abc123')
         self.assertContains(resp, 'value="FUNDADOR-ABC123"')
@@ -163,6 +173,23 @@ class PeriodoFundadorTests(_Base):
         psi = self._psi(timezone.now() + datetime.timedelta(days=30))
         self.client.force_login(psi.usuario)
         self.assertEqual(self.client.get(reverse('portal_checkout')).status_code, 200)
+
+    def test_el_checkout_le_dice_hasta_cuando_es_gratis_y_lo_manda_a_su_perfil(self):
+        gratis_hasta = timezone.now() + datetime.timedelta(days=30)
+        psi = self._psi(gratis_hasta)
+        self.client.force_login(psi.usuario)
+        resp = self.client.get(reverse('portal_checkout'))
+        self.assertContains(resp, f'Tenés gratis hasta el {timezone.localtime(gratis_hasta):%d/%m/%Y}')
+        self.assertContains(resp, 'Continuar con tu perfil')
+        self.assertContains(resp, reverse('portal_editar_perfil'))
+        self.assertNotContains(resp, 'Un último paso')
+
+    def test_el_checkout_no_muestra_el_cartel_si_el_periodo_ya_vencio(self):
+        psi = self._psi(timezone.now() - datetime.timedelta(days=1))
+        self.client.force_login(psi.usuario)
+        resp = self.client.get(reverse('portal_checkout'))
+        self.assertNotContains(resp, 'Continuar con tu perfil')
+        self.assertContains(resp, 'Un último paso')
 
 
 class RecordatoriosFundadorTests(_Base):
