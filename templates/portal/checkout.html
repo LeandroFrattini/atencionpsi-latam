@@ -3,8 +3,21 @@
 {% block title %}Activar suscripción | Atención Psi{% endblock %}
 {% block content %}
 <div class="portal-card portal-card-ancho">
-    <h1>Un último paso: elegí tu plan</h1>
-    <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa.</p>
+    {% if psicologo.en_periodo_fundador %}
+        <div class="portal-aviso-fundador">
+            <p>
+                <strong>¡Tenés gratis hasta el {{ psicologo.gratis_hasta|date:"d/m/Y" }}!</strong>
+                Sos de los primeros profesionales de Atención Psi: no hace falta que pagues nada ahora.
+                Podés armar y publicar tu perfil ya mismo, y activar tu suscripción más adelante.
+            </p>
+            <a href="{% url 'portal_editar_perfil' %}" class="btn-primario">Continuar con tu perfil</a>
+        </div>
+        <h1>Si querés, ya podés elegir tu plan</h1>
+        <p class="portal-lead">Opcional: activá tu suscripción cuando quieras para seguir publicado después del período gratis.</p>
+    {% else %}
+        <h1>Un último paso: elegí tu plan</h1>
+        <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa.</p>
+    {% endif %}
 
     {% if error_de_pago %}
         <p class="portal-error">No pudimos procesar el pago. Podés intentarlo de nuevo con otra tarjeta, o escribirnos desde <a href="{% url 'contacto' %}">Contacto</a> y te ayudamos.</p>

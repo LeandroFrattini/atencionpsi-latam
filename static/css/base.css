@@ -791,5 +791,7 @@ label[for="id_sitio_web"] {
     background: var(--verde-suave); border: 1px solid var(--verde-medio); border-radius: 12px;
     padding: 14px 16px; margin: 0 0 20px; font-size: 0.9rem; line-height: 1.5; color: var(--texto);
 }
-.portal-aviso-fundador a { color: var(--verde-oscuro); font-weight: 700; text-decoration: underline; }
+.portal-aviso-fundador a:not(.btn-primario) { color: var(--verde-oscuro); font-weight: 700; text-decoration: underline; }
+div.portal-aviso-fundador p { margin: 0 0 12px; }
+div.portal-aviso-fundador .btn-primario { display: inline-block; text-decoration: none; }
 .codigos-generados td, .codigos-generados th { font-family: ui-monospace, monospace; }
