@@ -50,7 +50,7 @@
 
     <section class="terminos-seccion">
         <h2>6. Tus derechos</h2>
-        <p>Podés pedirnos en cualquier momento acceder a tus datos, corregirlos o eliminarlos, escribiéndonos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a> o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Vamos a responderte a la brevedad.</p>
+        <p>Podés pedirnos en cualquier momento acceder a tus datos, corregirlos o eliminarlos, escribiéndonos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %}, por WhatsApp al <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">{{ contacto_telefono }}</a>{% endif %} o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Vamos a responderte a la brevedad.</p>
     </section>
 
     <section class="terminos-seccion">

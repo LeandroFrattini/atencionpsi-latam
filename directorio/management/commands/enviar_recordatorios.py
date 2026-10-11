@@ -1,5 +1,6 @@
 import datetime
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -8,6 +9,13 @@ from directorio.models import Psicologo
 
 VENTANA = datetime.timedelta(hours=24)
 AVISO_VENCIMIENTO = datetime.timedelta(days=7)
+
+
+def _cierre():
+    texto = 'Cualquier cosa, respondé este mail'
+    if settings.CONTACTO_TELEFONO:
+        texto += f' o escribinos por WhatsApp al {settings.CONTACTO_TELEFONO}'
+    return texto + '.'
 
 
 class Command(BaseCommand):
@@ -59,7 +67,7 @@ class Command(BaseCommand):
                         'Empezaste a crear tu perfil en Atención Psi pero todavía no activaste tu suscripción. '
                         'Sin eso tu perfil no se puede publicar.\n\n'
                         f'Entrá a tu cuenta para terminar: https://atencionpsi.lat/portal/checkout/\n\n'
-                        'Cualquier cosa, respondé este mail.'
+                        + _cierre()
                     ),
                     from_email=None,
                     recipient_list=[p.usuario.email],
@@ -79,7 +87,7 @@ class Command(BaseCommand):
                         'publicado en el buscador.\n\n'
                         f'Entrá a tu cuenta, completá los datos que falten y tocá "Publicar mi perfil": '
                         'https://atencionpsi.lat/portal/\n\n'
-                        'Cualquier cosa, respondé este mail.'
+                        + _cierre()
                     ),
                     from_email=None,
                     recipient_list=[p.usuario.email],
@@ -98,7 +106,7 @@ class Command(BaseCommand):
                         f'Gracias por ser de los primeros profesionales de Atención Psi. Tu período gratis termina el '
                         f'{p.gratis_hasta:%d/%m/%Y}. Para que tu perfil siga publicado después de esa fecha, '
                         'activá tu suscripción desde tu cuenta: https://atencionpsi.lat/portal/checkout/\n\n'
-                        'Cualquier cosa, respondé este mail.'
+                        + _cierre()
                     ),
                     from_email=None,
                     recipient_list=[p.usuario.email],

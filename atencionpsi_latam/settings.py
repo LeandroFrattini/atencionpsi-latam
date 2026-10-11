@@ -176,10 +176,13 @@ DEFAULT_FROM_EMAIL = 'Atención Psi <hola@atencionpsi.lat>'
 # defecto el mismo mail de la marca, pero es una sola línea para agregar
 # también su mail personal si lo pide (ej: [x, 'personal@...']).
 CONTACTO_EMAIL = 'hola@atencionpsi.lat'
-# WhatsApp de contacto general de la plataforma (no el de cada psicólogo) --
-# vacío hasta confirmar el número. Si queda vacío no se muestra el link
-# (ver directorio/contacto.html y el footer).
-CONTACTO_WHATSAPP = ''
+# WhatsApp de contacto general de la plataforma (no el de cada psicólogo).
+# CONTACTO_WHATSAPP va solo con dígitos (es lo que pide wa.me); el
+# CONTACTO_TELEFONO es el mismo número escrito para que lo lea una persona.
+# Si CONTACTO_WHATSAPP queda vacío no se muestra nada (ver el footer, Contacto,
+# Términos, Privacidad y los mails).
+CONTACTO_WHATSAPP = '5492915787311'
+CONTACTO_TELEFONO = '+54 9 291 578 7311'
 
 # Texto que dLocal Go pidió que esté en Términos y Condiciones, con el dato
 # legal real del titular de la cuenta (no genérico) -- confirmado 2026-09-09.

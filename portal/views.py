@@ -49,7 +49,10 @@ def _enviar_verificacion(request, usuario):
     uid = urlsafe_base64_encode(force_bytes(usuario.pk))
     token = default_token_generator.make_token(usuario)
     url = request.build_absolute_uri(reverse('portal_verificar_email', args=[uid, token]))
-    contexto = {'nombre': usuario.psicologo.nombre, 'url': url, 'contacto_email': settings.CONTACTO_EMAIL}
+    contexto = {
+        'nombre': usuario.psicologo.nombre, 'url': url, 'contacto_email': settings.CONTACTO_EMAIL,
+        'contacto_whatsapp': settings.CONTACTO_WHATSAPP, 'contacto_telefono': settings.CONTACTO_TELEFONO,
+    }
 
     email = EmailMultiAlternatives(
         subject='Confirmá tu email -- Atención Psi',
@@ -102,7 +105,7 @@ def registro(request, pais_slug):
                 messages.error(
                     request,
                     f'Tu cuenta se creó, pero hubo un problema mandando el mail de confirmación. '
-                    f'Escribinos a {settings.CONTACTO_EMAIL} para activarla.'
+                    f'Escribinos a {settings.CONTACTO_EMAIL} (o por WhatsApp al {settings.CONTACTO_TELEFONO}) para activarla.'
                 )
                 return redirect('portal_login')
             return render(request, 'portal/verificar_enviado.html', {'email': usuario.email})

@@ -50,6 +50,8 @@ def terminos(request):
     paises_con_plan = Pais.objects.filter(activo=True, es_externo=False).order_by('orden')
     return render(request, 'directorio/terminos.html', {
         'contacto_email': settings.CONTACTO_EMAIL,
+        'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'contacto_telefono': settings.CONTACTO_TELEFONO,
         'paises_con_plan': paises_con_plan,
         'terminos_datos_legales': settings.TERMINOS_DATOS_LEGALES,
     })
@@ -58,6 +60,8 @@ def terminos(request):
 def privacidad(request):
     return render(request, 'directorio/privacidad.html', {
         'contacto_email': settings.CONTACTO_EMAIL,
+        'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'contacto_telefono': settings.CONTACTO_TELEFONO,
         'terminos_datos_legales': settings.TERMINOS_DATOS_LEGALES,
     })
 
@@ -92,7 +96,7 @@ def contacto(request):
                 messages.error(
                     request,
                     f'Hubo un problema enviando tu mensaje. Probá de nuevo en unos minutos, '
-                    f'o escribinos directo a {settings.CONTACTO_EMAIL}.'
+                    f'o escribinos directo a {settings.CONTACTO_EMAIL} (WhatsApp {settings.CONTACTO_TELEFONO}).'
                 )
             else:
                 messages.success(request, 'Mensaje enviado, te vamos a responder a la brevedad.')
@@ -105,6 +109,7 @@ def contacto(request):
         'form': form, 'enviado': enviado,
         'contacto_email': settings.CONTACTO_EMAIL,
         'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'contacto_telefono': settings.CONTACTO_TELEFONO,
     })
 
 

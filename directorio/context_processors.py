@@ -28,6 +28,7 @@ def footer_contexto(request):
     return {
         'footer_contacto_email': settings.CONTACTO_EMAIL,
         'footer_contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'footer_contacto_telefono': settings.CONTACTO_TELEFONO,
         'footer_instagram_url': settings.INSTAGRAM_URL,
         'footer_facebook_url': settings.FACEBOOK_URL,
     }

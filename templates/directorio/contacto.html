@@ -7,7 +7,7 @@
     <p class="portal-lead">
         ¿Consultas, sugerencias o algún problema con el sitio? Escribinos por acá o directo a
         <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %} / por
-        <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}.
+        <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp {{ contacto_telefono }}</a>{% endif %}.
     </p>
 
     {% if enviado %}

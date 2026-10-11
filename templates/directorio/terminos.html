@@ -29,7 +29,7 @@
             <li>Un psicólogo o psicóloga que quiere aparecer en el buscador público crea su cuenta, completa su perfil (foto, formación, matrícula, orientación) y activa una <strong>suscripción mensual</strong> eligiendo uno de los dos planes.</li>
             <li>La suscripción se cobra con renovación automática cada mes calendario a través de la pasarela de pago habilitada en el sitio (por ejemplo, si te suscribís el día 9, el próximo cobro es el día 9 del mes siguiente), hasta que el profesional la cancele.</li>
             <li>Publicar el perfil es una decisión explícita del profesional: aunque la suscripción esté activa y el perfil completo, <strong>nadie ve el perfil hasta que el profesional toca "Publicar mi perfil"</strong> desde su cuenta.</li>
-            <li>El profesional puede despublicar su perfil cuando quiera (por ejemplo, durante vacaciones) sin cancelar la suscripción, y puede dar de baja la suscripción cuando quiera escribiendo a {{ contacto_email }} o por WhatsApp.</li>
+            <li>El profesional puede despublicar su perfil cuando quiera (por ejemplo, durante vacaciones) sin cancelar la suscripción, y puede dar de baja la suscripción cuando quiera escribiendo a {{ contacto_email }} o por WhatsApp{% if contacto_whatsapp %} al <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">{{ contacto_telefono }}</a>{% endif %}.</li>
             <li>Si la suscripción se corta por falta de pago, o el perfil queda incompleto, el perfil se oculta automáticamente del buscador hasta que se resuelva.</li>
         </ul>
 
@@ -64,7 +64,7 @@
 
     <section class="terminos-seccion">
         <h2>6. Contacto</h2>
-        <p>Para consultas sobre estos términos, escribinos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a> o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Para saber qué hacemos con tus datos, mirá la <a href="{% url 'privacidad' %}">Política de Privacidad</a>.</p>
+        <p>Para consultas sobre estos términos, escribinos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %}, por WhatsApp al <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">{{ contacto_telefono }}</a>{% endif %} o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Para saber qué hacemos con tus datos, mirá la <a href="{% url 'privacidad' %}">Política de Privacidad</a>.</p>
     </section>
 </div>
 {% endblock %}
