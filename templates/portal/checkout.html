@@ -50,18 +50,6 @@
             </label>
         </div>
 
-        {% if not integracion_pendiente %}
-        <div class="checkout-colaborar" id="bloque-colaborar">
-            <label class="portal-check">
-                <input type="checkbox" name="quiere_colaborar" id="id_quiere_colaborar"{% if psicologo.quiere_colaborar %} checked{% endif %}>
-                Quiero ser colaborador/a en las publicaciones de Instagram de Atención Psi
-            </label>
-            <p class="portal-field-ayuda">Con el Plan Premium publicamos en colaboración con tu cuenta (Collab): llegamos a tus seguidores y vos a los nuestros.</p>
-            <label for="id_instagram">Tu usuario de Instagram</label>
-            <input type="text" name="instagram" id="id_instagram" maxlength="100" placeholder="@usuario" value="{% if psicologo.instagram %}@{{ psicologo.instagram }}{% endif %}">
-        </div>
-        {% endif %}
-
         {% if integracion_pendiente %}
             <button type="submit" class="btn-primario">Confirmar suscripción (modo de prueba)</button>
         {% elif planes_disponibles %}
@@ -72,15 +60,4 @@
         {% endif %}
     </form>
 </div>
-<script>
-    // La casilla de colaborador/a es solo del Premium: sin JS queda visible.
-    (function () {
-        var bloque = document.getElementById('bloque-colaborar');
-        var premium = document.querySelector('input[name="plan"][value="premium"]');
-        if (!bloque || !premium) return;
-        function sync() { bloque.hidden = !premium.checked; }
-        document.querySelectorAll('input[name="plan"]').forEach(function (r) { r.addEventListener('change', sync); });
-        sync();
-    })();
-</script>
 {% endblock %}

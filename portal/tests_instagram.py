@@ -100,46 +100,20 @@ class PerfilInstagramTests(_Base):
 
 
 @override_settings(**CLAVES)
-class CheckoutColaboradorTests(BaseDLocalTests):
+class CheckoutSinInstagramTests(BaseDLocalTests):
     def setUp(self):
         super().setUp()
         self.client.force_login(self.usuario)
 
-    def test_el_checkout_ofrece_la_casilla_y_el_usuario(self):
+    def test_el_checkout_no_pide_instagram_ni_colaboracion(self):
         resp = self.client.get(reverse('portal_checkout'))
-        self.assertContains(resp, 'name="quiere_colaborar"')
-        self.assertContains(resp, 'name="instagram"')
-        self.assertContains(resp, 'Quiero ser colaborador/a')
+        self.assertNotContains(resp, 'name="instagram"')
+        self.assertNotContains(resp, 'name="quiere_colaborar"')
 
-    def test_premium_con_casilla_guarda_instagram_y_colaboracion(self):
-        resp = self.client.post(reverse('portal_checkout'), {'plan': 'premium', 'quiere_colaborar': 'on', 'instagram': '@Ana.Psi'})
+    def test_elegir_premium_no_toca_instagram_ni_colaboracion(self):
+        resp = self.client.post(reverse('portal_checkout'), {'plan': 'premium', 'quiere_colaborar': 'on', 'instagram': '@x'})
         self.assertEqual(resp.status_code, 302)
-        self.assertIn('checkout.dlocalgo.com', resp['Location'])
         self.psi.refresh_from_db()
-        self.assertTrue(self.psi.quiere_colaborar)
-        self.assertEqual(self.psi.instagram, 'ana.psi')
-
-    def test_basico_ignora_la_casilla(self):
-        self.client.post(reverse('portal_checkout'), {'plan': 'basico', 'quiere_colaborar': 'on', 'instagram': '@ana.psi'})
-        self.psi.refresh_from_db()
+        self.assertEqual(self.psi.plan, 'premium')
         self.assertFalse(self.psi.quiere_colaborar)
-        self.assertEqual(self.psi.instagram, 'ana.psi')
-
-    def test_premium_con_casilla_pero_sin_instagram_vuelve_con_error(self):
-        resp = self.client.post(reverse('portal_checkout'), {'plan': 'premium', 'quiere_colaborar': 'on', 'instagram': ''})
-        self.assertRedirects(resp, reverse('portal_checkout'))
-        self.psi.refresh_from_db()
-        self.assertFalse(self.psi.quiere_colaborar)
-        self.assertEqual(self.psi.plan, 'basico')   # no avanzó al pago
-
-    def test_usa_el_instagram_del_registro_si_no_lo_cambia(self):
-        Psicologo.objects.filter(pk=self.psi.pk).update(instagram='ana.psi')
-        resp = self.client.post(reverse('portal_checkout'), {'plan': 'premium', 'quiere_colaborar': 'on', 'instagram': ''})
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn('checkout.dlocalgo.com', resp['Location'])
-        self.psi.refresh_from_db()
-        self.assertTrue(self.psi.quiere_colaborar)
-
-    def test_instagram_invalido_no_avanza(self):
-        resp = self.client.post(reverse('portal_checkout'), {'plan': 'premium', 'instagram': 'no valido!'})
-        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.assertEqual(self.psi.instagram, '')
