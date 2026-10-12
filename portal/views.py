@@ -90,7 +90,6 @@ def registro(request, pais_slug):
                 pais=pais,
                 nombre=form.cleaned_data['nombre'],
                 whatsapp=form.cleaned_data['whatsapp'],
-                instagram=form.cleaned_data['instagram'],
                 matricula='',
                 terminos_aceptados_en=timezone.now(),
             )

@@ -31,30 +31,17 @@ class _Base(TestCase):
 
 
 class RegistroInstagramTests(_Base):
-    def _post(self, **extra):
-        datos = dict(
+    def test_el_registro_no_pide_instagram(self):
+        resp = self.client.get(reverse('portal_registro', args=['peru']))
+        self.assertNotContains(resp, 'Instagram')
+        self.assertNotContains(resp, 'name="instagram"')
+
+    def test_registrarse_sin_instagram_funciona(self):
+        self.client.post(reverse('portal_registro', args=['peru']), dict(
             nombre='Nueva', email='nueva@example.com', whatsapp='51999999999',
             password='ClaveSegura123', acepto_terminos='on',
-        )
-        datos.update(extra)
-        return self.client.post(reverse('portal_registro', args=['peru']), datos)
-
-    def test_el_formulario_pide_el_usuario_de_instagram_como_opcional(self):
-        resp = self.client.get(reverse('portal_registro', args=['peru']))
-        self.assertContains(resp, 'Usuario de Instagram (opcional)')
-
-    def test_se_guarda_normalizado(self):
-        self._post(instagram='@Nueva.Psi')
-        self.assertEqual(Psicologo.objects.get(usuario__username='nueva@example.com').instagram, 'nueva.psi')
-
-    def test_es_opcional(self):
-        self._post()
+        ))
         self.assertEqual(Psicologo.objects.get(usuario__username='nueva@example.com').instagram, '')
-
-    def test_un_usuario_invalido_se_rechaza_y_no_crea_la_cuenta(self):
-        resp = self._post(instagram='no es un usuario')
-        self.assertContains(resp, 'Escribí tu usuario así')
-        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
 
 
 class PerfilInstagramTests(_Base):

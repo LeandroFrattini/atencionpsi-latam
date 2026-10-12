@@ -45,10 +45,6 @@ class RegistroForm(HoneypotMixin, forms.Form):
     nombre = forms.CharField(label='Nombre y apellido', max_length=150)
     email = forms.EmailField(label='Email')
     whatsapp = forms.CharField(label='WhatsApp', max_length=30)
-    instagram = forms.CharField(
-        label='Usuario de Instagram (opcional)', max_length=100, required=False,
-        help_text='Ej: @atencionpsi',
-    )
     password = forms.CharField(label='Contraseña', widget=forms.PasswordInput, min_length=8)
     codigo_fundador = forms.CharField(
         label='Código de fundador (si tenés uno)', max_length=30, required=False,
@@ -75,9 +71,6 @@ class RegistroForm(HoneypotMixin, forms.Form):
         if User.objects.filter(username__iexact=email).exists():
             raise forms.ValidationError('Ya existe una cuenta con ese email.')
         return email
-
-    def clean_instagram(self):
-        return _limpiar_instagram(self.cleaned_data.get('instagram'))
 
     def clean_codigo_fundador(self):
         """Devuelve el CodigoFundador (o None si lo dejó vacío)."""
