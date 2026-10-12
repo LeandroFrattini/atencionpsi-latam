@@ -159,7 +159,8 @@ class PeriodoFundadorTests(_Base):
         self.client.force_login(psi.usuario)
         resp = self.client.get(reverse('portal_dashboard'))
         self.assertContains(resp, 'gratis hasta el')
-        self.assertContains(resp, f'{psi.gratis_hasta:%d/%m/%Y}')
+        # La pantalla muestra la hora local (no UTC): compararla igual.
+        self.assertContains(resp, f'{timezone.localtime(psi.gratis_hasta):%d/%m/%Y}')
         self.assertNotContains(resp, 'Suscripción pendiente')
 
     def test_vencido_el_panel_pide_activar_la_suscripcion(self):

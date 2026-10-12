@@ -330,6 +330,13 @@ class Psicologo(models.Model):
     # de gracia (settings.DLOCAL_GO_DIAS_DE_GRACIA).
     pago_declinado_desde = models.DateTimeField(null=True, blank=True)
     publicado_por_usuario = models.BooleanField('Publicado por el profesional', default=False)
+    # Usuario de Instagram (sin arroba) y, solo en el Plan Premium, si quiere
+    # que lo sumemos como colaborador/a (Collab) en las publicaciones.
+    instagram = models.CharField('Usuario de Instagram', max_length=30, blank=True)
+    quiere_colaborar = models.BooleanField(
+        'Quiere ser colaborador/a en Instagram', default=False,
+        help_text='Solo Plan Premium: lo sumamos como colaborador/a (Collab) en las publicaciones de Atención Psi',
+    )
 
     PLAN_CHOICES = [
         ('basico', 'Básico'),

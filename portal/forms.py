@@ -10,10 +10,21 @@ from django.utils.html import format_html
 from PIL import Image, ImageOps
 
 from directorio.forms import HoneypotMixin
+from directorio.instagram import normalizar_instagram
 from django.db.models import Q
 
 from directorio.models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Psicologo, Publico
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
+
+
+ERROR_INSTAGRAM = 'Escribí tu usuario así: @usuario (solo letras, números, puntos y guiones bajos).'
+
+
+def _limpiar_instagram(valor):
+    try:
+        return normalizar_instagram(valor)
+    except ValueError:
+        raise forms.ValidationError(ERROR_INSTAGRAM)
 
 
 class LoginForm(AuthenticationForm):
@@ -34,6 +45,10 @@ class RegistroForm(HoneypotMixin, forms.Form):
     nombre = forms.CharField(label='Nombre y apellido', max_length=150)
     email = forms.EmailField(label='Email')
     whatsapp = forms.CharField(label='WhatsApp', max_length=30)
+    instagram = forms.CharField(
+        label='Usuario de Instagram (opcional)', max_length=100, required=False,
+        help_text='Ej: @atencionpsi',
+    )
     password = forms.CharField(label='Contraseña', widget=forms.PasswordInput, min_length=8)
     codigo_fundador = forms.CharField(
         label='Código de fundador (si tenés uno)', max_length=30, required=False,
@@ -60,6 +75,9 @@ class RegistroForm(HoneypotMixin, forms.Form):
         if User.objects.filter(username__iexact=email).exists():
             raise forms.ValidationError('Ya existe una cuenta con ese email.')
         return email
+
+    def clean_instagram(self):
+        return _limpiar_instagram(self.cleaned_data.get('instagram'))
 
     def clean_codigo_fundador(self):
         """Devuelve el CodigoFundador (o None si lo dejó vacío)."""
@@ -102,6 +120,10 @@ class PerfilForm(forms.ModelForm):
         label='¿El motivo de consulta que atendés no está en la lista? Escribilo acá', max_length=80, required=False,
         help_text='Ej: "Procrastinación". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
     )
+    instagram = forms.CharField(
+        label='Usuario de Instagram', max_length=100, required=False,
+        help_text='Ej: @atencionpsi. No se muestra en tu perfil público.',
+    )
     publico_nuevo = forms.CharField(
         label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
         help_text='Ej: "Adultos mayores", "Deportistas". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
@@ -110,7 +132,7 @@ class PerfilForm(forms.ModelForm):
     class Meta:
         model = Psicologo
         fields = [
-            'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad',
+            'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'modalidad',
             'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
             'orientaciones', 'especialidades', 'publicos',
         ]
@@ -128,7 +150,7 @@ class PerfilForm(forms.ModelForm):
         }
 
     field_order = [
-        'nombre', 'matricula', 'whatsapp', 'ciudad', 'ciudad_nueva', 'modalidad',
+        'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'ciudad_nueva', 'modalidad',
         'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
         'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
@@ -147,6 +169,18 @@ class PerfilForm(forms.ModelForm):
         )
 
         psicologo = self.instance if self.instance.pk else None
+
+        # Instagram: se muestra con arroba. La casilla de colaborador/a es solo
+        # del Plan Premium (el plan se elige en el checkout).
+        if psicologo and psicologo.instagram:
+            self.initial['instagram'] = '@' + psicologo.instagram
+        self.fields['quiere_colaborar'].label = 'Quiero ser colaborador/a en las publicaciones de Instagram de Atención Psi'
+        self.fields['quiere_colaborar'].help_text = (
+            'Publicamos en colaboración con tu cuenta (Collab): llegamos a tus seguidores y vos a los nuestros. '
+            'Necesitamos tu usuario de Instagram.'
+        )
+        if not psicologo or psicologo.plan != 'premium':
+            del self.fields['quiere_colaborar']
 
         # Orientaciones y públicos: las aprobadas, más las que propuso este
         # profesional, más las que ya tiene tildadas (por si otra persona
@@ -173,6 +207,15 @@ class PerfilForm(forms.ModelForm):
             initial=ciudad_actual,
             help_text='Si atendés solo online y no querés mostrar una ciudad, dejalo en blanco.',
         )
+
+    def clean_instagram(self):
+        return _limpiar_instagram(self.cleaned_data.get('instagram'))
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get('quiere_colaborar') and not datos.get('instagram') and 'instagram' not in self.errors:
+            self.add_error('instagram', 'Para ser colaborador/a necesitamos tu usuario de Instagram.')
+        return datos
 
     def clean_foto(self):
         """Redimensiona y comprime la foto recién subida (no la ya guardada,

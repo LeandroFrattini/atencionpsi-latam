@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from directorio import dlocal_go, suscripciones
 from directorio.models import Ciudad, CodigoFundador, Especialidad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
+from directorio.instagram import normalizar_instagram
 from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
@@ -89,6 +90,7 @@ def registro(request, pais_slug):
                 pais=pais,
                 nombre=form.cleaned_data['nombre'],
                 whatsapp=form.cleaned_data['whatsapp'],
+                instagram=form.cleaned_data['instagram'],
                 matricula='',
                 terminos_aceptados_en=timezone.now(),
             )
@@ -219,8 +221,22 @@ def checkout(request):
                 'Ese plan todavía no está disponible para cobrar en tu país. Escribinos desde Contacto y lo resolvemos.',
             )
             return redirect('portal_checkout')
+        # Usuario de Instagram y, solo con el Premium, si quiere ser
+        # colaborador/a (Collab) en las publicaciones.
+        try:
+            instagram = normalizar_instagram(request.POST.get('instagram', ''))
+        except ValueError:
+            messages.error(request, 'El usuario de Instagram no es válido. Escribilo así: @usuario.')
+            return redirect('portal_checkout')
+        quiere_colaborar = plan == 'premium' and request.POST.get('quiere_colaborar') == 'on'
+        if quiere_colaborar and not (instagram or psicologo.instagram):
+            messages.error(request, 'Para ser colaborador/a necesitamos tu usuario de Instagram.')
+            return redirect('portal_checkout')
         psicologo.plan = plan
-        psicologo.save(update_fields=['plan'])
+        if instagram:
+            psicologo.instagram = instagram
+        psicologo.quiere_colaborar = quiere_colaborar
+        psicologo.save(update_fields=['plan', 'instagram', 'quiere_colaborar'])
         # El link de pago es de dLocal Go (ahí se cargan los datos de la
         # tarjeta, nunca pasan por este sitio). Se le adelanta el mail y se
         # le pone un identificador propio -- el estado real del pago se

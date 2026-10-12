@@ -166,15 +166,15 @@ class FormacionInline(admin.TabularInline):
 
 @admin.register(Psicologo)
 class PsicologoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'gratis_hasta', 'publicado', 'destacado')
-    list_filter = ('pais', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'especialidades', 'publicos')
+    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'gratis_hasta', 'instagram', 'quiere_colaborar', 'publicado', 'destacado')
+    list_filter = ('pais', 'modalidad', 'plan', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp')
     filter_horizontal = ('orientaciones', 'especialidades', 'publicos')
     inlines = [FormacionInline]
     fieldsets = (
-        (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'ciudad', 'modalidad')}),
+        (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
-        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'destacado', 'terminos_aceptados_en')}),
+        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
     )
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action']
