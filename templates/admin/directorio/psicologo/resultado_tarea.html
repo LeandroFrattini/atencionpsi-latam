@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Inicio</a> &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div style="padding: 16px 20px; border-radius: 6px; border: 1px solid {% if error %}#e6a1a1{% else %}#a9c9ae{% endif %}; background: {% if error %}#fdeeee{% else %}#eef6ef{% endif %};">
+    {% for linea in lineas %}
+      <p style="margin: 4px 0; white-space: pre-wrap;">{{ linea }}</p>
+    {% empty %}
+      <p style="margin: 4px 0;">No hay nada para mostrar.</p>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top: 20px; display: flex; gap: 12px; align-items: center;">
+    {% if reenviar %}
+      <form method="post" action="{% url 'admin:directorio_psicologo_recordatorios' %}" onsubmit="return confirm('¿Mandar ahora estos recordatorios por mail?');">
+        {% csrf_token %}
+        <input type="hidden" name="modo" value="enviar">
+        <button type="submit" class="button default" style="cursor:pointer">Enviar estos recordatorios ahora</button>
+      </form>
+    {% endif %}
+    <a href="{% url 'admin:index' %}" class="button">Volver al inicio</a>
+  </div>
+</div>
+{% endblock %}

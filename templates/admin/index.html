@@ -12,5 +12,27 @@
     <p style="margin: 8px 0 0; color: #666;">Mientras no las apruebes, las ve solo el profesional que las escribió. Entrá, tildá las que quieras y usá la acción "Aprobar seleccionados".</p>
 </div>
 {% endif %}
+{% if perms.directorio.change_psicologo %}
+<div style="margin-bottom: 24px; padding: 16px 20px; background: #eef6ef; border: 1px solid #a9c9ae; border-radius: 6px;">
+    <strong>Tareas de cobros y avisos</strong>
+    <p style="margin: 6px 0 12px; color: #555;">Corrélas cuando quieras: sincronizar una vez por semana (o cuando alguien cancele o rechacen una tarjeta) y los recordatorios cada 2 o 3 días.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <form method="post" action="{% url 'admin:directorio_psicologo_sincronizar' %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="button" style="cursor:pointer">Sincronizar con dLocal Go</button>
+        </form>
+        <form method="post" action="{% url 'admin:directorio_psicologo_recordatorios' %}" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="modo" value="simular">
+            <button type="submit" class="button" style="cursor:pointer">Ver recordatorios pendientes</button>
+        </form>
+        <form method="post" action="{% url 'admin:directorio_psicologo_recordatorios' %}" style="display:inline" onsubmit="return confirm('¿Mandar ahora los recordatorios por mail?');">
+            {% csrf_token %}
+            <input type="hidden" name="modo" value="enviar">
+            <button type="submit" class="button default" style="cursor:pointer">Enviar recordatorios</button>
+        </form>
+    </div>
+</div>
+{% endif %}
 {{ block.super }}
 {% endblock %}

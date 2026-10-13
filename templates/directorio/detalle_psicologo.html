@@ -150,6 +150,23 @@
                     {% endif %}
                     <a href="https://wa.me/{{ p.whatsapp_limpio }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
                 </div>
+
+                {% with enlace=request.scheme|add:'://'|add:request.get_host|add:p.url_publica %}
+                {% with mensaje='Mirá el perfil de '|add:p.nombre|add:' en Atención Psi: '|add:enlace %}
+                <div class="compartir" id="compartir" data-url="{{ enlace }}" data-titulo="{{ p.nombre }} | Atención Psi" data-texto="Mirá el perfil de {{ p.nombre }} en Atención Psi">
+                    <button type="button" class="btn-compartir" id="btn-compartir" aria-expanded="false" aria-controls="panel-compartir">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                        Compartir perfil
+                    </button>
+                    <div class="compartir-panel" id="panel-compartir" hidden>
+                        <button type="button" class="compartir-opcion" data-accion="copiar">Copiar link</button>
+                        <a class="compartir-opcion" href="https://wa.me/?text={{ mensaje|urlencode }}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+                        <a class="compartir-opcion" href="mailto:?subject={{ p.nombre|urlencode }}%20%7C%20Atenci%C3%B3n%20Psi&body={{ mensaje|urlencode }}">Enviar por email</a>
+                    </div>
+                    <p class="compartir-aviso" id="compartir-aviso" role="status" aria-live="polite"></p>
+                </div>
+                {% endwith %}
+                {% endwith %}
             </div>
         </aside>
     </div>
@@ -166,4 +183,47 @@
     </section>
     {% endif %}
 </div>
+<script>
+    // Compartir perfil: en el celular abre el menú de compartir del sistema; en la
+    // computadora muestra copiar link, WhatsApp y email.
+    (function () {
+        var caja = document.getElementById('compartir');
+        var boton = document.getElementById('btn-compartir');
+        var panel = document.getElementById('panel-compartir');
+        var aviso = document.getElementById('compartir-aviso');
+        if (!caja || !boton) return;
+        var url = caja.dataset.url, titulo = caja.dataset.titulo, texto = caja.dataset.texto;
+        var temporizador = null;
+        function avisar(msg) {
+            aviso.textContent = msg;
+            clearTimeout(temporizador);
+            temporizador = setTimeout(function () { aviso.textContent = ''; }, 3000);
+        }
+        function copiar() {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(url);
+            }
+            return new Promise(function (ok, fallo) {
+                var t = document.createElement('textarea');
+                t.value = url; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+                document.body.appendChild(t); t.select();
+                try { document.execCommand('copy') ? ok() : fallo(); } catch (e) { fallo(e); } finally { document.body.removeChild(t); }
+            });
+        }
+        function abrir(abierto) { panel.hidden = !abierto; boton.setAttribute('aria-expanded', abierto ? 'true' : 'false'); }
+        boton.addEventListener('click', function () {
+            if (navigator.share) {
+                navigator.share({title: titulo, text: texto, url: url}).catch(function () { /* canceló */ });
+            } else {
+                abrir(panel.hidden);
+            }
+        });
+        panel.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-accion="copiar"]');
+            if (b) { copiar().then(function () { avisar('¡Link copiado!'); }, function () { avisar('No se pudo copiar. Copialo desde la barra del navegador.'); }); }
+        });
+        document.addEventListener('click', function (e) { if (!e.target.closest('#compartir')) abrir(false); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') abrir(false); });
+    })();
+</script>
 {% endblock %}

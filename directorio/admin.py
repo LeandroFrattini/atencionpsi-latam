@@ -1,7 +1,9 @@
 import zipfile
-from io import BytesIO
+from io import BytesIO, StringIO
 
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
+from django.core.management import call_command
 from django.shortcuts import redirect
 from django import forms
 from django.urls import path, reverse
@@ -11,7 +13,7 @@ from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
-from . import dlocal_go, planes_dlocal
+from . import dlocal_go, planes_dlocal, suscripciones
 from .models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
@@ -178,6 +180,70 @@ class PsicologoAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action']
+
+    # ---- Tareas que antes eran de consola: botones en el inicio del admin ----------------
+    ETIQUETAS_SINCRONIZACION = {
+        'activa': 'Con la suscripción al día (quedan publicados)',
+        'en_gracia': 'Con el cobro rechazado, dentro de los días de gracia',
+        'declinada': 'Despublicados por cobro rechazado',
+        'baja': 'Dados de baja (cancelaron la suscripción)',
+        'pendiente': 'Eligieron plan pero todavía no pagaron',
+        'sin_suscripcion': 'Sin suscripción en dLocal Go',
+        'exento': 'Exentos de pago',
+        'error': 'No se pudieron revisar (mirá los logs)',
+    }
+
+    def get_urls(self):
+        return [
+            path('tareas/sincronizar/', self.admin_site.admin_view(self.sincronizar_view), name='directorio_psicologo_sincronizar'),
+            path('tareas/recordatorios/', self.admin_site.admin_view(self.recordatorios_view), name='directorio_psicologo_recordatorios'),
+        ] + super().get_urls()
+
+    def _pagina_resultado(self, request, titulo, lineas, error=False, reenviar=False):
+        contexto = {
+            **self.admin_site.each_context(request),
+            'title': titulo, 'lineas': lineas, 'error': error, 'reenviar': reenviar, 'opts': self.model._meta,
+        }
+        return TemplateResponse(request, 'admin/directorio/psicologo/resultado_tarea.html', contexto)
+
+    @method_decorator(require_POST)
+    def sincronizar_view(self, request):
+        """Consulta a dLocal Go quién pagó y quién se dio de baja y actualiza las
+        publicaciones (lo mismo que hacía `manage.py sincronizar_suscripciones`)."""
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        if not dlocal_go.conectado():
+            return self._pagina_resultado(request, 'Sincronizar con dLocal Go',
+                                          ['Faltan las claves de dLocal Go en Render (DLOCAL_GO_API_KEY / DLOCAL_GO_SECRET_KEY).'], error=True)
+        try:
+            resumen = suscripciones.sincronizar_todos()
+        except dlocal_go.DLocalError as e:
+            return self._pagina_resultado(request, 'Sincronizar con dLocal Go', [f'No se pudo hablar con dLocal Go: {e}'], error=True)
+        if not resumen:
+            lineas = ['Listo. Todavía no hay suscripciones en dLocal Go para revisar.']
+        else:
+            lineas = ['Listo. Esto es lo que encontré:']
+            for estado, cantidad in sorted(resumen.items()):
+                lineas.append(f'  • {self.ETIQUETAS_SINCRONIZACION.get(estado, estado)}: {cantidad}')
+        return self._pagina_resultado(request, 'Sincronizar con dLocal Go', lineas)
+
+    @method_decorator(require_POST)
+    def recordatorios_view(self, request):
+        """Muestra (modo=simular) o manda (modo=enviar) los mails de recordatorio:
+        terminar el pago, completar el perfil y fin del período de fundador."""
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        enviar = request.POST.get('modo') == 'enviar'
+        salida = StringIO()
+        try:
+            call_command('enviar_recordatorios', *(['--apply'] if enviar else []), stdout=salida)
+        except Exception as e:
+            return self._pagina_resultado(request, 'Recordatorios', [f'No se pudieron mandar los recordatorios: {e}'], error=True)
+        lineas = [l for l in salida.getvalue().splitlines() if l.strip()]
+        return self._pagina_resultado(
+            request, 'Recordatorios enviados' if enviar else 'Recordatorios pendientes (todavía no se mandó nada)',
+            lineas, reenviar=not enviar,
+        )
 
     @admin.display(boolean=True)
     def publicado(self, obj):
