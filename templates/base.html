@@ -36,36 +36,52 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=24">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=29">
     {% block json_ld %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    {% with ruta=request.resolver_match.url_name %}
     <header class="topbar">
         <a href="{% url 'hub' %}" class="logo"><span class="v">Atención</span><span class="r">Psi</span></a>
-        <nav class="topbar-nav">
-            <a href="{% url 'faq' %}" class="topbar-link">Preguntas frecuentes</a>
-            {% if pais and not pais.es_externo %}
-                <a href="{% url 'portal_registro' pais.slug %}" class="topbar-link topbar-link-cta">¿Sos psicólogo/a? Sumate</a>
-            {% endif %}
-            <a href="{% url 'portal_login' %}" class="topbar-link">Portal profesional</a>
-            {% if paises_activos %}
-                <details class="pais-switcher">
-                    <summary>
-                        {% if pais %}<img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono">{{ pais.nombre }}{% else %}Elegí tu país{% endif %}
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                    </summary>
-                    <div class="pais-switcher-menu">
-                        {% for pa in paises_activos %}
-                            <a href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{% url 'pais_home' pa.slug %}{% endif %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}">
-                                <img src="{% static pa.bandera_svg %}" alt="" class="bandera-icono"> {{ pa.nombre }}
-                            </a>
-                        {% endfor %}
-                    </div>
-                </details>
-            {% endif %}
-        </nav>
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navMenu">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="nav-menu" id="navMenu">
+            <nav aria-label="Principal">
+                <ul class="nav-links">
+                    <li><a href="{% url 'hub' %}"{% if ruta == 'hub' %} class="activo" aria-current="page"{% endif %}>Inicio</a></li>
+                    <li><a href="{% if pais and not pais.es_externo %}{% url 'buscador_pais' pais.slug %}{% else %}{% url 'hub' %}{% endif %}"{% if ruta == 'buscador_pais' %} class="activo" aria-current="page"{% endif %}>Buscador</a></li>
+                    <li><a href="{% url 'sobre_nosotros' %}"{% if ruta == 'sobre_nosotros' %} class="activo" aria-current="page"{% endif %}>Sobre nosotros</a></li>
+                    <li><a href="{% url 'faq' %}"{% if ruta == 'faq' %} class="activo" aria-current="page"{% endif %}>Preguntas frecuentes</a></li>
+                </ul>
+            </nav>
+            <div class="nav-actions">
+                {% if paises_activos %}
+                    <details class="pais-switcher">
+                        <summary>
+                            {% if pais %}<img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono">{{ pais.nombre }}{% else %}Elegí tu país{% endif %}
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </summary>
+                        <div class="pais-switcher-menu">
+                            {% for pa in paises_activos %}
+                                <a href="{% if pa.es_externo %}{{ pa.url_externa }}{% else %}{% url 'pais_home' pa.slug %}{% endif %}" class="pais-switcher-item{% if pais.slug == pa.slug %} pais-switcher-item-actual{% endif %}"{% if pa.es_externo %} rel="noopener"{% endif %}>
+                                    <img src="{% static pa.bandera_svg %}" alt="" class="bandera-icono"> {{ pa.nombre }}{% if pa.es_externo %} <span class="pais-switcher-externo" aria-hidden="true">&nearr;</span>{% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </details>
+                {% endif %}
+                <a href="{% url 'portal_login' %}" class="btn-portal-nav">Portal profesional</a>
+                {% with destino=pais|default:pais_para_sumarse %}
+                    {% if destino and not destino.es_externo %}
+                        <a href="{% url 'portal_registro' destino.slug %}" class="btn-unete-nav">Sumate al equipo</a>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
     </header>
+    {% endwith %}
     <main>
         {% if messages %}
             <ul class="mensajes">
@@ -76,33 +92,70 @@
         {% endif %}
         {% block content %}{% endblock %}
     </main>
-    <footer class="footer">
-        <span>
-            Atención Psi &mdash; expandiendo en Latinoamérica &middot;
-            <a href="mailto:{{ footer_contacto_email }}">{{ footer_contacto_email }}</a>{% if footer_contacto_whatsapp %} &middot;
-            <a href="https://wa.me/{{ footer_contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp {{ footer_contacto_telefono }}</a>{% endif %}
-        </span>
-        <span class="footer-links">
-            <a href="{% url 'faq' %}">Preguntas frecuentes</a>
-            <a href="{% url 'terminos' %}">Términos y Condiciones</a>
-            <a href="{% url 'privacidad' %}">Política de Privacidad</a>
-            <a href="{% url 'contacto' %}">Contacto</a>
-        </span>
-        {% if footer_instagram_url or footer_facebook_url %}
-        <span class="footer-redes">
-            {% if footer_instagram_url %}
-                <a href="{{ footer_instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
-                </a>
-            {% endif %}
-            {% if footer_facebook_url %}
-                <a href="{{ footer_facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 9h3V5h-3c-2.2 0-4 1.8-4 4v2H7v4h3v7h4v-7h3l1-4h-4V9c0-.6.4-1 1-1Z"/></svg>
-                </a>
-            {% endif %}
-        </span>
-        {% endif %}
+    <footer class="site-footer">
+        <div class="site-footer-inner">
+            <div class="site-footer-brand">
+                <a href="{% url 'hub' %}" class="logo"><span class="v">Atención</span><span class="r">Psi</span></a>
+                <p>Psicólogos con matrícula habilitante en Perú, Uruguay y Chile, y en toda Argentina. Atención online y presencial, con contacto directo y sin intermediarios.</p>
+                {% if footer_instagram_url or footer_facebook_url %}
+                <span class="footer-redes">
+                    {% if footer_instagram_url %}
+                        <a href="{{ footer_instagram_url }}" target="_blank" rel="noopener" aria-label="Instagram">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+                        </a>
+                    {% endif %}
+                    {% if footer_facebook_url %}
+                        <a href="{{ footer_facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 9h3V5h-3c-2.2 0-4 1.8-4 4v2H7v4h3v7h4v-7h3l1-4h-4V9c0-.6.4-1 1-1Z"/></svg>
+                        </a>
+                    {% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <div class="site-footer-cols">
+                <div class="site-footer-col">
+                    <h4>Explorar</h4>
+                    <a href="{% url 'hub' %}">Inicio</a>
+                    <a href="{% if pais and not pais.es_externo %}{% url 'buscador_pais' pais.slug %}{% else %}{% url 'hub' %}{% endif %}">Buscador</a>
+                    <a href="{% url 'sobre_nosotros' %}">Sobre nosotros</a>
+                    <a href="{% url 'faq' %}">Preguntas frecuentes</a>
+                </div>
+                <div class="site-footer-col">
+                    <h4>Profesionales</h4>
+                    <a href="{% url 'portal_login' %}">Portal profesional</a>
+                    {% with destino=pais|default:pais_para_sumarse %}{% if destino and not destino.es_externo %}<a href="{% url 'portal_registro' destino.slug %}">Sumate al equipo</a>{% endif %}{% endwith %}
+                </div>
+                <div class="site-footer-col">
+                    <h4>Contacto</h4>
+                    <a href="mailto:{{ footer_contacto_email }}">{{ footer_contacto_email }}</a>
+                    {% if footer_contacto_whatsapp %}<a href="https://wa.me/{{ footer_contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp {{ footer_contacto_telefono }}</a>{% endif %}
+                    <a href="{% url 'contacto' %}">Escribinos</a>
+                </div>
+                <div class="site-footer-col">
+                    <h4>Legal</h4>
+                    <a href="{% url 'terminos' %}">Términos y Condiciones</a>
+                    <a href="{% url 'privacidad' %}">Política de Privacidad</a>
+                </div>
+            </div>
+        </div>
+        <p class="site-footer-bottom">&copy; 2026 Atención Psi &middot; Hecho con cariño para cuidar a quienes cuidan.</p>
     </footer>
+    <script>
+        // Menú de celular: se abre y se cierra con el botón de las tres rayas.
+        (function () {
+            var toggle = document.getElementById('navToggle');
+            var menu = document.getElementById('navMenu');
+            if (!toggle || !menu) return;
+            function setOpen(open) {
+                menu.classList.toggle('nav-menu-open', open);
+                toggle.classList.toggle('nav-toggle-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+            }
+            toggle.addEventListener('click', function () { setOpen(!menu.classList.contains('nav-menu-open')); });
+            menu.addEventListener('click', function (e) { if (e.target.closest('.nav-links a, .btn-portal-nav, .btn-unete-nav')) setOpen(false); });
+        })();
+    </script>
     {% if ga4_measurement_id %}
         {% comment %}
         Banner de cookies -- solo aparece si hay analítica configurada (si

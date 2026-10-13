@@ -11,11 +11,11 @@ class PaisesSitemap(Sitemap):
     priority = 1.0
 
     def items(self):
-        return ['hub'] + list(Pais.objects.filter(activo=True, es_externo=False).values_list('slug', flat=True))
+        return ['hub', 'sobre_nosotros'] + list(Pais.objects.filter(activo=True, es_externo=False).values_list('slug', flat=True))
 
     def location(self, item):
-        if item == 'hub':
-            return reverse('hub')
+        if item in ('hub', 'sobre_nosotros'):
+            return reverse(item)
         return reverse('pais_home', args=[item])
 
 

@@ -105,6 +105,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'directorio.context_processors.paises_activos',
                 'directorio.context_processors.stats_globales',
+                'directorio.context_processors.pais_para_sumarse',
                 'directorio.context_processors.footer_contexto',
                 'directorio.context_processors.analytics_contexto',
             ],
@@ -189,6 +190,11 @@ CONTACTO_TELEFONO = '+54 9 291 578 7311'
 # El precio de la suscripción ya no vive acá: sale de Pais.precio_basico /
 # Pais.precio_premium, porque ahora es un dato por país, no un texto único.
 TERMINOS_DATOS_LEGALES = 'Leandro Frattini, persona física, CUIL 20-38404694-1 (Argentina).'
+
+# Listado público de profesionales de Argentina (lo publica atencionpsi.com.ar) para
+# el "mix" del inicio. Solo se usa si Argentina está activa en Admin -> Países.
+# Si no responde, el inicio muestra los demás países sin problema.
+ARGENTINA_FEED_URL = os.environ.get('ARGENTINA_FEED_URL', 'https://atencionpsi.com.ar/api/destacados/')
 
 # Redes sociales del footer -- vacío por defecto a propósito: dLocal Go pidió
 # explícitamente no mostrar íconos genéricos si no hay perfil real detrás.

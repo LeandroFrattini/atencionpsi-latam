@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ContactoForm
 from .models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
+from .destacados import mezcla_de_psicologos
 from .taxonomia import clave
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,21 @@ def robots_txt(request):
 
 def hub(request):
     paises = Pais.objects.filter(activo=True)
-    return render(request, 'directorio/hub.html', {'paises': paises})
+    return render(request, 'directorio/hub.html', {
+        'paises': paises,
+        # Mezcla distinta en cada visita, de todos los países activos.
+        'destacados': mezcla_de_psicologos(8),
+    })
+
+
+def sobre_nosotros(request):
+    pais = Pais.objects.filter(activo=True, es_externo=False).order_by('orden').first()
+    return render(request, 'directorio/sobre_nosotros.html', {
+        'pais_inicio': pais,
+        'contacto_email': settings.CONTACTO_EMAIL,
+        'contacto_whatsapp': settings.CONTACTO_WHATSAPP,
+        'contacto_telefono': settings.CONTACTO_TELEFONO,
+    })
 
 
 def faq(request):

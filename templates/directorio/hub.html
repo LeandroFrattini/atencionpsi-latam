@@ -19,4 +19,23 @@
         <p class="pais-vacio">Todavía no hay países activos.</p>
     {% endfor %}
 </div>
+{% if destacados %}
+<section class="mix-destacados" aria-labelledby="titulo-destacados">
+    <h2 id="titulo-destacados">Psicólogos destacados</h2>
+    <p class="mix-sub">Una selección de profesionales de todos los países. Cada vez que entrás, te mostramos otros.</p>
+    <div class="mix-grid">
+        {% for d in destacados %}
+        <a href="{{ d.url }}" class="mini-card"{% if d.externo %} target="_blank" rel="noopener"{% endif %}>
+            <span class="mini-foto">
+                {% if d.foto_url %}<img src="{{ d.foto_url }}" alt="Foto de {{ d.nombre }}" loading="lazy">{% else %}<span class="mini-inicial">{{ d.nombre|slice:":1" }}</span>{% endif %}
+                <span class="mini-bandera" title="{{ d.pais_nombre }}"><img src="{{ d.bandera_url }}" alt="{{ d.pais_nombre }}"></span>
+            </span>
+            <span class="mini-nombre">{{ d.nombre }}</span>
+            {% if d.ciudad %}<span class="mini-ciudad">{{ d.ciudad }}</span>{% endif %}
+            {% if d.enfoque %}<span class="mini-enfoque">{{ d.enfoque }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}

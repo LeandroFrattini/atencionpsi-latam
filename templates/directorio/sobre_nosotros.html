@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sobre nosotros | Atención Psi{% endblock %}
+{% block meta_description %}Atención Psi nació en Argentina para que encontrar a un psicólogo o psicóloga no sea un laberinto. Hoy damos el mismo paso en Perú, Uruguay y Chile: perfiles reales, contacto directo y mucho cuidado.{% endblock %}
+{% block og_title %}Sobre nosotros | Atención Psi{% endblock %}
+{% block og_description %}Pedir ayuda es el primer paso. Te acompañamos a darlo.{% endblock %}
+{% block json_ld %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "Sobre nosotros | Atención Psi",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'sobre_nosotros' %}",
+    "mainEntity": {"@type": "Organization", "name": "Atención Psi", "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'hub' %}"}
+}
+</script>
+{% endblock %}
+{% block content %}
+<section class="nosotros-hero">
+    <span class="nosotros-etiqueta">Quiénes somos</span>
+    <h1>Pedir ayuda es el primer paso.<br>Te acompañamos a darlo.</h1>
+    <p>Atención Psi es un lugar para encontrar a la persona indicada para escucharte, en Perú, Uruguay, Chile y en cada lugar al que sigamos llegando.</p>
+</section>
+
+<section class="nosotros-historia">
+    <h2>Cómo empezó</h2>
+    <p>Atención Psi nació en Argentina con una idea muy simple: que encontrar a un psicólogo o psicóloga no tenga que ser un laberinto. Que no haga falta saber a quién preguntarle, ni juntar coraje para llamar a diez consultorios, ni quedarse sin respuesta.</p>
+    <p>Hoy es una red firme, con muchos profesionales que ya acompañan a personas todos los días. Y damos el mismo paso en Perú, Uruguay y Chile, con el mismo cuidado de siempre: perfiles reales, contacto directo y trato humano.</p>
+</section>
+
+<section class="nosotros-dos">
+    <article class="nosotros-card">
+        <span class="nosotros-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+        </span>
+        <h2>Si estás buscando atención</h2>
+        <p>Sabemos que dar el primer paso cuesta. Por eso armamos un buscador simple, para que puedas encontrar con calma a quien mejor se adapte a vos: por ciudad, por motivo de consulta, por enfoque o por modalidad. Y escribirle directo, sin listas de espera ni formularios eternos.</p>
+        <p>Buscar y contactar profesionales es gratis. Elegís vos, a tu ritmo.</p>
+        {% if pais_inicio %}<a href="{% url 'buscador_pais' pais_inicio.slug %}" class="btn-primario nosotros-btn">Ver psicólogos</a>{% else %}<a href="{% url 'hub' %}" class="btn-primario nosotros-btn">Elegir mi país</a>{% endif %}
+    </article>
+    <article class="nosotros-card nosotros-card-rosa">
+        <span class="nosotros-icono nosotros-icono-rosa" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+        </span>
+        <h2>Si sos psicólogo/a</h2>
+        <p>Detrás de cada perfil hay una persona que eligió dedicarse a cuidar a otras. Queremos que sea fácil encontrarte, que quien te necesita llegue a vos y que puedas trabajar a tu manera: vos ponés tus horarios, tu modalidad y tus valores, sin comisión por sesión.</p>
+        <p>Estamos sumando a los primeros profesionales de cada país, y nos encanta que formen parte de cómo se construye esto.</p>
+        {% if pais_inicio %}<a href="{% url 'portal_registro' pais_inicio.slug %}" class="btn-primario nosotros-btn nosotros-btn-rosa">Sumarme al equipo</a>{% endif %}
+    </article>
+</section>
+
+<section class="nosotros-valores">
+    <h2>Lo que nos mueve</h2>
+    <div class="nosotros-valores-grid">
+        <div class="valor-card">
+            <span class="valor-icono" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z"/></svg></span>
+            <h3>Cercanía</h3>
+            <p>Hablamos simple y sin vueltas. Pedir ayuda ya es suficiente; no tiene que ser complicado ni intimidante.</p>
+        </div>
+        <div class="valor-card">
+            <span class="valor-icono" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+            <h3>Confianza</h3>
+            <p>Cada perfil muestra el número de matrícula o colegiatura del profesional, para que sepas con quién estás hablando.</p>
+        </div>
+        <div class="valor-card">
+            <span class="valor-icono" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></span>
+            <h3>Respeto</h3>
+            <p>Cada persona es distinta. Por eso hay distintos enfoques, motivos de consulta y modalidades: la decisión es tuya y a tu tiempo.</p>
+        </div>
+        <div class="valor-card">
+            <span class="valor-icono" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+            <h3>Alcance</h3>
+            <p>Atención online y presencial, en distintas ciudades, para que la distancia no sea la razón de no empezar.</p>
+        </div>
+    </div>
+</section>
+
+<section class="nosotros-cuidado">
+    <h2>Cuidar a quienes cuidan</h2>
+    <p>Creemos que las personas que cuidan la salud mental de otras también merecen trabajar tranquilas, ser encontradas y sentirse acompañadas. Una buena atención empieza por un buen encuentro, y trabajamos todos los días para que ese encuentro suceda.</p>
+</section>
+
+<p class="nosotros-aviso">Si estás atravesando una situación de urgencia o riesgo, este sitio no reemplaza la atención de emergencia: comunicate ahora con los servicios de emergencia de tu país o acercate a la guardia más cercana.</p>
+
+<section class="nosotros-cierre">
+    <p class="nosotros-cierre-lead">Gracias por estar acá. Si estás buscando, ojalá encuentres a quien te acompañe. Si sos profesional, bienvenido/a.</p>
+    <p class="nosotros-cierre-firma">Con cariño,</p>
+    <p class="nosotros-cierre-equipo">El equipo de Atención Psi
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.3-9.2C1.4 8.3 3.4 5 6.6 5c2 0 3.7 1.1 5.4 3.1C13.7 6.1 15.4 5 17.4 5c3.2 0 5.2 3.3 3.9 6.8C19.5 16.4 12 21 12 21Z"/></svg>
+    </p>
+    <p class="nosotros-contacto">Escribinos cuando quieras: <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %} &middot; <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">WhatsApp {{ contacto_telefono }}</a>{% endif %}</p>
+</section>
+{% endblock %}

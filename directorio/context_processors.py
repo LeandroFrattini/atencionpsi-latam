@@ -22,6 +22,12 @@ def stats_globales(request):
     return {'total_sesiones_atendidas_latam': total}
 
 
+def pais_para_sumarse(request):
+    """A qué país lleva el botón "Sumate al equipo" cuando se está en una página
+    sin país (inicio, FAQ...): el primero activo que vive en este sitio."""
+    return {'pais_para_sumarse': Pais.objects.filter(activo=True, es_externo=False).order_by('orden').first()}
+
+
 def footer_contexto(request):
     """Datos de contacto/redes para el footer, disponibles en todas las
     páginas (dLocal Go pidió que estén visibles en todo el sitio)."""
