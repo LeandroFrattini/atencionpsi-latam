@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
-from django.db import transaction
+from django.db import InterfaceError, OperationalError, close_old_connections, transaction
 from django.db.models import Count, Max
 from django.http import Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
@@ -80,23 +80,35 @@ def registro(request, pais_slug):
             # Lo bloquea solo: tanto AuthenticationForm (login de /portal/)
             # como los dos backends de auth chequean is_active antes de
             # dejar entrar.
-            usuario = User.objects.create_user(
-                username=form.cleaned_data['email'],
-                email=form.cleaned_data['email'],
-                password=form.cleaned_data['password'],
-                is_active=False,
-            )
-            psicologo = Psicologo.objects.create(
-                usuario=usuario,
-                pais=pais,
-                nombre=form.cleaned_data['nombre'],
-                whatsapp=form.cleaned_data['whatsapp'],
-                matricula='',
-                terminos_aceptados_en=timezone.now(),
-            )
-            codigo = form.cleaned_data.get('codigo_fundador')
-            if codigo:
-                _canjear_codigo(request, psicologo, codigo, pais)
+            #
+            # Usuario + perfil + código van en una sola transacción: si la base
+            # se corta a mitad de camino (pasó con la conexión a Postgres) no
+            # queda una cuenta a medias, sin mail y que además bloquea el email
+            # para volver a intentar el registro.
+            try:
+                with transaction.atomic():
+                    usuario = User.objects.create_user(
+                        username=form.cleaned_data['email'],
+                        email=form.cleaned_data['email'],
+                        password=form.cleaned_data['password'],
+                        is_active=False,
+                    )
+                    psicologo = Psicologo.objects.create(
+                        usuario=usuario,
+                        pais=pais,
+                        nombre=form.cleaned_data['nombre'],
+                        whatsapp=form.cleaned_data['whatsapp'],
+                        matricula='',
+                        terminos_aceptados_en=timezone.now(),
+                    )
+                    codigo = form.cleaned_data.get('codigo_fundador')
+                    if codigo:
+                        _canjear_codigo(request, psicologo, codigo, pais)
+            except (OperationalError, InterfaceError):
+                logger.exception('Falló la base de datos al registrar a %s', form.cleaned_data['email'])
+                close_old_connections()
+                messages.error(request, 'No pudimos completar el registro por un problema momentáneo. Probá de nuevo en un minuto: no se guardó nada.')
+                return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
             try:
                 _enviar_verificacion(request, usuario)
             except Exception:

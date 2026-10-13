@@ -2,11 +2,13 @@
 import datetime
 import re
 from io import StringIO
+from unittest.mock import patch
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.management import call_command
+from django.db import InterfaceError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -105,6 +107,23 @@ class RegistroConCodigoTests(_Base):
         resp = self._registrar(c.codigo, pais='peru')
         self.assertContains(resp, 'Ese código es para Chile')
         self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+
+    def test_si_la_base_se_corta_al_canjear_no_queda_una_cuenta_a_medias(self):
+        """Caso real: "connection already closed" justo al aplicar el código.
+        No debe dar 500 ni dejar usuario/perfil huérfanos (que además
+        bloquearían el email para volver a intentar)."""
+        c = CodigoFundador.objects.create(pais=self.peru)
+        with patch.object(Psicologo, 'canjear_codigo_fundador', side_effect=InterfaceError('connection already closed')):
+            resp = self._registrar(c.codigo)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'problema momentáneo')
+        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+        self.assertFalse(Psicologo.objects.filter(nombre='Nueva Psicóloga').exists())
+        self.assertEqual(len(mail.outbox), 0)
+        # Y al reintentar, anda normal.
+        resp = self._registrar(c.codigo)
+        self.assertTemplateUsed(resp, 'portal/verificar_enviado.html')
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_sin_codigo_el_registro_sigue_igual_que_antes(self):
         self._registrar('')
