@@ -27,6 +27,8 @@ from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
 from .forms import (
+    DIAS_DE_LA_SEMANA,
+    DisponibilidadFormSetInicial,
     DiaNoAtiendeFormSet,
     DisponibilidadFormSet,
     FormacionFormSet,
@@ -419,10 +421,22 @@ def despublicar(request):
 def agenda(request):
     psicologo = request.user.psicologo
 
+    # Sin ningún horario cargado: una fila por día (lunes a sábado), con el día ya elegido.
+    # El mismo `initial` tiene que usarse al guardar: así una fila donde solo
+    # está el día (sin horas) cuenta como vacía y se ignora.
+    primera_vez = not psicologo.disponibilidad_semanal.exists()
+
     def armar(data=None):
+        if primera_vez:
+            disponibilidad = DisponibilidadFormSetInicial(
+                data, instance=psicologo, prefix='disp',
+                initial=[{'dia_semana': d} for d in DIAS_DE_LA_SEMANA],
+            )
+        else:
+            disponibilidad = DisponibilidadFormSet(data, instance=psicologo, prefix='disp')
         return (
             TipoSesionFormSet(data, instance=psicologo, prefix='tipos'),
-            DisponibilidadFormSet(data, instance=psicologo, prefix='disp'),
+            disponibilidad,
             DiaNoAtiendeFormSet(data, instance=psicologo, prefix='libres'),
         )
 

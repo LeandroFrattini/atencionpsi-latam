@@ -795,3 +795,26 @@ label[for="id_sitio_web"] {
 div.portal-aviso-fundador p { margin: 0 0 12px; }
 div.portal-aviso-fundador .btn-primario { display: inline-block; text-decoration: none; }
 .codigos-generados td, .codigos-generados th { font-family: ui-monospace, monospace; }
+
+.btn-agregar-fila { margin: 10px 0 6px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; }
+
+/* Agenda en celular: cada fila de las tablas se apila con su etiqueta, en vez
+   de quedar cortada a la derecha. */
+@media (max-width: 640px) {
+    .portal-tabla-form thead { display: none; }
+    .portal-tabla-form, .portal-tabla-form tbody { display: block; width: 100%; }
+    .portal-tabla-form tr {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px;
+        padding: 12px 0; border-bottom: 1px solid var(--borde);
+    }
+    .portal-tabla-form td { display: block; padding: 0; min-width: 0; border: 0; }
+    .portal-tabla-form td::before {
+        content: attr(data-label); display: block; margin-bottom: 3px;
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--texto-tenue);
+    }
+    .portal-tabla-form td:not([data-label])::before { content: none; }
+    .portal-tabla-form td input, .portal-tabla-form td select { width: 100%; }
+    .portal-tabla-form td[data-label="Nombre"],
+    .portal-tabla-form td[data-label="Motivo (opcional)"],
+    .portal-tabla-form td[data-label="Día"] { grid-column: 1 / -1; }
+}

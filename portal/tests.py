@@ -382,8 +382,9 @@ class AgendaPortalTests(TestCase):
             'tipos-0-nombre': '', 'tipos-0-duracion_min': '', 'tipos-0-precio': '', 'tipos-0-orden': '',
             'disp-TOTAL_FORMS': '2', 'disp-INITIAL_FORMS': '0',
             'disp-MIN_NUM_FORMS': '0', 'disp-MAX_NUM_FORMS': '1000',
-            'disp-0-dia_semana': '', 'disp-0-hora_desde': '', 'disp-0-hora_hasta': '',
-            'disp-1-dia_semana': '', 'disp-1-hora_desde': '', 'disp-1-hora_hasta': '',
+            # Como en el navegador: el día ya viene elegido, aunque las horas estén vacías.
+            'disp-0-dia_semana': '0', 'disp-0-hora_desde': '', 'disp-0-hora_hasta': '',
+            'disp-1-dia_semana': '1', 'disp-1-hora_desde': '', 'disp-1-hora_hasta': '',
             'libres-TOTAL_FORMS': '1', 'libres-INITIAL_FORMS': '0',
             'libres-MIN_NUM_FORMS': '0', 'libres-MAX_NUM_FORMS': '1000',
             'libres-0-fecha_desde': '', 'libres-0-fecha_hasta': '', 'libres-0-motivo': '',

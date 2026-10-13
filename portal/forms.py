@@ -293,6 +293,16 @@ DisponibilidadFormSet = inlineformset_factory(
     extra=2, can_delete=True,
 )
 
+# Para quien todavía no cargó ningún horario: una fila por día (lunes a sábado), ya
+# con el día elegido, así completa solo "desde" y "hasta" de los días que atiende
+# (en vez de tener que guardar de a dos filas).
+DIAS_DE_LA_SEMANA = [dia for dia, _ in DisponibilidadSemanal.DIA_CHOICES]
+DisponibilidadFormSetInicial = inlineformset_factory(
+    Psicologo, DisponibilidadSemanal,
+    form=DisponibilidadForm,
+    extra=len(DIAS_DE_LA_SEMANA), can_delete=True,
+)
+
 DiaNoAtiendeFormSet = inlineformset_factory(
     Psicologo, DiaNoAtiende,
     form=DiaNoAtiendeForm,

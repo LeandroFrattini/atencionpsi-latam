@@ -7,7 +7,7 @@
     <h1>Mi agenda</h1>
     <p class="portal-lead">
         Definí tus tipos de sesión y tus horarios. Con esto, los pacientes pueden
-        reservar turnos desde tu perfil público. Dejá una fila vacía para agregar; tildá
+        reservar turnos desde tu perfil público. Usá &ldquo;+ Agregar&rdquo; para sumar más filas; tildá
         &ldquo;eliminar&rdquo; para borrar.
     </p>
 
@@ -18,65 +18,111 @@
         <h2 class="portal-subtitulo">Tipos de sesión</h2>
         {{ fs_tipos.non_form_errors }}
         {{ fs_tipos.management_form }}
-        <table class="portal-tabla portal-tabla-form">
+        <table class="portal-tabla portal-tabla-form" id="tabla-tipos">
             <thead><tr><th>Nombre</th><th>Duración (min)</th><th>Precio (opcional)</th><th>Orden</th><th></th></tr></thead>
             <tbody>
             {% for f in fs_tipos %}
                 <tr>
                     {{ f.id }}
-                    <td>{{ f.nombre }}{% if f.nombre.errors %}<p class="portal-error">{{ f.nombre.errors.0 }}</p>{% endif %}</td>
-                    <td>{{ f.duracion_min }}</td>
-                    <td>{{ f.precio }}</td>
-                    <td>{{ f.orden }}</td>
+                    <td data-label="Nombre">{{ f.nombre }}{% if f.nombre.errors %}<p class="portal-error">{{ f.nombre.errors.0 }}</p>{% endif %}</td>
+                    <td data-label="Duración (min)">{{ f.duracion_min }}</td>
+                    <td data-label="Precio (opcional)">{{ f.precio }}</td>
+                    <td data-label="Orden">{{ f.orden }}</td>
                     <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
+        <template id="vacia-tipos">
+            <tr>
+                {{ fs_tipos.empty_form.id }}
+                <td data-label="Nombre">{{ fs_tipos.empty_form.nombre }}</td>
+                <td data-label="Duración (min)">{{ fs_tipos.empty_form.duracion_min }}</td>
+                <td data-label="Precio (opcional)">{{ fs_tipos.empty_form.precio }}</td>
+                <td data-label="Orden">{{ fs_tipos.empty_form.orden }}</td>
+                <td></td>
+            </tr>
+        </template>
+        <button type="button" class="btn-secundario btn-agregar-fila" data-prefijo="tipos">+ Agregar otro tipo de sesión</button>
 
         {# ---------------- Disponibilidad semanal ---------------- #}
         <h2 class="portal-subtitulo">Disponibilidad semanal</h2>
         <p class="portal-field-ayuda">Se repite todas las semanas. Podés cargar varios bloques por día (ej: mañana y tarde).</p>
         {{ fs_disp.non_form_errors }}
         {{ fs_disp.management_form }}
-        <table class="portal-tabla portal-tabla-form">
+        <table class="portal-tabla portal-tabla-form" id="tabla-disp">
             <thead><tr><th>Día</th><th>Desde</th><th>Hasta</th><th></th></tr></thead>
             <tbody>
             {% for f in fs_disp %}
                 <tr>
                     {{ f.id }}
-                    <td>{{ f.dia_semana }}</td>
-                    <td>{{ f.hora_desde }}</td>
-                    <td>{{ f.hora_hasta }}</td>
+                    <td data-label="Día">{{ f.dia_semana }}</td>
+                    <td data-label="Desde">{{ f.hora_desde }}</td>
+                    <td data-label="Hasta">{{ f.hora_hasta }}</td>
                     <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
                 </tr>
                 {% if f.non_field_errors %}<tr><td colspan="4"><p class="portal-error">{{ f.non_field_errors.0 }}</p></td></tr>{% endif %}
             {% endfor %}
             </tbody>
         </table>
+        <template id="vacia-disp">
+            <tr>
+                {{ fs_disp.empty_form.id }}
+                <td data-label="Día">{{ fs_disp.empty_form.dia_semana }}</td>
+                <td data-label="Desde">{{ fs_disp.empty_form.hora_desde }}</td>
+                <td data-label="Hasta">{{ fs_disp.empty_form.hora_hasta }}</td>
+                <td></td>
+            </tr>
+        </template>
+        <button type="button" class="btn-secundario btn-agregar-fila" data-prefijo="disp">+ Agregar otro horario</button>
 
         {# ---------------- Días que no atiende ---------------- #}
         <h2 class="portal-subtitulo">Días que no atiendo</h2>
         <p class="portal-field-ayuda">Vacaciones, licencia, feriados. Tienen prioridad sobre la disponibilidad semanal.</p>
         {{ fs_libres.non_form_errors }}
         {{ fs_libres.management_form }}
-        <table class="portal-tabla portal-tabla-form">
+        <table class="portal-tabla portal-tabla-form" id="tabla-libres">
             <thead><tr><th>Desde</th><th>Hasta</th><th>Motivo (opcional)</th><th></th></tr></thead>
             <tbody>
             {% for f in fs_libres %}
                 <tr>
                     {{ f.id }}
-                    <td>{{ f.fecha_desde }}</td>
-                    <td>{{ f.fecha_hasta }}</td>
-                    <td>{{ f.motivo }}</td>
+                    <td data-label="Desde">{{ f.fecha_desde }}</td>
+                    <td data-label="Hasta">{{ f.fecha_hasta }}</td>
+                    <td data-label="Motivo (opcional)">{{ f.motivo }}</td>
                     <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
                 </tr>
                 {% if f.non_field_errors %}<tr><td colspan="4"><p class="portal-error">{{ f.non_field_errors.0 }}</p></td></tr>{% endif %}
             {% endfor %}
             </tbody>
         </table>
+        <template id="vacia-libres">
+            <tr>
+                {{ fs_libres.empty_form.id }}
+                <td data-label="Desde">{{ fs_libres.empty_form.fecha_desde }}</td>
+                <td data-label="Hasta">{{ fs_libres.empty_form.fecha_hasta }}</td>
+                <td data-label="Motivo (opcional)">{{ fs_libres.empty_form.motivo }}</td>
+                <td></td>
+            </tr>
+        </template>
+        <button type="button" class="btn-secundario btn-agregar-fila" data-prefijo="libres">+ Agregar otro día libre</button>
 
         <button type="submit" class="btn-primario">Guardar agenda</button>
     </form>
 </div>
+<script>
+    // "+ Agregar": suma una fila en blanco a la tabla (usa la plantilla vacía
+    // del formset y sube TOTAL_FORMS, para que Django la reciba al guardar).
+    document.querySelectorAll('.btn-agregar-fila').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            var prefijo = boton.dataset.prefijo;
+            var total = document.getElementById('id_' + prefijo + '-TOTAL_FORMS');
+            var plantilla = document.getElementById('vacia-' + prefijo);
+            var tbody = document.querySelector('#tabla-' + prefijo + ' tbody');
+            var html = plantilla.innerHTML.replace(/__prefix__/g, total.value);
+            tbody.insertAdjacentHTML('beforeend', html);
+            total.value = parseInt(total.value, 10) + 1;
+        });
+    });
+</script>
 {% endblock %}
