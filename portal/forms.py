@@ -17,6 +17,18 @@ from directorio.models import Ciudad, CodigoFundador, Especialidad, Formacion, O
 from turnos.models import DiaNoAtiende, DisponibilidadSemanal, Paciente, TipoSesion
 
 
+def aclarar_whatsapp(campo, pais):
+    """Avisa que el número va con el código de país: el link de WhatsApp del perfil
+    (wa.me/<número>) solo funciona si el número lo trae (+54, +51, +598, +56...)."""
+    codigo = (pais.codigo_telefono if pais else '') or ''
+    ejemplo = f'+{codigo} para {pais.nombre}' if codigo else '+54 para Argentina o +51 para Perú'
+    campo.help_text = (
+        f'Escribilo con el código de tu país adelante (por ejemplo {ejemplo}). '
+        'Si no lo incluís, el link de WhatsApp de tu perfil no va a funcionar.'
+    )
+    campo.widget.attrs.update({'placeholder': f'+{codigo} …' if codigo else '+54 …', 'inputmode': 'tel', 'autocomplete': 'tel'})
+
+
 ERROR_INSTAGRAM = 'Escribí tu usuario así: @usuario (solo letras, números, puntos y guiones bajos).'
 
 
@@ -60,6 +72,7 @@ class RegistroForm(HoneypotMixin, forms.Form):
     def __init__(self, *args, pais=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.pais = pais
+        aclarar_whatsapp(self.fields['whatsapp'], pais)
         self.fields['acepto_terminos'].label = format_html(
             'Leí y acepto los <a href="{}" target="_blank" rel="noopener">Términos y Condiciones</a> '
             'y la <a href="{}" target="_blank" rel="noopener">Política de Privacidad</a>.',
@@ -162,6 +175,7 @@ class PerfilForm(forms.ModelForm):
         )
 
         psicologo = self.instance if self.instance.pk else None
+        aclarar_whatsapp(self.fields['whatsapp'], pais)
 
         # Instagram: se muestra con arroba. La casilla de colaborador/a es solo
         # del Plan Premium (el plan se elige en el checkout).

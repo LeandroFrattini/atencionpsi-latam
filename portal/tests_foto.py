@@ -56,3 +56,40 @@ class FotoConAlmacenamientoCaidoTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.psi.refresh_from_db()
         self.assertTrue(self.psi.foto.name)
+
+
+class AclaracionDelWhatsappTests(TestCase):
+    """El número va con el código de país o el link de WhatsApp del perfil no funciona."""
+
+    def setUp(self):
+        Pais.objects.all().delete()
+        self.pais = Pais.objects.create(
+            nombre='Perú', slug='peru', codigo_iso='PE', bandera_emoji='🇵🇪', moneda='PEN', activo=True, codigo_telefono='51',
+        )
+
+    def test_el_registro_lo_aclara_con_el_codigo_del_pais(self):
+        resp = self.client.get(reverse('portal_registro', args=['peru']))
+        self.assertContains(resp, 'código de tu país adelante')
+        self.assertContains(resp, 'por ejemplo +51 para Perú')
+        self.assertContains(resp, 'el link de WhatsApp de tu perfil no va a funcionar')
+        self.assertContains(resp, 'placeholder="+51 …"')
+
+    def test_el_perfil_tambien_lo_aclara(self):
+        usuario = User.objects.create_user('p@example.com', password='ClaveSegura123')
+        Psicologo.objects.create(usuario=usuario, pais=self.pais, nombre='Psi', matricula='1', whatsapp='51999999999')
+        self.client.force_login(usuario)
+        resp = self.client.get(reverse('portal_editar_perfil'))
+        self.assertContains(resp, 'por ejemplo +51 para Perú')
+
+    def test_sin_codigo_cargado_da_ejemplos_generales(self):
+        Pais.objects.filter(pk=self.pais.pk).update(codigo_telefono='')
+        resp = self.client.get(reverse('portal_registro', args=['peru']))
+        self.assertContains(resp, '+54 para Argentina o +51 para Perú')
+
+    def test_registrarse_con_el_numero_completo_sigue_funcionando(self):
+        resp = self.client.post(reverse('portal_registro', args=['peru']), dict(
+            nombre='Nueva', email='nueva@example.com', whatsapp='+51 987 654 321',
+            password='ClaveSegura123', acepto_terminos='on',
+        ))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Psicologo.objects.get(usuario__username='nueva@example.com').whatsapp_limpio(), '51987654321')
