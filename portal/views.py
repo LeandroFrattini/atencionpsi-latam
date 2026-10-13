@@ -335,7 +335,21 @@ def editar_perfil(request):
         form = PerfilForm(request.POST, request.FILES, instance=psicologo, pais=psicologo.pais)
         formset = FormacionFormSet(request.POST, instance=psicologo)
         if form.is_valid() and formset.is_valid():
-            psicologo = form.save()
+            try:
+                # En su propia transacción: si falla la subida de la foto, se deshace solo esto
+                # y se puede seguir mostrando el formulario con el aviso.
+                with transaction.atomic():
+                    psicologo = form.save()
+            except Exception:
+                # Si falla el almacenamiento de fotos (Supabase caído, claves o bucket mal
+                # configurados) no se muestra una pantalla de error: se avisa en el campo
+                # de la foto y queda el detalle en los logs. Cualquier otro error sigue siendo un 500.
+                if 'foto' not in request.FILES:
+                    raise
+                logger.exception('No se pudo guardar la foto del profesional %s en el almacenamiento', psicologo.pk)
+                form.add_error('foto', 'No pudimos guardar la foto en este momento. Probá de nuevo en unos minutos; '
+                                       'si sigue pasando, guardá el resto de tu perfil sin cambiar la foto y escribinos.')
+                return render(request, 'portal/editar_perfil.html', {'p': psicologo, 'form': form, 'formset': formset})
             formset.save()
 
             # Lo escrito a mano no entra directo a la lista de todos: queda
