@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
-{% block meta_description %}Encontrá psicólogos verificados en {{ pais.nombre }}: perfiles con matrícula habilitante, turnos online por videollamada y contacto directo por WhatsApp. Elegí por ciudad, modalidad y orientación.{% endblock %}
+{% block meta_description %}Encontrá psicólogos con matrícula habilitante en {{ pais.nombre }}: buscá por nombre, ciudad, motivo de consulta o enfoque, mirá su perfil y reservá un turno o escribile por WhatsApp.{% endblock %}
 {% block og_title %}Psicólogos en {{ pais.nombre }} | Atención Psi{% endblock %}
-{% block og_description %}Perfiles de psicólogos verificados en {{ pais.nombre }}, con matrícula habilitante y turnos online.{% endblock %}
+{% block og_description %}Perfiles de psicólogos con matrícula habilitante en {{ pais.nombre }}, con turnos online y contacto directo.{% endblock %}
 {% block json_ld %}
 {% if psicologos %}
 <script type="application/ld+json">
@@ -28,52 +28,177 @@
 {% include 'directorio/_hreflang.html' %}
 {% endblock %}
 {% block content %}
-<div class="buscador-head">
-    <a href="{% url 'hub' %}" class="volver">&larr; Todos los países</a>
-    <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Psicólogos en {{ pais.nombre }}</h1>
-    {% if total_sesiones_atendidas_latam %}
-        <p class="hub-stat-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>
-    {% endif %}
+<section class="buscar-hero">
+    <p class="buscar-migas"><a href="{% url 'hub' %}">&larr; Todos los países</a></p>
+    <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Encontrá tu psicólogo en {{ pais.nombre }}</h1>
+    <p class="buscar-lead">
+        {% if total_pais %}{{ total_pais }} profesional{{ total_pais|pluralize:"es" }} con matrícula habilitante.{% endif %}
+        Buscá por nombre, ciudad, motivo de consulta o enfoque.
+    </p>
+    {% if total_sesiones_atendidas_latam %}<p class="hub-stat-confianza buscar-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>{% endif %}
+
+    <form id="form-buscar" method="get" action="{{ ruta }}" role="search" class="buscar-form" autocomplete="off">
+        <div class="buscar-campo">
+            <svg class="buscar-lupa" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="q" name="q" value="{{ datos.q }}" placeholder="Ej: ansiedad, Lima, terapia de pareja…" aria-label="Buscar psicólogos por nombre, ciudad, motivo o enfoque"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugerencias" enterkeyhint="search">
+            <button type="button" class="buscar-borrar" id="buscar-borrar" aria-label="Borrar búsqueda" hidden>&times;</button>
+            <button type="submit" class="buscar-boton">Buscar</button>
+            <ul id="sugerencias" class="sugerencias" role="listbox" aria-label="Sugerencias" hidden></ul>
+        </div>
+    </form>
+</section>
+
+<div id="resultados" class="buscar-resultados">
+    {% include 'directorio/_buscador_resultados.html' %}
 </div>
 
-<form method="get" class="filtros">
-    <select name="modalidad" onchange="this.form.submit()">
-        <option value="">Modalidad</option>
-        <option value="online" {% if request.GET.modalidad == 'online' %}selected{% endif %}>Online</option>
-        <option value="presencial" {% if request.GET.modalidad == 'presencial' %}selected{% endif %}>Presencial</option>
-        <option value="ambas" {% if request.GET.modalidad == 'ambas' %}selected{% endif %}>Online y presencial</option>
-    </select>
-    <select name="ciudad" onchange="this.form.submit()">
-        <option value="">Ciudad</option>
-        {% for c in ciudades %}
-            <option value="{{ c }}" {% if request.GET.ciudad == c %}selected{% endif %}>{{ c }}</option>
-        {% endfor %}
-    </select>
-    <select name="orientacion" onchange="this.form.submit()">
-        <option value="">Orientación</option>
-        {% for o in orientaciones_list %}
-            <option value="{{ o.pk }}" {% if request.GET.orientacion == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.nombre }}</option>
-        {% endfor %}
-    </select>
-    <select name="especialidad" onchange="this.form.submit()">
-        <option value="">Motivo de consulta</option>
-        {% for e in especialidades_list %}
-            <option value="{{ e.pk }}" {% if request.GET.especialidad == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nombre }}</option>
-        {% endfor %}
-    </select>
-    <select name="publico" onchange="this.form.submit()">
-        <option value="">¿Para quién?</option>
-        {% for pu in publicos_list %}
-            <option value="{{ pu.pk }}" {% if request.GET.publico == pu.pk|stringformat:'s' %}selected{% endif %}>{{ pu.nombre }}</option>
-        {% endfor %}
-    </select>
-</form>
+{{ sugerencias|json_script:"sugerencias-datos" }}
+<script>
+(function () {
+    var form = document.getElementById('form-buscar');
+    var input = document.getElementById('q');
+    var lista = document.getElementById('sugerencias');
+    var borrar = document.getElementById('buscar-borrar');
+    var cont = document.getElementById('resultados');
+    var datos = JSON.parse(document.getElementById('sugerencias-datos').textContent);
+    var ETIQUETAS = {ciudad: 'Ciudad', motivo: 'Motivo', enfoque: 'Enfoque', publico: 'Atiende a', profesional: 'Profesional'};
+    var PARAM = {ciudad: 'ciudad', motivo: 'especialidad', enfoque: 'orientacion', publico: 'publico'};
+    var temporizador = null, controlador = null, activo = -1, items = [];
 
-<div class="psicologos-grid">
-    {% for p in psicologos %}
-        {% include 'directorio/_psicologo_card.html' %}
-    {% empty %}
-        <p class="sin-resultados">Todavía no hay psicólogos publicados en {{ pais.nombre }} con esos filtros.</p>
-    {% endfor %}
-</div>
+    function norm(t) { return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
+
+    // ---- Búsqueda en vivo: pide solo la parte que cambia y la reemplaza -----------------
+    function urlActual() {
+        var qs = new URLSearchParams(new FormData(form));
+        Array.from(qs.keys()).forEach(function (k) { if (!qs.get(k)) qs.delete(k); });
+        var s = qs.toString();
+        return location.pathname + (s ? '?' + s : '');
+    }
+    function cargar(url) {
+        if (controlador) controlador.abort();
+        controlador = new AbortController();
+        cont.classList.add('cargando');
+        var sep = url.indexOf('?') === -1 ? '?' : '&';
+        fetch(url + sep + 'fragmento=1', {signal: controlador.signal, headers: {'X-Requested-With': 'fetch'}})
+            .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+            .then(function (html) {
+                var abierto = cont.querySelector('.mas-filtros');
+                var estabaAbierto = abierto && abierto.open;
+                cont.innerHTML = html;
+                var nuevo = cont.querySelector('.mas-filtros');
+                if (nuevo && estabaAbierto) nuevo.open = true;
+                var estado = cont.querySelector('.buscar-estado');
+                if (estado && document.activeElement !== input) { input.value = estado.dataset.q || ''; actualizarBorrar(); }
+                history.replaceState(null, '', url);
+                cont.classList.remove('cargando');
+            })
+            .catch(function (e) {
+                if (e.name === 'AbortError') return;
+                window.location.href = url;   // sin JS o con error de red: carga normal
+            });
+    }
+    function actualizarBorrar() { borrar.hidden = !input.value; }
+
+    // Escribir: sugerencias al instante, resultados con una pausa corta.
+    input.addEventListener('input', function () {
+        actualizarBorrar();
+        mostrarSugerencias();
+        clearTimeout(temporizador);
+        temporizador = setTimeout(function () { cargar(urlActual()); }, 320);
+    });
+    form.addEventListener('submit', function (e) { e.preventDefault(); cerrar(); clearTimeout(temporizador); cargar(urlActual()); });
+    borrar.addEventListener('click', function () { input.value = ''; actualizarBorrar(); cerrar(); cargar(urlActual()); input.focus(); });
+    cont.addEventListener('change', function (e) { if (e.target.matches('select')) cargar(urlActual()); });
+    cont.addEventListener('click', function (e) {
+        var a = e.target.closest('a.chip-filtro, a.seg-link, a.pill-quitar, a.pill-limpiar, a.pill-limpiar-grande');
+        if (!a) return;
+        e.preventDefault();
+        cargar(a.getAttribute('href'));
+    });
+
+    // ---- Sugerencias (autocompletado) ----------------------------------------------------
+    function coincidencias(t) {
+        var term = norm(t);
+        if (!term) return [];
+        var palabras = term.split(/\s+/);
+        var lista = datos.filter(function (d) { return palabras.every(function (p) { return d.k.indexOf(p) !== -1; }); });
+        lista.sort(function (a, b) {
+            var ea = a.k.indexOf(term) === 0 ? 0 : 1, eb = b.k.indexOf(term) === 0 ? 0 : 1;
+            if (ea !== eb) return ea - eb;
+            var orden = {motivo: 0, ciudad: 1, enfoque: 2, publico: 3, profesional: 4};
+            return (orden[a.t] - orden[b.t]) || (b.c - a.c) || a.n.localeCompare(b.n);
+        });
+        return lista.slice(0, 7);
+    }
+    function resaltar(texto, term) {
+        var i = norm(texto).indexOf(norm(term));
+        if (i < 0 || !term.trim()) return document.createTextNode(texto);
+        var frag = document.createDocumentFragment();
+        frag.appendChild(document.createTextNode(texto.slice(0, i)));
+        var b = document.createElement('strong');
+        b.textContent = texto.slice(i, i + term.trim().length);
+        frag.appendChild(b);
+        frag.appendChild(document.createTextNode(texto.slice(i + term.trim().length)));
+        return frag;
+    }
+    function mostrarSugerencias() {
+        items = coincidencias(input.value);
+        lista.textContent = '';
+        activo = -1;
+        if (!items.length) { cerrar(); return; }
+        items.forEach(function (d, i) {
+            var li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.id = 'sug-' + i;
+            var tipo = document.createElement('span');
+            tipo.className = 'sug-tipo sug-tipo-' + d.t;
+            tipo.textContent = ETIQUETAS[d.t];
+            var nombre = document.createElement('span');
+            nombre.className = 'sug-nombre';
+            nombre.appendChild(resaltar(d.n, input.value));
+            li.appendChild(tipo);
+            li.appendChild(nombre);
+            if (d.c) { var c = document.createElement('span'); c.className = 'sug-cant'; c.textContent = d.c; li.appendChild(c); }
+            li.addEventListener('mousedown', function (e) { e.preventDefault(); elegir(d); });
+            lista.appendChild(li);
+        });
+        lista.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    }
+    function cerrar() { lista.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); activo = -1; }
+    function marcar(i) {
+        Array.from(lista.children).forEach(function (li, j) { li.classList.toggle('sug-activa', j === i); li.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
+        activo = i;
+        if (i >= 0) input.setAttribute('aria-activedescendant', 'sug-' + i); else input.removeAttribute('aria-activedescendant');
+    }
+    function elegir(d) {
+        clearTimeout(temporizador);
+        var qs = new URLSearchParams(new FormData(form));
+        if (d.t === 'profesional') {
+            qs.set('q', d.n);
+            input.value = d.n;
+        } else {
+            qs.set(PARAM[d.t], d.v);
+            qs.delete('q');
+            input.value = '';
+        }
+        Array.from(qs.keys()).forEach(function (k) { if (!qs.get(k)) qs.delete(k); });
+        actualizarBorrar();
+        cerrar();
+        var s = qs.toString();
+        cargar(location.pathname + (s ? '?' + s : ''));
+    }
+    input.addEventListener('keydown', function (e) {
+        if (lista.hidden) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); marcar((activo + 1) % items.length); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); marcar((activo - 1 + items.length) % items.length); }
+        else if (e.key === 'Enter' && activo >= 0) { e.preventDefault(); elegir(items[activo]); }
+        else if (e.key === 'Escape') { cerrar(); }
+    });
+    input.addEventListener('focus', function () { if (input.value) mostrarSugerencias(); });
+    document.addEventListener('click', function (e) { if (!e.target.closest('.buscar-campo')) cerrar(); });
+    actualizarBorrar();
+})();
+</script>
 {% endblock %}

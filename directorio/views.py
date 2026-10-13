@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import ContactoForm
 from .models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
+from . import buscador
 from .destacados import mezcla_de_psicologos
 from .taxonomia import clave
 
@@ -228,40 +229,63 @@ def buscador_pais(request, pais_slug):
     if pais.es_externo:
         return redirect(pais.url_externa)
 
-    psicologos_qs = pais.psicologos.all().prefetch_related('orientaciones', 'publicos', 'especialidades', 'tipos_sesion')
+    publicados = _publicados(pais)
+    datos = buscador.leer_parametros(request.GET)
+    ruta = request.path
 
-    ciudad = request.GET.get('ciudad', '').strip()
-    modalidad = request.GET.get('modalidad', '').strip()
-    orientacion_id = request.GET.get('orientacion', '').strip()
-    publico_id = request.GET.get('publico', '').strip()
-    especialidad_id = request.GET.get('especialidad', '').strip()
+    # 1) filtros exactos, 2) búsqueda por palabras, 3) orden
+    resultado = buscador.aplicar_filtros(publicados, datos)
+    resultado = buscador.filtrar_por_texto(resultado, datos['q'])
+    orden = datos['orden'] if (datos['orden'] not in ('precio_asc', 'precio_desc') or pais.muestra_precio_sesion) else ''
+    psicologos = buscador.ordenar(resultado, orden, con_texto=bool(buscador.palabras(datos['q'])))
 
-    if ciudad:
-        psicologos_qs = psicologos_qs.filter(ciudad__iexact=ciudad)
-    if modalidad:
-        psicologos_qs = psicologos_qs.filter(modalidad=modalidad)
-    if orientacion_id:
-        psicologos_qs = psicologos_qs.filter(orientaciones__pk=orientacion_id)
-    if publico_id:
-        psicologos_qs = psicologos_qs.filter(publicos__pk=publico_id)
-    if especialidad_id:
-        psicologos_qs = psicologos_qs.filter(especialidades__pk=especialidad_id)
+    nombres = buscador.nombres_por_id()
+    pills = buscador.pills_activas(ruta, datos, nombres)
 
-    # "publicado" combina pago + completitud de perfil -- no es un campo de
-    # base, así que el filtro final se resuelve en Python sobre un queryset
-    # ya achicado por los filtros de arriba.
-    psicologos = [p for p in psicologos_qs.distinct() if p.publicado]
-
-    ciudades = sorted({p.ciudad_publica for p in pais.psicologos.all() if p.publicado and p.ciudad_publica})
-
-    return render(request, 'directorio/buscador.html', {
+    populares = buscador.motivos_populares(publicados)
+    contexto = {
         'pais': pais,
         'psicologos': psicologos,
-        'ciudades': ciudades,
-        'orientaciones_list': Orientacion.objects.filter(aprobado=True),
-        'publicos_list': Publico.objects.filter(aprobado=True),
-        'especialidades_list': Especialidad.objects.filter(aprobado=True),
+        'total': len(psicologos),
+        'total_pais': len(publicados),
+        'datos': datos,
+        'ruta': ruta,
+        'pills': pills,
+        'hay_filtros': bool(pills),
+        'limpiar_url': ruta,
+        'motivos_chips': [{
+            'nombre': nombre, 'cantidad': n,
+            'activo': datos['especialidad'] == str(pk),
+            'url': buscador.url_con(ruta, datos, especialidad='' if datos['especialidad'] == str(pk) else str(pk)),
+        } for pk, nombre, n in populares],
+        'motivos_sugeridos': [
+            {'nombre': nombre, 'cantidad': n, 'url': f'{ruta}?especialidad={pk}'} for pk, nombre, n in populares[:6]
+        ],
+        'modalidades': [{
+            'etiqueta': etiqueta, 'activo': datos['modalidad'] == valor,
+            'url': buscador.url_con(ruta, datos, modalidad=valor),
+        } for valor, etiqueta in buscador.MODALIDADES],
+        'ordenes': buscador.ORDENES if pais.muestra_precio_sesion else [o for o in buscador.ORDENES if not o[0].startswith('precio')],
+    }
+
+    # Listas de los desplegables: solo lo que tiene al menos un profesional publicado.
+    ids_orient = {o.pk for p in publicados for o in p.orientaciones_publicas}
+    ids_esp = {e.pk for p in publicados for e in p.especialidades_publicas}
+    ids_pub = {pu.pk for p in publicados for pu in p.publicos_publicos}
+    contexto.update({
+        'ciudades': buscador.ciudades_con_gente(publicados),
+        'orientaciones_list': [o for o in Orientacion.objects.filter(aprobado=True) if o.pk in ids_orient],
+        'publicos_list': [pu for pu in Publico.objects.filter(aprobado=True) if pu.pk in ids_pub],
+        'especialidades_list': [e for e in Especialidad.objects.filter(aprobado=True) if e.pk in ids_esp],
+        'filtros_extra': sum(1 for k in ('ciudad', 'orientacion', 'especialidad', 'publico') if datos[k]),
     })
+
+    # Con ?fragmento=1 se devuelve solo la parte que cambia (la usa el buscador en vivo).
+    if request.GET.get('fragmento'):
+        return render(request, 'directorio/_buscador_resultados.html', contexto)
+
+    contexto['sugerencias'] = buscador.sugerencias(publicados)
+    return render(request, 'directorio/buscador.html', contexto)
 
 
 def detalle_psicologo(request, pais_slug, pk):

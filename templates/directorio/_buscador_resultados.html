@@ -1,0 +1,111 @@
+{% comment %}
+Todo lo que cambia cuando se busca o se filtra: chips de motivos, modalidad, filtros extra,
+contador, filtros activos y resultados. Se renderiza completo en la página y, con
+?fragmento=1, solo esto (el buscador en vivo lo reemplaza sin recargar).
+Los controles llevan form="form-buscar" para viajar con el campo de búsqueda.
+{% endcomment %}
+<div class="buscar-estado" data-q="{{ datos.q }}" hidden></div>
+<input type="hidden" name="modalidad" value="{{ datos.modalidad }}" form="form-buscar">
+
+{% if motivos_chips %}
+<div class="buscar-chips" role="group" aria-label="Motivos de consulta frecuentes">
+    <span class="buscar-chips-titulo">Motivos frecuentes</span>
+    <div class="buscar-chips-fila">
+        {% for c in motivos_chips %}
+            <a href="{{ c.url }}" class="chip-filtro{% if c.activo %} chip-filtro-activo{% endif %}" aria-pressed="{% if c.activo %}true{% else %}false{% endif %}">{{ c.nombre }} <small>{{ c.cantidad }}</small></a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="buscar-controles">
+    <div class="seg" role="group" aria-label="Modalidad de atención">
+        {% for m in modalidades %}
+            <a href="{{ m.url }}" class="seg-link{% if m.activo or not datos.modalidad and forloop.first %} seg-link-activo{% endif %}" aria-pressed="{% if m.activo or not datos.modalidad and forloop.first %}true{% else %}false{% endif %}">{{ m.etiqueta }}</a>
+        {% endfor %}
+    </div>
+    <details class="mas-filtros"{% if filtros_extra %} open{% endif %}>
+        <summary>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+            Más filtros{% if filtros_extra %} <span class="mas-filtros-n">{{ filtros_extra }}</span>{% endif %}
+        </summary>
+        <div class="mas-filtros-grid">
+            <label>Ciudad
+                <select name="ciudad" form="form-buscar">
+                    <option value="">Todas</option>
+                    {% for c in ciudades %}<option value="{{ c }}"{% if datos.ciudad == c %} selected{% endif %}>{{ c }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Motivo de consulta
+                <select name="especialidad" form="form-buscar">
+                    <option value="">Todos</option>
+                    {% for e in especialidades_list %}<option value="{{ e.pk }}"{% if datos.especialidad == e.pk|stringformat:'s' %} selected{% endif %}>{{ e.nombre }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Enfoque
+                <select name="orientacion" form="form-buscar">
+                    <option value="">Todos</option>
+                    {% for o in orientaciones_list %}<option value="{{ o.pk }}"{% if datos.orientacion == o.pk|stringformat:'s' %} selected{% endif %}>{{ o.nombre }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Atiende a
+                <select name="publico" form="form-buscar">
+                    <option value="">Todos</option>
+                    {% for pu in publicos_list %}<option value="{{ pu.pk }}"{% if datos.publico == pu.pk|stringformat:'s' %} selected{% endif %}>{{ pu.nombre }}</option>{% endfor %}
+                </select>
+            </label>
+        </div>
+        <noscript><button type="submit" form="form-buscar" class="btn-secundario">Aplicar filtros</button></noscript>
+    </details>
+</div>
+
+<div class="buscar-resumen">
+    <p class="buscar-total" aria-live="polite">
+        {% if total == 1 %}<strong>1</strong> psicólogo/a{% else %}<strong>{{ total }}</strong> psicólogos{% endif %}
+        {% if hay_filtros %}con tu búsqueda{% else %}en {{ pais.nombre }}{% endif %}
+    </p>
+    <label class="buscar-orden">Ordenar por
+        <select name="orden" form="form-buscar">
+            {% for valor, etiqueta in ordenes %}<option value="{% if valor != 'recomendados' %}{{ valor }}{% endif %}"{% if datos.orden == valor or not datos.orden and valor == 'recomendados' %} selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+        </select>
+    </label>
+</div>
+
+{% if pills %}
+<ul class="pills" aria-label="Filtros activos">
+    {% for pill in pills %}
+        <li><a href="{{ pill.quitar }}" class="pill-quitar" aria-label="Quitar filtro {{ pill.etiqueta }}">{{ pill.etiqueta }} <span aria-hidden="true">&times;</span></a></li>
+    {% endfor %}
+    <li><a href="{{ limpiar_url }}" class="pill-limpiar">Limpiar todo</a></li>
+</ul>
+{% endif %}
+
+{% if psicologos %}
+<div class="psicologos-grid">
+    {% for p in psicologos %}
+        {% include 'directorio/_psicologo_card.html' %}
+    {% endfor %}
+</div>
+{% elif total_pais == 0 %}
+<div class="buscar-vacio">
+    <h2>Todavía no hay psicólogos publicados en {{ pais.nombre }}</h2>
+    <p>Estamos sumando a los primeros profesionales. Si sos psicólogo/a, podés ser de los primeros.</p>
+    <a href="{% url 'portal_registro' pais.slug %}" class="btn-primario">Sumarme al equipo</a>
+</div>
+{% else %}
+<div class="buscar-vacio">
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8.5 11h5"/></svg>
+    <h2>No encontramos a nadie con esa búsqueda</h2>
+    <p>Probá con otras palabras, o sacá algún filtro para ver más profesionales. Podés buscar por nombre, ciudad, motivo (por ejemplo ansiedad) o enfoque.</p>
+    <div class="buscar-vacio-acciones">
+        <a href="{{ limpiar_url }}" class="btn-primario pill-limpiar-grande">Ver todos los psicólogos</a>
+        <a href="{% url 'contacto' %}" class="btn-secundario">Escribinos y te ayudamos</a>
+    </div>
+    {% if motivos_sugeridos %}
+    <p class="buscar-vacio-sub">O mirá por motivo de consulta:</p>
+    <div class="buscar-chips-fila buscar-chips-centro">
+        {% for c in motivos_sugeridos %}<a href="{{ c.url }}" class="chip-filtro">{{ c.nombre }} <small>{{ c.cantidad }}</small></a>{% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}

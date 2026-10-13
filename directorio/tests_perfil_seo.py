@@ -158,6 +158,7 @@ class BuscadorEspecialidadTests(_Base):
 
     def test_el_desplegable_ofrece_solo_especialidades_aprobadas(self):
         Especialidad.objects.create(nombre='Tema Pendiente', aprobado=False)
+        self.psi.especialidades.add(self.ansiedad)   # el desplegable solo ofrece motivos con alguien publicado
         resp = self.client.get(reverse('buscador_pais', args=['peru']))
         self.assertContains(resp, '>Ansiedad</option>')
         self.assertNotContains(resp, 'Tema Pendiente')
