@@ -1092,3 +1092,7 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 }
 
 .buscar-confianza { margin: -10px 0 18px; }
+
+/* Saludo del profesional con sesión iniciada */
+.btn-hola { max-width: 220px; overflow: hidden; text-overflow: ellipsis; background: var(--verde-suave); }
+.btn-hola:hover { background: #7da87b; }

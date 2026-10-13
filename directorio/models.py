@@ -480,6 +480,13 @@ class Psicologo(models.Model):
         return [e for e in self.especialidades.all() if e.aprobado]
 
     @property
+    def nombre_corto(self):
+        """Primer nombre sin el título ("Lic. María Gonzales" -> "María"), para saludar."""
+        sin_titulo = re.sub(r'^\s*((lic|licda|mg|mag|dr|dra|ps|psic|psi|mgtr|mtro|mtra)\.?\s+)+', '', self.nombre or '', flags=re.I).strip()
+        partes = sin_titulo.split() or (self.nombre or '').split()
+        return partes[0] if partes else ''
+
+    @property
     def slug_url(self):
         """Nombre sin el título ("Lic.", "Mg.", "Dr."...) + id, para una URL con
         el nombre adentro (/peru/psicologo/maria-gonzales-3/). El id del final

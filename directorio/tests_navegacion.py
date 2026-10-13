@@ -49,7 +49,8 @@ class BarraTests(_Base):
     def test_argentina_inactiva_no_aparece_en_el_selector(self):
         self.assertNotContains(self.client.get(reverse('hub')), 'atencionpsi.com.ar')
 
-    def test_argentina_activa_aparece_y_manda_al_com_ar(self):
+    @mock.patch('directorio.destacados._feed_argentina', return_value=[])
+    def test_argentina_activa_aparece_y_manda_al_com_ar(self, _feed):
         Pais.objects.filter(pk=self.argentina.pk).update(activo=True)
         resp = self.client.get(reverse('hub'))
         self.assertContains(resp, 'href="https://atencionpsi.com.ar"')
@@ -163,3 +164,40 @@ class MezclaTests(_Base):
             destacados.mezcla_de_psicologos(8)
             destacados.mezcla_de_psicologos(8)
         self.assertEqual(pedido.call_count, 1)
+
+
+class SaludoDelProfesionalTests(_Base):
+    def test_sin_sesion_se_ve_el_portal_profesional_y_sumate(self):
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, 'Portal profesional')
+        self.assertContains(resp, 'Sumate al equipo')
+        self.assertNotContains(resp, 'Hola, ')
+
+    def test_con_sesion_de_profesional_dice_hola_con_su_nombre_y_oculta_el_portal(self):
+        psi = self._psi(self.peru, 'Lic. María Gonzales', 'maria@example.com')
+        self.client.force_login(psi.usuario)
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, 'Hola, María')
+        self.assertContains(resp, reverse('portal_dashboard'))
+        html = resp.content.decode()
+        barra = html[html.index('<header'):html.index('</header>')]
+        self.assertNotIn('Portal profesional', barra)
+        self.assertNotIn('Sumate al equipo', barra)
+        self.assertIn('Mi cuenta', html[html.index('<footer'):])
+
+    def test_el_saludo_aparece_en_todas_las_paginas(self):
+        psi = self._psi(self.peru, 'Camila Torres', 'camila@example.com')
+        self.client.force_login(psi.usuario)
+        for url in (reverse('faq'), reverse('sobre_nosotros'), reverse('buscador_pais', args=['peru']), reverse('portal_dashboard')):
+            self.assertContains(self.client.get(url), 'Hola, Camila', msg_prefix=url)
+
+    def test_una_cuenta_que_no_es_de_profesional_sigue_viendo_el_portal(self):
+        admin = User.objects.create_superuser('admin_nav', 'a@example.com', 'ClaveSegura123')
+        self.client.force_login(admin)
+        resp = self.client.get(reverse('hub'))
+        self.assertContains(resp, 'Portal profesional')
+        self.assertNotContains(resp, 'Hola, ')
+
+    def test_nombre_corto_saca_los_titulos(self):
+        for nombre, esperado in (('Lic. María Gonzales', 'María'), ('Mg. Dr. Pedro Pérez', 'Pedro'), ('Camila Torres', 'Camila'), ('  Dra.   Ana', 'Ana')):
+            self.assertEqual(Psicologo(nombre=nombre).nombre_corto, esperado)
