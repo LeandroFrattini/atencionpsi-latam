@@ -235,3 +235,23 @@ TIME_ZONE = 'America/Argentina/Buenos_Aires'
 USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# LOGS -- con DEBUG apagado Django NO imprime los errores 500 en consola (solo
+# intenta mandarlos por mail a ADMINS), así que en Render no quedaba rastro de qué
+# falló. Esto manda a la consola (los logs de Render) el detalle completo de cada
+# error del servidor, más cualquier advertencia de la aplicación.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '[%(levelname)s] %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'consola': {'class': 'logging.StreamHandler', 'formatter': 'simple'},
+    },
+    'root': {'handlers': ['consola'], 'level': 'WARNING'},
+    'loggers': {
+        'django.request': {'handlers': ['consola'], 'level': 'ERROR', 'propagate': False},
+        'django.security': {'handlers': ['consola'], 'level': 'WARNING', 'propagate': False},
+    },
+}
