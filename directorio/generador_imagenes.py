@@ -542,6 +542,16 @@ def _tarjeta_foto(canvas, x, y, ancho, alto, foto_field, radio=32):
         _icono_persona_placeholder(d, ix + interior_w // 2, iy + interior_h // 2, min(interior_w, interior_h) * 0.28, VERDE_OSCURO)
 
 
+# Cómo se escribe cada país delante de la ciudad en las imágenes ("PE - Lima"). Por defecto
+# es el código ISO de dos letras; Argentina se escribe ARG. Para sumar un caso, agregarlo acá.
+SIGLAS_PAIS = {'AR': 'ARG'}
+
+
+def _sigla_pais(psicologo):
+    iso = (psicologo.pais.codigo_iso or '').upper()
+    return SIGLAS_PAIS.get(iso, iso)
+
+
 def _datos_atencion(psicologo):
     """Adapta los campos propios de este proyecto (modalidad simple,
     ciudad simple) a las mismas listas que usaba el generador de
@@ -552,7 +562,11 @@ def _datos_atencion(psicologo):
         modalidades = [psicologo.get_modalidad_display()]
     else:
         modalidades = []
-    ciudades = [psicologo.ciudad_publica] if psicologo.ciudad_publica else []
+    # Siempre con el país adelante, porque se suben profesionales de varios países:
+    # "PE - Lima", "UY - Montevideo"... Si solo atiende online y no tiene ciudad, queda la sigla.
+    sigla = _sigla_pais(psicologo)
+    ciudad = psicologo.ciudad_publica
+    ciudades = [f'{sigla} - {ciudad}' if ciudad else sigla]
     return modalidades, ciudades
 
 

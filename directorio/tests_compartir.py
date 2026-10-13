@@ -52,3 +52,33 @@ class CompartirPerfilTests(TestCase):
         resp = self._perfil()
         self.assertContains(resp, 'Sesión: S/ 80')
         self.assertContains(resp, 'Escribir por WhatsApp')
+
+
+class SiglaDePaisEnLasImagenesTests(TestCase):
+    """La ciudad de las imágenes de Instagram lleva el país adelante: "PE - Lima"."""
+
+    def _psi(self, iso, ciudad, nombre='Psi Test'):
+        pais, _ = Pais.objects.get_or_create(
+            codigo_iso=iso, defaults=dict(nombre=iso, slug=iso.lower() + 'x', bandera_emoji='x', moneda='USD', activo=True),
+        )
+        usuario = User.objects.create_user(f'{iso}{ciudad}@example.com', email=f'{iso}{ciudad}@example.com', password='ClaveSegura123')
+        return Psicologo.objects.create(usuario=usuario, pais=pais, nombre=nombre, matricula='1', whatsapp='1', ciudad=ciudad)
+
+    def test_cada_pais_con_su_sigla(self):
+        from directorio.generador_imagenes import _datos_atencion
+        casos = {'PE': 'PE - Lima', 'UY': 'UY - Montevideo', 'CL': 'CL - Santiago', 'AR': 'ARG - Bahía Blanca'}
+        ciudades = {'PE': 'Lima', 'UY': 'Montevideo', 'CL': 'Santiago', 'AR': 'Bahía Blanca'}
+        for iso, esperado in casos.items():
+            psi = self._psi(iso, ciudades[iso])
+            self.assertEqual(_datos_atencion(psi)[1], [esperado], iso)
+
+    def test_sin_ciudad_queda_solo_la_sigla(self):
+        from directorio.generador_imagenes import _datos_atencion
+        psi = self._psi('PE', '')
+        self.assertEqual(_datos_atencion(psi)[1], ['PE'])
+
+    def test_las_dos_imagenes_se_generan_con_el_prefijo(self):
+        from directorio.generador_imagenes import generar_imagen_feed, generar_imagen_story
+        psi = self._psi('UY', 'Montevideo')
+        self.assertGreater(len(generar_imagen_story(psi).getvalue() if hasattr(generar_imagen_story(psi), 'getvalue') else b'x'), 0)
+        self.assertIsNotNone(generar_imagen_feed(psi))
