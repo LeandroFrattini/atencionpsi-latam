@@ -87,6 +87,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'directorio.middleware.VisitaMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

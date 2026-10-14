@@ -559,3 +559,36 @@ class PlanDLocal(models.Model):
 
     def __str__(self):
         return f'{self.get_plan_display()} {self.pais.codigo_iso} ({self.moneda} {self.monto})'
+
+
+class Visita(models.Model):
+    """Visitas reales por página y por día (sin robots). Ver directorio/middleware.py."""
+    fecha = models.DateField()
+    pagina = models.CharField(max_length=200)
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['fecha', 'pagina'], name='visita_unica_por_dia_y_pagina')]
+        ordering = ['-fecha', '-cantidad']
+        verbose_name = 'Visita por página'
+        verbose_name_plural = 'Visitas por página'
+
+    def __str__(self):
+        return f'{self.fecha} | {self.pagina} ({self.cantidad})'
+
+
+class VisitaPerfil(models.Model):
+    """Visitas reales al perfil público de cada profesional, por día (sin robots, sin las del
+    propio profesional ni las de quien administra el sitio)."""
+    fecha = models.DateField()
+    psicologo = models.ForeignKey(Psicologo, on_delete=models.CASCADE, related_name='visitas_perfil')
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['fecha', 'psicologo'], name='visita_perfil_unica_por_dia')]
+        ordering = ['-fecha']
+        verbose_name = 'Visita a un perfil'
+        verbose_name_plural = 'Visitas a perfiles'
+
+    def __str__(self):
+        return f'{self.fecha} | {self.psicologo.nombre} ({self.cantidad})'

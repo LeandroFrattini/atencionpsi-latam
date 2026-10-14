@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Inicio</a> &rsaquo; Visitas
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <p>Cuentan personas reales: no se incluyen robots (Google, WhatsApp armando una vista previa, herramientas de SEO…), ni al equipo que administra el sitio, ni a un profesional mirando su propio perfil.</p>
+
+  <h2>Visitas por día (últimos 14 días)</h2>
+  <table>
+    <thead><tr>{% for fecha, n in dias %}<th>{{ fecha|date:"d/m" }}</th>{% endfor %}</tr></thead>
+    <tbody><tr>{% for fecha, n in dias %}<td style="text-align:center">{{ n }}</td>{% endfor %}</tr></tbody>
+  </table>
+
+  <h2 style="margin-top:28px">Visitas por profesional</h2>
+  <table>
+    <thead><tr><th>Profesional</th><th>País</th><th>Publicado</th><th>7 días</th><th>30 días</th><th>Total</th></tr></thead>
+    <tbody>
+    {% for f in profesionales %}
+      <tr>
+        <td><a href="{% url 'admin:directorio_psicologo_change' f.psicologo.pk %}">{{ f.psicologo.nombre }}</a></td>
+        <td>{{ f.psicologo.pais.nombre }}</td>
+        <td>{% if f.publicado %}Sí{% else %}No{% endif %}</td>
+        <td>{{ f.siete }}</td><td>{{ f.treinta }}</td><td>{{ f.total }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">Todavía no hay profesionales.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px">Páginas más vistas (últimos 30 días)</h2>
+  <table>
+    <thead><tr><th>Página</th><th>7 días</th><th>30 días</th></tr></thead>
+    <tbody>
+    {% for f in paginas %}
+      <tr><td>{{ f.pagina }}</td><td>{{ f.siete }}</td><td>{{ f.treinta }}</td></tr>
+    {% empty %}
+      <tr><td colspan="3">Todavía no hay visitas registradas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:20px"><a href="{% url 'admin:directorio_visita_changelist' %}">Ver el detalle día por día</a></p>
+</div>
+{% endblock %}

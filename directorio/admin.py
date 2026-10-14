@@ -15,8 +15,8 @@ from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from django.utils import timezone
 
-from . import dlocal_go, planes_dlocal, suscripciones
-from .models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
+from . import dlocal_go, planes_dlocal, suscripciones, visitas
+from .models import Visita, VisitaPerfil, Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
 @admin.register(Pais)
@@ -142,6 +142,31 @@ class CodigoFundadorAdmin(admin.ModelAdmin):
         return TemplateResponse(request, 'admin/directorio/codigofundador/generar.html', contexto)
 
 
+class _SoloLecturaAdmin(admin.ModelAdmin):
+    """Las visitas las cuenta el sitio solo: acá se miran, no se editan."""
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Visita)
+class VisitaAdmin(_SoloLecturaAdmin):
+    list_display = ('fecha', 'pagina', 'cantidad')
+    list_filter = ('fecha',)
+    search_fields = ('pagina',)
+    date_hierarchy = 'fecha'
+
+
+@admin.register(VisitaPerfil)
+class VisitaPerfilAdmin(_SoloLecturaAdmin):
+    list_display = ('fecha', 'psicologo', 'cantidad')
+    list_filter = ('fecha', 'psicologo__pais')
+    search_fields = ('psicologo__nombre',)
+    date_hierarchy = 'fecha'
+
+
 @admin.register(PlanDLocal)
 class PlanDLocalAdmin(admin.ModelAdmin):
     """Los planes se crean con `manage.py crear_planes_dlocal --apply`, no a mano:
@@ -262,7 +287,19 @@ class PsicologoAdmin(admin.ModelAdmin):
         return [
             path('tareas/sincronizar/', self.admin_site.admin_view(self.sincronizar_view), name='directorio_psicologo_sincronizar'),
             path('tareas/recordatorios/', self.admin_site.admin_view(self.recordatorios_view), name='directorio_psicologo_recordatorios'),
+            path('visitas/', self.admin_site.admin_view(self.visitas_view), name='directorio_psicologo_visitas'),
         ] + super().get_urls()
+
+    def visitas_view(self, request):
+        """Reporte de visitas reales (sin robots): páginas más vistas, visitas por profesional
+        y visitas por día."""
+        if not self.has_view_or_change_permission(request):
+            raise PermissionDenied
+        contexto = {
+            **self.admin_site.each_context(request),
+            'title': 'Visitas', 'opts': self.model._meta, **visitas.reporte_general(),
+        }
+        return TemplateResponse(request, 'admin/directorio/psicologo/visitas.html', contexto)
 
     def _pagina_resultado(self, request, titulo, lineas, error=False, reenviar=False):
         contexto = {

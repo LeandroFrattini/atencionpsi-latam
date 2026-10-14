@@ -24,7 +24,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt
 
-from directorio import dlocal_go, suscripciones
+from directorio import dlocal_go, suscripciones, visitas
 from directorio.models import Ciudad, CodigoFundador, Especialidad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
@@ -399,6 +399,7 @@ def dashboard(request):
         'turnos_por_confirmar': psicologo.turnos.filter(fecha_hora__lt=ahora, estado='agendado').count(),
         'total_pacientes': psicologo.pacientes.count(),
         'agenda_lista': psicologo.tipos_sesion.exists() and psicologo.disponibilidad_semanal.exists(),
+        'visitas': visitas.resumen_perfil(psicologo),
     })
 
 

@@ -53,6 +53,15 @@
         </p>
     {% endif %}
 
+    <h2 class="portal-subtitulo">Visitas a tu perfil público</h2>
+    <div class="portal-resumen portal-visitas">
+        <div class="portal-resumen-item"><span class="portal-resumen-num">{{ visitas.hoy }}</span><span class="portal-resumen-lbl">hoy</span></div>
+        <div class="portal-resumen-item"><span class="portal-resumen-num">{{ visitas.siete }}</span><span class="portal-resumen-lbl">últimos 7 días</span></div>
+        <div class="portal-resumen-item"><span class="portal-resumen-num">{{ visitas.treinta }}</span><span class="portal-resumen-lbl">últimos 30 días</span></div>
+        <div class="portal-resumen-item"><span class="portal-resumen-num">{{ visitas.total }}</span><span class="portal-resumen-lbl">en total</span></div>
+    </div>
+    <p class="portal-field-ayuda">Cuenta personas reales que entraron a tu perfil. No se cuentan robots ni tus propias visitas.</p>
+
     <div class="portal-resumen">
         <a href="{% url 'portal_turnos' %}" class="portal-resumen-item">
             <span class="portal-resumen-num">{{ proximos_turnos|length }}</span>
