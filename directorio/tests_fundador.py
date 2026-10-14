@@ -123,7 +123,7 @@ class RegistroConCodigoTests(_Base):
         # Y al reintentar, anda normal.
         resp = self._registrar(c.codigo)
         self.assertTemplateUsed(resp, 'portal/verificar_enviado.html')
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox), 2)  # confirmación a la persona + aviso de nuevo registro
 
     def test_sin_codigo_el_registro_sigue_igual_que_antes(self):
         self._registrar('')
@@ -135,7 +135,8 @@ class RegistroConCodigoTests(_Base):
     def test_al_confirmar_el_email_con_codigo_aterriza_en_el_cartel_de_gratis(self):
         c = CodigoFundador.objects.create(pais=self.peru)
         self._registrar(c.codigo)
-        link = re.search(r'/portal/verificar/\S+/\S+/', mail.outbox[-1].body).group(0)
+        del_usuario = [m for m in mail.outbox if 'nueva@example.com' in m.to]
+        link = re.search(r'/portal/verificar/\S+/\S+/', del_usuario[-1].body).group(0)
         resp = self.client.get(link, follow=True)
         self.assertRedirects(resp, reverse('portal_checkout'))
         self.assertContains(resp, 'Tenés gratis hasta el')

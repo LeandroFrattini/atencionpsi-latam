@@ -66,6 +66,51 @@ def _enviar_verificacion(request, usuario):
     email.send()
 
 
+def _avisar_nuevo_registro(request, psicologo, mail_enviado):
+    """Le avisa a la dueña del sitio que se registró alguien nuevo, con los
+    datos para contactarlo y si el mail de confirmación salió bien (así se
+    entera enseguida si alguien queda trabado). Nunca rompe el registro: si
+    este aviso falla solo se anota en los logs."""
+    try:
+        pais = psicologo.pais
+        admin_url = request.build_absolute_uri(reverse('admin:directorio_psicologo_change', args=[psicologo.pk]))
+        total = Psicologo.objects.filter(pais=pais).count()
+        lineas = [
+            '¡FELICITACIONES! 🎉 Tenés un nuevo registro en Atención Psi.',
+            '',
+            f'Nombre: {psicologo.nombre}',
+            f'País: {pais.nombre}',
+            f'Email: {psicologo.usuario.email}',
+            f'WhatsApp: {psicologo.whatsapp or "(no cargó)"}',
+        ]
+        if psicologo.codigo_fundador_id:
+            lineas.append(
+                f'Código de fundador: {psicologo.codigo_fundador.codigo} '
+                f'(gratis hasta el {psicologo.gratis_hasta:%d/%m/%Y})'
+            )
+        else:
+            lineas.append('Código de fundador: no usó')
+        lineas += [
+            f'Se registró: {timezone.localtime():%d/%m/%Y %H:%M}',
+            '',
+            'Mail de confirmación: ' + (
+                'enviado (queda pendiente que lo confirme).' if mail_enviado
+                else 'NO SE PUDO ENVIAR ⚠️ -- activale la cuenta a mano desde el admin o escribile.'
+            ),
+            f'Ya son {total} profesionales registrados en {pais.nombre}.',
+            '',
+            f'Ver en el admin: {admin_url}',
+        ]
+        EmailMultiAlternatives(
+            subject=f'🎉 ¡Nuevo registro! {psicologo.nombre} ({pais.nombre})',
+            body='\n'.join(lineas),
+            from_email=None,
+            to=settings.REGISTROS_NOTIFICAR_A,
+        ).send()
+    except Exception:
+        logger.exception('No se pudo mandar el aviso de nuevo registro (%s)', getattr(psicologo, 'pk', '?'))
+
+
 def registro(request, pais_slug):
     pais = get_object_or_404(Pais, slug=pais_slug, activo=True)
 
@@ -109,13 +154,17 @@ def registro(request, pais_slug):
                 close_old_connections()
                 messages.error(request, 'No pudimos completar el registro por un problema momentáneo. Probá de nuevo en un minuto: no se guardó nada.')
                 return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
+            mail_enviado = True
             try:
                 _enviar_verificacion(request, usuario)
             except Exception:
+                mail_enviado = False
                 # El envío depende del SMTP de Brevo -- si falla, la cuenta ya
                 # existe (sin eso no hay forma de que llegue a confirmarla
                 # nunca), pero no tiene que tirar un 500 en pleno registro.
                 logger.exception('No se pudo enviar el mail de verificación a %s', usuario.email)
+            _avisar_nuevo_registro(request, psicologo, mail_enviado)
+            if not mail_enviado:
                 messages.error(
                     request,
                     f'Tu cuenta se creó, pero hubo un problema mandando el mail de confirmación. '

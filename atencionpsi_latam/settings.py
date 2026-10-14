@@ -181,6 +181,12 @@ DEFAULT_FROM_EMAIL = 'Atención Psi <hola@atencionpsi.lat>'
 # defecto el mismo mail de la marca, pero es una sola línea para agregar
 # también su mail personal si lo pide (ej: [x, 'personal@...']).
 CONTACTO_EMAIL = 'hola@atencionpsi.lat'
+# A dónde llega el aviso "¡Nuevo registro!" cada vez que se anota un profesional.
+# Por defecto el mail de la marca; para mandarlo a otro/s: variable de entorno
+# REGISTROS_NOTIFICAR_A en Render, separados por coma (requiere nuevo deploy).
+REGISTROS_NOTIFICAR_A = [
+    e.strip() for e in os.environ.get('REGISTROS_NOTIFICAR_A', '').split(',') if e.strip()
+] or [CONTACTO_EMAIL]
 # WhatsApp de contacto general de la plataforma (no el de cada psicólogo).
 # CONTACTO_WHATSAPP va solo con dígitos (es lo que pide wa.me); el
 # CONTACTO_TELEFONO es el mismo número escrito para que lo lea una persona.

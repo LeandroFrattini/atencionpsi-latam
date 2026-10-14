@@ -39,9 +39,8 @@ class RegistroTests(TestCase):
         self.assertEqual(psicologo.pais, self.pais)
         self.assertFalse(psicologo.suscripcion_activa)
         self.assertIsNotNone(psicologo.terminos_aceptados_en)
-        self.assertEqual(len(mail.outbox), 1)
-        enviado = mail.outbox[0]
-        self.assertIn('nueva@example.com', enviado.to)
+        self.assertEqual(len(mail.outbox), 2)  # confirmación a la persona + aviso de nuevo registro a la dueña
+        enviado = [m for m in mail.outbox if 'nueva@example.com' in m.to][0]
         self.assertIn('/portal/verificar/', enviado.body)
         # Viene con alternativa HTML (mismo link que la versión en texto plano).
         self.assertEqual(len(enviado.alternatives), 1)
@@ -49,6 +48,51 @@ class RegistroTests(TestCase):
         self.assertEqual(mimetype, 'text/html')
         self.assertIn('/portal/verificar/', html)
         self.assertIn('Nueva Psicóloga', html)
+
+    def _avisos_a_la_duena(self):
+        from django.conf import settings
+        return [m for m in mail.outbox if m.to == settings.REGISTROS_NOTIFICAR_A]
+
+    def test_al_registrarse_le_llega_a_la_duena_el_aviso_de_nuevo_registro(self):
+        self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
+        avisos = self._avisos_a_la_duena()
+        self.assertEqual(len(avisos), 1)
+        aviso = avisos[0]
+        self.assertIn('¡Nuevo registro!', aviso.subject)
+        self.assertIn('Nueva Psicóloga', aviso.subject)
+        for dato in ('FELICITACIONES', 'Nueva Psicóloga', 'nueva@example.com', '51988888888', 'Perú',
+                     'Código de fundador: no usó', 'enviado', 'Ya son 1 profesionales registrados en Perú',
+                     '/admin/directorio/psicologo/'):
+            self.assertIn(dato, aviso.body)
+        self.assertNotIn('NO SE PUDO ENVIAR', aviso.body)
+
+    def test_el_aviso_dice_que_codigo_de_fundador_uso(self):
+        from directorio.models import CodigoFundador
+        codigo = CodigoFundador.objects.create(pais=self.pais)
+        self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro(codigo_fundador=codigo.codigo))
+        aviso = self._avisos_a_la_duena()[0]
+        self.assertIn('Código de fundador: ' + codigo.codigo, aviso.body)
+        self.assertIn('gratis hasta el', aviso.body)
+
+    def test_el_aviso_avisa_si_el_mail_de_confirmacion_no_se_pudo_mandar(self):
+        with mock.patch('portal.views._enviar_verificacion', side_effect=Exception('SMTP caído')):
+            self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
+        aviso = self._avisos_a_la_duena()[0]
+        self.assertIn('NO SE PUDO ENVIAR', aviso.body)
+
+    def test_si_falla_el_aviso_el_registro_igual_se_completa(self):
+        from django.core.mail import EmailMultiAlternatives as Real
+
+        class Falla(Real):
+            def send(self, *args, **kwargs):
+                if '¡Nuevo registro!' in self.subject:
+                    raise RuntimeError('SMTP caído')
+                return super().send(*args, **kwargs)
+
+        with mock.patch('portal.views.EmailMultiAlternatives', Falla):
+            resp = self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
+        self.assertTemplateUsed(resp, 'portal/verificar_enviado.html')
+        self.assertTrue(User.objects.filter(username='nueva@example.com').exists())
 
     def test_cuenta_sin_confirmar_no_puede_iniciar_sesion(self):
         self.client.post(reverse('portal_registro', args=['peru']), self._datos_registro())
@@ -96,7 +140,8 @@ class VerificacionEmailTests(TestCase):
         self.usuario = User.objects.get(username='nueva@example.com')
 
     def _link_del_mail(self):
-        match = re.search(r'/portal/verificar/\S+/\S+/', mail.outbox[-1].body)
+        del_usuario = [m for m in mail.outbox if 'nueva@example.com' in m.to]
+        match = re.search(r'/portal/verificar/\S+/\S+/', del_usuario[-1].body)
         return match.group(0)
 
     def test_link_valido_activa_la_cuenta_y_loguea(self):
@@ -138,7 +183,7 @@ class VerificacionEmailTests(TestCase):
     def test_reenviar_a_email_inexistente_no_manda_nada_pero_no_lo_delata(self):
         resp = self.client.post(reverse('portal_reenviar_verificacion'), {'email': 'no-existe@example.com'})
         self.assertRedirects(resp, reverse('portal_verificar_enviado'))
-        self.assertEqual(len(mail.outbox), 1)  # solo el del registro en setUp
+        self.assertEqual(len(mail.outbox), 2)  # solo los del registro en setUp (confirmación + aviso a la dueña)
 
     def test_reenviar_a_cuenta_ya_confirmada_no_manda_nada(self):
         self.client.get(self._link_del_mail())
