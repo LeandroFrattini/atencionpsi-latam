@@ -1,7 +1,7 @@
 import io
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.forms import inlineformset_factory
@@ -27,6 +27,24 @@ def aclarar_whatsapp(campo, pais):
         'Si no lo incluís, el link de WhatsApp de tu perfil no va a funcionar.'
     )
     campo.widget.attrs.update({'placeholder': f'+{codigo} …' if codigo else '+54 …', 'inputmode': 'tel', 'autocomplete': 'tel'})
+
+
+class CambiarContrasenaForm(PasswordChangeForm):
+    """Pide la contraseña actual (así nadie con la sesión abierta en una compu ajena
+    puede cambiarla) y la nueva dos veces. Las reglas son las de AUTH_PASSWORD_VALIDATORS."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['old_password'].label = 'Contraseña actual'
+        self.fields['new_password1'].label = 'Contraseña nueva'
+        self.fields['new_password2'].label = 'Repetí la contraseña nueva'
+        # Las ayudas que trae Django hablan de "usted"; acá se habla de vos.
+        self.fields['new_password1'].help_text = (
+            'Al menos 8 caracteres. No uses una clave muy común ni algo parecido a tu nombre o tu email.'
+        )
+        self.fields['new_password2'].help_text = 'Escribila otra vez para confirmar.'
+        for campo in self.fields.values():
+            campo.widget.attrs.setdefault('autocomplete', 'current-password' if campo is self.fields['old_password'] else 'new-password')
 
 
 ERROR_INSTAGRAM = 'Escribí tu usuario así: @usuario (solo letras, números, puntos y guiones bajos).'

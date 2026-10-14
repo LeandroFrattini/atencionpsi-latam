@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Cambiar mi contraseña | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    {% with seccion='contrasena' %}{% include 'portal/_nav.html' %}{% endwith %}
+
+    <h1>Cambiar mi contraseña</h1>
+    <p class="portal-lead">Elegí una contraseña nueva para entrar a tu cuenta. Vas a seguir con la sesión iniciada.</p>
+
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<p class="portal-error">{{ form.non_field_errors.0 }}</p>{% endif %}
+        {% for field in form %}
+            <div class="portal-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<div class="portal-field-ayuda">{{ field.help_text|safe }}</div>{% endif %}
+                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn-primario">Guardar contraseña nueva</button>
+    </form>
+    <a href="{% url 'portal_dashboard' %}" class="portal-lead-sm">&larr; Volver a mi cuenta</a>
+</div>
+{% endblock %}

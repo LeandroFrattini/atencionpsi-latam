@@ -5,6 +5,9 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import login, logout
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.messages.views import SuccessMessageMixin
+from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
@@ -27,6 +30,7 @@ from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
 
 from .forms import (
+    CambiarContrasenaForm,
     DIAS_DE_LA_SEMANA,
     DisponibilidadFormSetInicial,
     DiaNoAtiendeFormSet,
@@ -189,6 +193,15 @@ def _canjear_codigo(request, psicologo, codigo, pais):
             return
         psicologo.canjear_codigo_fundador(bloqueado)
     messages.success(request, f'Código aplicado: {bloqueado.meses_gratis} meses gratis.')
+
+
+class CambiarContrasenaView(SuccessMessageMixin, PasswordChangeView):
+    """El profesional cambia su contraseña desde el menú de su cuenta. Sigue con la
+    sesión iniciada después de cambiarla."""
+    form_class = CambiarContrasenaForm
+    template_name = 'portal/cambiar_contrasena.html'
+    success_url = reverse_lazy('portal_dashboard')
+    success_message = 'Listo, cambiaste tu contraseña.'
 
 
 def verificar_enviado(request):
