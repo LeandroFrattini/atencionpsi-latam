@@ -7,6 +7,11 @@ Navegación del portal del profesional. `seccion` (string) marca el link activo:
     <a href="{% url 'portal_agenda' %}" class="portal-nav-link{% if seccion == 'agenda' %} activo{% endif %}">Mi agenda</a>
     <a href="{% url 'portal_turnos' %}" class="portal-nav-link{% if seccion == 'turnos' %} activo{% endif %}">Turnos</a>
     <a href="{% url 'portal_pacientes' %}" class="portal-nav-link{% if seccion == 'pacientes' %} activo{% endif %}">Pacientes</a>
+    {% with yo=user.psicologo %}
+    {% if yo.en_periodo_fundador and not yo.suscripcion_activa and not yo.exento_de_pago %}
+        <span class="portal-nav-gratis" title="Tu perfil está habilitado sin pagar hasta esa fecha. Para seguir publicado después, activá tu suscripción.">Gratis hasta el {{ yo.gratis_hasta|date:"d/m/Y" }}</span>
+    {% endif %}
+    {% endwith %}
     <a href="{% url 'portal_cambiar_contrasena' %}" class="portal-nav-link{% if seccion == 'contrasena' %} activo{% endif %}">Contraseña</a>
     <form method="post" action="{% url 'portal_logout' %}" class="portal-nav-logout">
         {% csrf_token %}

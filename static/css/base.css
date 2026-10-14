@@ -1119,3 +1119,9 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 }
 .compartir-opcion:hover { background: var(--verde-suave); color: var(--verde-oscuro); }
 .compartir-aviso { min-height: 1.2em; margin: 8px 0 0; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--verde-oscuro); }
+
+/* Aviso del período gratis en el menú del portal */
+.portal-nav-gratis {
+    display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+    background: #fff1d9; color: #946b1a; white-space: nowrap; cursor: help;
+}

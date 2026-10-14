@@ -1,3 +1,4 @@
+import datetime
 import zipfile
 from io import BytesIO, StringIO
 
@@ -12,6 +13,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
+from django.utils import timezone
 
 from . import dlocal_go, planes_dlocal, suscripciones
 from .models import Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
@@ -72,6 +74,19 @@ class CiudadAdmin(ModeracionAdminMixin, admin.ModelAdmin):
     list_filter = ('aprobado', 'pais')
     list_editable = ('orden',)
     search_fields = ('nombre',)
+
+
+class GratisHastaForm(forms.Form):
+    fecha = forms.DateField(
+        label='Gratis hasta (inclusive)', widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text='Hasta ese día, a las 23:59, tiene su perfil sin pagar. Después, si no activó la suscripción, se despublica solo.',
+    )
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data['fecha']
+        if fecha < timezone.localdate():
+            raise forms.ValidationError('Elegí una fecha de hoy en adelante.')
+        return fecha
 
 
 class GenerarCodigosForm(forms.Form):
@@ -179,7 +194,57 @@ class PsicologoAdmin(admin.ModelAdmin):
         ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
     )
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
-    actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action']
+    actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action',
+               'dar_gratis_hasta_action', 'quitar_gratis_action']
+
+    # ---- Período gratis (sin código): se le da a quien elijas, hasta la fecha que elijas ----
+    @admin.action(description='Dar acceso gratis hasta una fecha…')
+    def dar_gratis_hasta_action(self, request, queryset):
+        """Deja a los profesionales tildados con el perfil habilitado sin pagar hasta el día
+        elegido (mismo mecanismo que el código de fundador: `gratis_hasta`). A quien ya
+        tiene la suscripción activa no se le toca nada."""
+        form = GratisHastaForm(request.POST if 'apply' in request.POST else None)
+        if 'apply' in request.POST and form.is_valid():
+            fecha = form.cleaned_data['fecha']
+            limite = timezone.make_aware(datetime.datetime.combine(fecha, datetime.time(23, 59, 59)))
+            hechos = 0
+            for p in queryset:
+                if p.suscripcion_activa:
+                    self.message_user(request, f'{p.nombre}: ya paga su suscripción, no se le cambió nada.', level=messages.WARNING)
+                    continue
+                p.gratis_hasta = limite
+                p.recordatorio_vencimiento_enviado = False   # que vuelva a recibir el aviso de fin
+                if not p.fecha_pago_confirmado:
+                    p.fecha_pago_confirmado = timezone.now()   # referencia para el recordatorio de "completá tu perfil"
+                p.save(update_fields=['gratis_hasta', 'recordatorio_vencimiento_enviado', 'fecha_pago_confirmado'])
+                hechos += 1
+            if hechos:
+                self.message_user(
+                    request, f'{hechos} profesional(es) con acceso gratis hasta el {fecha:%d/%m/%Y}.', level=messages.SUCCESS,
+                )
+            return None
+        return self._pagina_gratis(request, queryset, form, 'dar')
+
+    @admin.action(description='Quitar el período gratis…')
+    def quitar_gratis_action(self, request, queryset):
+        """Les saca el período gratis: si no tienen suscripción activa ni están exentos, el perfil
+        deja de estar publicado en el acto. Pide confirmación por eso."""
+        if 'apply' in request.POST:
+            hechos = queryset.exclude(gratis_hasta__isnull=True).update(gratis_hasta=None)
+            self.message_user(request, f'Se quitó el período gratis a {hechos} profesional(es).', level=messages.SUCCESS)
+            return None
+        return self._pagina_gratis(request, queryset, None, 'quitar')
+
+    def _pagina_gratis(self, request, queryset, form, modo):
+        contexto = {
+            **self.admin_site.each_context(request),
+            'title': 'Dar acceso gratis hasta una fecha' if modo == 'dar' else 'Quitar el período gratis',
+            'queryset': queryset, 'form': form, 'modo': modo,
+            'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+            'accion': 'dar_gratis_hasta_action' if modo == 'dar' else 'quitar_gratis_action',
+            'media': self.media,
+        }
+        return TemplateResponse(request, 'admin/directorio/psicologo/gratis_hasta.html', contexto)
 
     # ---- Tareas que antes eran de consola: botones en el inicio del admin ----------------
     ETIQUETAS_SINCRONIZACION = {

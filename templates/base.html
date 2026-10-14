@@ -36,7 +36,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=34">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=35">
     {% block json_ld %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
@@ -73,7 +73,7 @@
                     </details>
                 {% endif %}
                 {% if user.is_authenticated and user.psicologo %}
-                    <a href="{% url 'portal_dashboard' %}" class="btn-portal-nav btn-hola" title="Ir a mi cuenta">Hola, {{ user.psicologo.nombre_corto }}</a>
+                    <a href="{% url 'portal_dashboard' %}" class="btn-portal-nav btn-hola" title="{% if user.psicologo.en_periodo_fundador and not user.psicologo.suscripcion_activa %}Gratis hasta el {{ user.psicologo.gratis_hasta|date:"d/m/Y" }}{% else %}Ir a mi cuenta{% endif %}">Hola, {{ user.psicologo.nombre_corto }}</a>
                 {% else %}
                     <a href="{% url 'portal_login' %}" class="btn-portal-nav">Portal profesional</a>
                     {% with destino=pais|default:pais_para_sumarse %}
