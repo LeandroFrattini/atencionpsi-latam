@@ -113,6 +113,32 @@ def _wrap(draw, text, fnt, max_w):
     return lineas or [text]
 
 
+def _ajustar_lista(draw, items, tamanios, familia, peso, max_w, entra):
+    """
+    Arma el texto de una lista ("a quién atiende", orientaciones) para que
+    entre en el lugar disponible, sin cortar nunca a mitad de la lista:
+    1) prueba cada tamaño de letra, del más grande al más chico;
+    2) si ni con el más chico entra, saca elementos ENTEROS del final y
+       agrega "y N más" (en vez de cortar una palabra o dejar una coma suelta).
+    `entra(lineas, fnt)` dice si ese resultado cabe. Devuelve
+    (fuente, lineas, recortado); `recortado` es True si hubo que sacar elementos.
+    """
+    items = [i for i in items if i]
+    fnt = _font(familia, peso, tamanios[0])
+    lineas = [', '.join(items)]
+    for tam in tamanios:
+        fnt = _font(familia, peso, tam)
+        lineas = _wrap(draw, ', '.join(items), fnt, max_w)
+        if entra(lineas, fnt):
+            return fnt, lineas, False
+    for n in range(len(items) - 1, 0, -1):
+        texto = ', '.join(items[:n]) + ' y %d más' % (len(items) - n)
+        lineas = _wrap(draw, texto, fnt, max_w)
+        if entra(lineas, fnt):
+            return fnt, lineas, True
+    return fnt, lineas, len(items) > 1
+
+
 def _center(draw, text, cx, y, fnt, fill):
     draw.text((cx - _tw(draw, text, fnt) // 2, y), text, font=fnt, fill=fill)
 
@@ -731,7 +757,7 @@ def generar_imagen_story(psicologo, telefono_manual=None):
     draw.text((icono_web_cx + icono_web_d // 2 + 18, icono_web_cy), web_texto, font=f_burbuja_web, fill=BLANCO, anchor='lm')
 
     # ── Franja etaria: tipografía libre, se achica sola si la lista es larga ──
-    destinatarios = ', '.join(pu.nombre for pu in psicologo.publicos_publicos)
+    destinatarios = [pu.nombre for pu in psicologo.publicos_publicos]
     if destinatarios:
         eyebrow = 'ATIENDE A'
         f_eyebrow = _font('montserrat', 700, 24)
@@ -740,13 +766,12 @@ def generar_imagen_story(psicologo, telefono_manual=None):
         limite_inferior_y = web_y - 40
         alto_encabezado = _th(draw, eyebrow, f_eyebrow) + 16 + 20 + 12
 
-        for tam in (58, 50, 44, 38):
-            f_franja = _font('playfair', 600, tam)
-            lineas = _wrap(draw, destinatarios, f_franja, max_ancho_franja)
-            alto_linea = _th(draw, 'Ag', f_franja) + 14
-            alto_bloque = alto_linea * len(lineas)
-            if limite_superior_y + alto_encabezado + alto_bloque <= limite_inferior_y or tam == 38:
-                break
+        def _entra(lineas, fnt):
+            alto_linea = _th(draw, 'Ag', fnt) + 14
+            return limite_superior_y + alto_encabezado + alto_linea * len(lineas) <= limite_inferior_y
+
+        f_franja, lineas, _ = _ajustar_lista(draw, destinatarios, (58, 50, 44, 38), 'playfair', 600, max_ancho_franja, _entra)
+        alto_linea = _th(draw, 'Ag', f_franja) + 14
 
         fy = limite_superior_y
         _center(draw, eyebrow, W // 2, fy, f_eyebrow, VERDE_OSCURO)
@@ -762,10 +787,14 @@ def generar_imagen_story(psicologo, telefono_manual=None):
 
 
 # ── Generador de post de feed ────────────────────────────────────────────
-def generar_imagen_feed(psicologo):
+def _componer_feed(psicologo, foto_h):
     """
-    Post de feed (1080x1350) con UN profesional. A diferencia de la
-    historia, no lleva el logo de "Atención Psi" ni la burbuja de
+    Post de feed (1080x1350) con UN profesional, con la foto de `foto_h` de
+    alto. Devuelve (imagen, recortado): `recortado` es True si para que
+    entrara el texto hubo que sacar elementos de alguna lista (ver
+    generar_imagen_feed, que prueba con fotos más bajas antes de aceptarlo).
+
+    A diferencia de la historia, no lleva el logo de "Atención Psi" ni la burbuja de
     Instagram -- se postea directo en la cuenta, así que ya se sabe de
     quién es -- pero sí una burbuja con la web al final. Campos: nombre,
     orientación (acá: las orientaciones-filtro que cargó el profesional,
@@ -784,7 +813,8 @@ def generar_imagen_feed(psicologo):
     draw = ImageDraw.Draw(canvas)
 
     # ── Tarjeta de foto ──
-    foto_w, foto_h = 560, 600
+    recortado = False
+    foto_w = 560
     foto_x = (FEED_W - foto_w) // 2
     foto_y = 90
     _tarjeta_foto(canvas, foto_x, foto_y, foto_w, foto_h, getattr(psicologo, 'foto', None))
@@ -805,10 +835,13 @@ def generar_imagen_feed(psicologo):
 
     # ── Orientación, en itálica (mismo efecto "escrito a mano" que la
     # franja de a quién atiende) para que se lea distinto del nombre. ──
-    orientacion = ', '.join(o.nombre for o in psicologo.orientaciones_publicas)
-    if orientacion:
-        f_orient = _font('playfair', 500, 33)
-        lineas_orient = _wrap(draw, orientacion, f_orient, FEED_W - 220)[:3]
+    orientaciones = [o.nombre for o in psicologo.orientaciones_publicas]
+    if orientaciones:
+        f_orient, lineas_orient, rec = _ajustar_lista(
+            draw, orientaciones, (33, 30, 28), 'playfair', 500, FEED_W - 220,
+            lambda lineas, fnt: len(lineas) <= 3,
+        )
+        recortado = recortado or rec
         for linea in lineas_orient:
             capa = _texto_italica(linea, f_orient, TINTA_SUAVE)
             canvas.paste(capa, ((FEED_W - capa.size[0]) // 2, cy), capa)
@@ -862,7 +895,7 @@ def generar_imagen_feed(psicologo):
     _icono_globo(draw, icono_web_cx, icono_web_cy, icono_web_d * 0.42, BLANCO)
     draw.text((icono_web_cx + icono_web_d // 2 + 16, icono_web_cy), web_texto, font=f_burbuja_web, fill=BLANCO, anchor='lm')
 
-    destinatarios = ', '.join(pu.nombre for pu in psicologo.publicos_publicos)
+    destinatarios = [pu.nombre for pu in psicologo.publicos_publicos]
     if destinatarios:
         eyebrow = 'ATIENDE A'
         f_eyebrow = _font('montserrat', 700, 23)
@@ -871,13 +904,13 @@ def generar_imagen_feed(psicologo):
         limite_inferior_y = web_y - 40
         alto_encabezado = _th(draw, eyebrow, f_eyebrow) + 16 + 20 + 12
 
-        for tam in (52, 46, 40, 34):
-            f_franja = _font('playfair', 600, tam)
-            lineas = _wrap(draw, destinatarios, f_franja, max_ancho_franja)
-            alto_linea = _th(draw, 'Ag', f_franja) + 12
-            alto_bloque = alto_linea * len(lineas)
-            if limite_superior_y + alto_encabezado + alto_bloque <= limite_inferior_y or tam == 34:
-                break
+        def _entra(lineas, fnt):
+            alto_linea = _th(draw, 'Ag', fnt) + 12
+            return limite_superior_y + alto_encabezado + alto_linea * len(lineas) <= limite_inferior_y
+
+        f_franja, lineas, rec = _ajustar_lista(draw, destinatarios, (52, 46, 40, 34), 'playfair', 600, max_ancho_franja, _entra)
+        recortado = recortado or rec
+        alto_linea = _th(draw, 'Ag', f_franja) + 12
 
         fy = limite_superior_y
         _center(draw, eyebrow, FEED_W // 2, fy, f_eyebrow, VERDE_OSCURO)
@@ -889,6 +922,23 @@ def generar_imagen_feed(psicologo):
             canvas.paste(capa_linea, ((FEED_W - capa_linea.size[0]) // 2, fy), capa_linea)
             fy += alto_linea
 
+    return canvas, recortado
+
+
+# Altos de foto que prueba el feed, de mayor a menor: si el texto del
+# profesional es largo se achica la foto para darle lugar antes de tener
+# que sacar elementos de las listas.
+ALTOS_FOTO_FEED = (600, 540, 480, 430)
+
+
+def generar_imagen_feed(psicologo):
+    """Post de feed (1080x1350) con UN profesional. Se queda con la foto
+    más grande con la que el texto entra completo; si ni con la más chica
+    entra, deja lo que cabe y resume el resto como "y N más"."""
+    for foto_h in ALTOS_FOTO_FEED:
+        canvas, recortado = _componer_feed(psicologo, foto_h)
+        if not recortado:
+            break
     return canvas
 
 

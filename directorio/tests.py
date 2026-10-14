@@ -417,6 +417,52 @@ class GeneradorImagenesTests(TestCase):
         self.assertEqual(generar_imagen_story(pelado).size, (1080, 1920))
         self.assertEqual(generar_imagen_feed(pelado).size, (1080, 1350))
 
+    def _dibujo(self):
+        from PIL import Image, ImageDraw
+        return ImageDraw.Draw(Image.new('RGB', (1080, 400)))
+
+    def test_lista_corta_entra_con_la_letra_grande_y_sin_recortar(self):
+        from directorio.generador_imagenes import _ajustar_lista
+        fnt, lineas, recortado = _ajustar_lista(
+            self._dibujo(), ['Adultos', 'Jóvenes'], (52, 46, 40, 34), 'playfair', 600, 920, lambda l, f: len(l) <= 2,
+        )
+        self.assertFalse(recortado)
+        self.assertEqual(lineas, ['Adultos, Jóvenes'])
+
+    def test_lista_larga_achica_la_letra_antes_de_sacar_elementos(self):
+        from directorio.generador_imagenes import _ajustar_lista
+        items = ['Adolescentes', 'Adultos', 'Adultos mayores', 'Comunidad LGBTIQ+', 'Deportistas', 'Familias', 'Jóvenes']
+        _, lineas, recortado = _ajustar_lista(
+            self._dibujo(), items, (52, 46, 40, 34), 'playfair', 600, 920, lambda l, f: len(l) <= 3,
+        )
+        self.assertFalse(recortado)
+        self.assertEqual(' '.join(lineas).replace(', ', ',').split(','), items)
+
+    def test_si_no_entra_saca_elementos_enteros_y_dice_cuantos_faltan(self):
+        from directorio.generador_imagenes import _ajustar_lista
+        items = ['Público número %d con nombre largo' % i for i in range(1, 25)]
+        _, lineas, recortado = _ajustar_lista(
+            self._dibujo(), items, (52, 46, 40, 34), 'playfair', 600, 920, lambda l, f: len(l) <= 2,
+        )
+        self.assertTrue(recortado)
+        self.assertLessEqual(len(lineas), 2)
+        texto = ' '.join(lineas)
+        self.assertRegex(texto, r' y \d+ más$')          # nunca queda cortado a mitad de la lista
+        self.assertFalse(texto.endswith(','))
+        mostrados = texto.count('Público número')
+        self.assertIn(' y %d más' % (24 - mostrados), texto)  # la cuenta cierra
+
+    def test_feed_con_listas_enormes_sigue_teniendo_el_tamano_y_no_rompe(self):
+        from types import SimpleNamespace as NS
+        from directorio.generador_imagenes import generar_imagen_feed
+        largo = NS(
+            nombre='María de los Ángeles Fernández de la Cruz', foto=None, modalidad='online', ciudad_publica='Lima',
+            pais=NS(codigo_iso='PE'), get_modalidad_display=lambda: 'Online',
+            orientaciones_publicas=[NS(nombre='Orientación %d con nombre largo' % i) for i in range(14)],
+            publicos_publicos=[NS(nombre='Público %d con nombre largo' % i) for i in range(24)],
+        )
+        self.assertEqual(generar_imagen_feed(largo).size, (1080, 1350))
+
     def test_telefono_manual_pisa_el_whatsapp_guardado(self):
         from directorio.generador_imagenes import _formatear_telefono
         # El propio psicólogo (whatsapp 51987654321) vs un número a mano --
