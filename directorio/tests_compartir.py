@@ -76,13 +76,27 @@ class BanderaEnLasImagenesTests(TestCase):
         psi = self._psi('PE', '')
         self.assertEqual(_datos_atencion(psi)[1], [psi.pais.nombre])
 
-    def test_hay_bandera_para_cada_pais_activo_del_sitio(self):
+    # Países con sección armada: los activos y los que todavía están inactivos
+    # (Colombia, Ecuador y México), para que al activarlos no falte ninguna bandera.
+    PAISES_CON_BANDERA = ('PE', 'UY', 'CL', 'AR', 'CO', 'EC', 'MX')
+
+    def test_hay_bandera_para_cada_pais_del_sitio_activo_o_no(self):
         from directorio.generador_imagenes import _bandera
-        for iso in ('PE', 'UY', 'CL', 'AR'):
+        for iso in self.PAISES_CON_BANDERA:
             bandera = _bandera(self._psi(iso, 'X' + iso), 27)
             self.assertIsNotNone(bandera, iso)
             self.assertEqual(bandera.size[1], 27)
             self.assertGreater(bandera.size[0], 27)  # más ancha que alta
+
+    def test_cada_pais_tiene_tambien_el_svg_que_usa_el_sitio(self):
+        """La web (selector de país, registro) usa static/img/flags/<iso>.svg
+        (Pais.bandera_svg); las imágenes de Instagram, el PNG de directorio/flags."""
+        import os
+        from django.conf import settings
+        for iso in self.PAISES_CON_BANDERA:
+            svg = os.path.join(settings.BASE_DIR, 'static', 'img', 'flags', iso.lower() + '.svg')
+            self.assertTrue(os.path.exists(svg), svg)
+            self.assertEqual(Pais(codigo_iso=iso).bandera_svg, f'img/flags/{iso.lower()}.svg')
 
     def test_un_pais_sin_png_no_rompe_y_solo_muestra_el_texto(self):
         from directorio.generador_imagenes import _bandera, generar_imagen_feed

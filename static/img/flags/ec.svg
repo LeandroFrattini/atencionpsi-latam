@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+    <rect width="900" height="300" fill="#FFDD00"/>
+    <rect y="300" width="900" height="150" fill="#034EA2"/>
+    <rect y="450" width="900" height="150" fill="#ED1C24"/>
+    <!-- Escudo simplificado: óvalo (cielo arriba, tierra abajo), montaña con sol y el cóndor -->
+    <ellipse cx="450" cy="300" rx="94" ry="114" fill="#8C6A2F"/>
+    <path d="M372 300 A78 98 0 0 1 528 300 Z" fill="#8EC9EE"/>
+    <path d="M372 300 A78 98 0 0 0 528 300 Z" fill="#2E8B57"/>
+    <circle cx="450" cy="246" r="17" fill="#FFDD00"/>
+    <path d="M392 300 L436 252 L456 280 L478 262 L508 300 Z" fill="#8E9AA8"/>
+    <path d="M396 318 Q450 296 504 318 L498 336 Q450 316 402 336 Z" fill="#1E6FB8"/>
+    <path d="M450 160 C418 152 386 160 362 188 C398 176 428 182 450 206 C472 182 502 176 538 188 C514 160 482 152 450 160 Z" fill="#4A3320"/>
+    <circle cx="450" cy="188" r="10" fill="#4A3320"/>
+</svg>
