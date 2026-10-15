@@ -77,3 +77,27 @@ class TelefonoMexicoTests(TestCase):
 
     def test_los_otros_paises_siguen_igual(self):
         self.assertEqual(_formatear_telefono('987654321', '51'), '+51 9 98765-4321')
+
+
+class BanderaMexicoTests(TestCase):
+    """La bandera sin el escudo del centro es idéntica a la de Italia (verde, blanco,
+    rojo): tiene que llevar el escudo, tanto en el PNG de las imágenes de Instagram
+    como en el SVG de la web."""
+
+    def test_el_png_tiene_el_escudo_en_el_centro_de_la_franja_blanca(self):
+        import os
+        from PIL import Image
+        from django.conf import settings
+        img = Image.open(os.path.join(settings.BASE_DIR, 'directorio', 'flags', 'mx.png')).convert('RGB')
+        ancho, alto = img.size
+        centro = img.crop((int(ancho * 0.38), int(alto * 0.30), int(ancho * 0.62), int(alto * 0.72)))
+        no_blancos = sum(1 for px in centro.getdata() if min(px) < 235)
+        self.assertGreater(no_blancos, 600, 'la franja blanca del centro está vacía: falta el escudo')
+
+    def test_el_svg_de_la_web_tiene_el_escudo(self):
+        import os
+        from django.conf import settings
+        with open(os.path.join(settings.BASE_DIR, 'static', 'img', 'flags', 'mx.svg'), encoding='utf-8') as f:
+            svg = f.read()
+        self.assertIn('Escudo nacional', svg)
+        self.assertIn('<ellipse', svg)

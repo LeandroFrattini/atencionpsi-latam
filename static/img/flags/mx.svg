@@ -1,5 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2">
-    <rect width="1" height="2" fill="#006847"/>
-    <rect x="1" width="1" height="2" fill="#fff"/>
-    <rect x="2" width="1" height="2" fill="#CE1126"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600">
+    <rect width="300" height="600" fill="#006847"/>
+    <rect x="300" width="300" height="600" fill="#FFFFFF"/>
+    <rect x="600" width="300" height="600" fill="#CE1126"/>
+    <!-- Escudo nacional (versión simplificada): águila sobre el nopal devorando la serpiente, con la corona de ramas -->
+    <g transform="translate(450 300) scale(1.12)">
+        <!-- ramas (encino a la izquierda con frutos rojos, laurel a la derecha) -->
+        <path d="M-58 44 C-94 14 -92 -40 -56 -74 L-48 -66 C-74 -36 -74 6 -44 34 Z" fill="#2F7D32"/>
+        <path d="M58 44 C94 14 92 -40 56 -74 L48 -66 C74 -36 74 6 44 34 Z" fill="#2F7D32"/>
+        <g fill="#CE1126"><circle cx="-80" cy="-6" r="4.5"/><circle cx="-84" cy="-28" r="4.5"/><circle cx="-72" cy="-50" r="4.5"/><circle cx="-70" cy="14" r="4.5"/></g>
+        <!-- moño tricolor -->
+        <path d="M-50 56 Q0 92 50 56" stroke="#006847" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M-44 63 Q0 97 44 63" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M-38 70 Q0 101 38 70" stroke="#CE1126" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <!-- agua y piedra -->
+        <ellipse cx="0" cy="48" rx="46" ry="10" fill="#4F8FC0"/>
+        <ellipse cx="-2" cy="40" rx="34" ry="9" fill="#C9A66B"/>
+        <!-- nopal -->
+        <ellipse cx="-2" cy="26" rx="14" ry="17" fill="#3E8E41"/>
+        <ellipse cx="-24" cy="10" rx="12" ry="15" fill="#3E8E41" transform="rotate(-18 -24 10)"/>
+        <ellipse cx="20" cy="8" rx="12" ry="15" fill="#3E8E41" transform="rotate(16 20 8)"/>
+        <g fill="#CE1126"><circle cx="-26" cy="-5" r="5"/><circle cx="24" cy="-7" r="5"/><circle cx="-2" cy="9" r="4.5"/></g>
+        <!-- alas -->
+        <path d="M18 -30 C34 -72 66 -88 84 -74 C62 -68 54 -44 36 -20 Z" fill="#7A5230"/>
+        <path d="M-8 -30 C-30 -70 -62 -82 -78 -68 C-54 -62 -44 -40 -26 -18 Z" fill="#7A5230"/>
+        <!-- cola -->
+        <path d="M26 -8 L46 20 L32 15 L28 26 L18 8 Z" fill="#4F3119"/>
+        <!-- cuerpo, cabeza y pico -->
+        <ellipse cx="8" cy="-20" rx="28" ry="22" fill="#6B4423" transform="rotate(-22 8 -20)"/>
+        <circle cx="-22" cy="-50" r="13" fill="#6B4423"/>
+        <path d="M-32 -54 L-52 -46 L-32 -42 Z" fill="#E8B923"/>
+        <circle cx="-25" cy="-53" r="2.6" fill="#FFFFFF"/>
+        <!-- patas -->
+        <path d="M2 -4 L-4 12 M14 -4 L16 10" stroke="#E8B923" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <!-- serpiente -->
+        <path d="M-44 -44 C-62 -22 -38 -8 -52 12" stroke="#8D8D8D" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </g>
 </svg>
