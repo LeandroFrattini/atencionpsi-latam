@@ -54,8 +54,9 @@ class CompartirPerfilTests(TestCase):
         self.assertContains(resp, 'Escribir por WhatsApp')
 
 
-class SiglaDePaisEnLasImagenesTests(TestCase):
-    """La ciudad de las imágenes de Instagram lleva el país adelante: "PE - Lima"."""
+class BanderaEnLasImagenesTests(TestCase):
+    """En las imágenes de Instagram la ciudad lleva la bandera del país adelante
+    (la bandera + "Lima"); ya no se escribe la sigla ("PE - Lima")."""
 
     def _psi(self, iso, ciudad, nombre='Psi Test'):
         pais, _ = Pais.objects.get_or_create(
@@ -64,18 +65,30 @@ class SiglaDePaisEnLasImagenesTests(TestCase):
         usuario = User.objects.create_user(f'{iso}{ciudad}@example.com', email=f'{iso}{ciudad}@example.com', password='ClaveSegura123')
         return Psicologo.objects.create(usuario=usuario, pais=pais, nombre=nombre, matricula='1', whatsapp='1', ciudad=ciudad)
 
-    def test_cada_pais_con_su_sigla(self):
+    def test_la_ciudad_va_sola_porque_el_pais_lo_dice_la_bandera(self):
         from directorio.generador_imagenes import _datos_atencion
-        casos = {'PE': 'PE - Lima', 'UY': 'UY - Montevideo', 'CL': 'CL - Santiago', 'AR': 'ARG - Bahía Blanca'}
-        ciudades = {'PE': 'Lima', 'UY': 'Montevideo', 'CL': 'Santiago', 'AR': 'Bahía Blanca'}
-        for iso, esperado in casos.items():
-            psi = self._psi(iso, ciudades[iso])
-            self.assertEqual(_datos_atencion(psi)[1], [esperado], iso)
+        for iso, ciudad in {'PE': 'Lima', 'UY': 'Montevideo', 'CL': 'Santiago', 'AR': 'Bahía Blanca'}.items():
+            psi = self._psi(iso, ciudad)
+            self.assertEqual(_datos_atencion(psi)[1], [ciudad], iso)
 
-    def test_sin_ciudad_queda_solo_la_sigla(self):
+    def test_sin_ciudad_queda_el_nombre_del_pais(self):
         from directorio.generador_imagenes import _datos_atencion
         psi = self._psi('PE', '')
-        self.assertEqual(_datos_atencion(psi)[1], ['PE'])
+        self.assertEqual(_datos_atencion(psi)[1], [psi.pais.nombre])
+
+    def test_hay_bandera_para_cada_pais_activo_del_sitio(self):
+        from directorio.generador_imagenes import _bandera
+        for iso in ('PE', 'UY', 'CL', 'AR'):
+            bandera = _bandera(self._psi(iso, 'X' + iso), 27)
+            self.assertIsNotNone(bandera, iso)
+            self.assertEqual(bandera.size[1], 27)
+            self.assertGreater(bandera.size[0], 27)  # más ancha que alta
+
+    def test_un_pais_sin_png_no_rompe_y_solo_muestra_el_texto(self):
+        from directorio.generador_imagenes import _bandera, generar_imagen_feed
+        psi = self._psi('ZZ', 'Ciudad Rara')
+        self.assertIsNone(_bandera(psi, 27))
+        self.assertEqual(generar_imagen_feed(psi).size, (1080, 1350))
 
     def test_las_dos_imagenes_se_generan_con_el_prefijo(self):
         from directorio.generador_imagenes import generar_imagen_feed, generar_imagen_story
