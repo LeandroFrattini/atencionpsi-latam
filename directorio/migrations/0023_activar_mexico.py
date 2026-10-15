@@ -9,12 +9,12 @@ from django.utils.text import slugify
 # en el build de Render lo haga también en producción (mismo motivo que 0006/0015).
 #
 # Precios en pesos mexicanos, sin decimales. Equivalen a unos US$14,5 (Básico) y
-# US$25 (Premium) al cambio de ~17,15 MXN/USD de mediados de septiembre de 2026, que
-# es lo mismo que valen hoy los planes de Chile y Uruguay (CLP 13.990 / 23.990 y
-# UYU 590 / 990). Si se quieren cambiar, se editan desde el admin (País) -- pero ojo:
+# US$23 (Premium) al cambio de ~17,15 MXN/USD de mediados de septiembre de 2026 (los
+# planes de Chile y Uruguay valen unos US$14,5 y US$25; el Premium de México se fijó
+# un poco más bajo a propósito: 249 / 399). Si se quieren cambiar, se editan desde el admin (País) -- pero ojo:
 # los planes de dLocal Go ya creados quedan con el monto con el que se crearon.
 PRECIO_BASICO = 249
-PRECIO_PREMIUM = 429
+PRECIO_PREMIUM = 399
 
 # Ciudad de México (alcaldías), zona metropolitana y las ciudades más grandes del país.
 # Lo que cada profesional ya haya escrito o escriba a mano entra aparte, pendiente de

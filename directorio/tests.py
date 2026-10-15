@@ -361,7 +361,7 @@ class TerminosYFooterTests(TestCase):
         for nombre in ['Perú', 'Uruguay', 'Chile', 'México']:
             self.assertIn(nombre, contenido)
         self.assertIn('$ 249', contenido)   # México: Plan Básico
-        self.assertIn('$ 429', contenido)   # México: Plan Premium
+        self.assertIn('$ 399', contenido)   # México: Plan Premium
         self.assertNotIn('Colombia', contenido)
 
     def test_footer_tiene_los_links_legales_en_cualquier_pagina(self):

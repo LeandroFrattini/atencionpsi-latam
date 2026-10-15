@@ -23,7 +23,7 @@ class MexicoActivoTests(TestCase):
         self.assertEqual(self.mx.ciudad_ejemplo, 'Ciudad de México')
 
     def test_precios_de_los_planes(self):
-        self.assertEqual((self.mx.precio_basico, self.mx.precio_premium), (249, 429))
+        self.assertEqual((self.mx.precio_basico, self.mx.precio_premium), (249, 399))
         self.assertLess(self.mx.precio_basico, self.mx.precio_premium)
 
     def test_ciudades_cargadas_aprobadas_y_con_slug_unico(self):
