@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Atención Psi{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay y Chile.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay, Chile y México.{% endblock %}">
     <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
     {% comment %}
     Canónica automática por página (sin query string) -- evita que Google
@@ -17,7 +17,7 @@
     <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
     <meta property="og:locale" content="{% if pais %}es_{{ pais.codigo_iso }}{% else %}es_LA{% endif %}">
     <meta property="og:title" content="{% block og_title %}Atención Psi{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay y Chile.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Encontrá tu psicólogo online en Latinoamérica: perfiles verificados, turnos por videollamada y atención profesional en Perú, Uruguay, Chile y México.{% endblock %}">
     {% comment %}
     Imagen de OG por defecto (wordmark de marca) -- cada página puede
     sobreescribir este bloque con la suya propia, ej. la foto del
@@ -100,7 +100,7 @@
         <div class="site-footer-inner">
             <div class="site-footer-brand">
                 <a href="{% url 'hub' %}" class="logo"><span class="v">Atención</span><span class="r">Psi</span></a>
-                <p>Psicólogos con matrícula habilitante en Perú, Uruguay y Chile, y en toda Argentina. Atención online y presencial, con contacto directo y sin intermediarios.</p>
+                <p>Psicólogos con matrícula habilitante en Perú, Uruguay, Chile y México, y en toda Argentina. Atención online y presencial, con contacto directo y sin intermediarios.</p>
                 {% if footer_instagram_url or footer_facebook_url %}
                 <span class="footer-redes">
                     {% if footer_instagram_url %}

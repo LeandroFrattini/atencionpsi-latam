@@ -150,6 +150,19 @@ def _limpiar_nombre(nombre):
     return n
 
 
+def _formatear_telefono_mexico(n):
+    """México: 10 dígitos después del +52 (ya no se usa el "1" de celular, que
+    todavía cargan algunos). CDMX, Guadalajara y Monterrey (55, 33, 81) tienen
+    lada de 2 dígitos ("+52 55 1234 5678"); el resto, de 3 ("+52 442 123 4567")."""
+    if len(n) == 11 and n.startswith('1'):
+        n = n[1:]
+    if len(n) != 10:
+        return f'+52 {n}'
+    if n[:2] in ('55', '33', '81'):
+        return f'+52 {n[:2]} {n[2:6]} {n[6:]}'
+    return f'+52 {n[:3]} {n[3:6]} {n[6:]}'
+
+
 def _formatear_telefono(digitos, codigo_pais):
     """
     Devuelve el teléfono con "+<código> 9 " y agrupado para leerse bien.
@@ -163,6 +176,8 @@ def _formatear_telefono(digitos, codigo_pais):
     n = digitos
     if codigo_pais and n.startswith(codigo_pais):
         n = n[len(codigo_pais):]
+    if codigo_pais == '52':
+        return _formatear_telefono_mexico(n)
     if n.startswith('9') and len(n) > 10:
         n = n[1:]
 

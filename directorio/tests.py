@@ -351,17 +351,18 @@ class TerminosYFooterTests(TestCase):
         self.assertContains(resp, 'no es una red de derivaciones')
 
     def test_terminos_muestra_los_dos_planes_de_cada_pais_activo(self):
-        # Los países sembrados por la migración 0006/0008 (Perú, Uruguay,
-        # Chile activos y con precio) tienen que aparecer cada uno con sus
-        # dos planes -- Argentina (externa) y los inactivos, no.
+        # Los países sembrados por las migraciones (Perú, Uruguay, Chile y,
+        # desde 0023, México: activos y con precio) tienen que aparecer cada
+        # uno con sus dos planes -- Argentina (externa) y los inactivos, no.
         resp = self.client.get(reverse('terminos'))
         contenido = resp.content.decode()
         self.assertIn('Plan Básico', contenido)
         self.assertIn('Plan Premium', contenido)
-        for nombre in ['Perú', 'Uruguay', 'Chile']:
+        for nombre in ['Perú', 'Uruguay', 'Chile', 'México']:
             self.assertIn(nombre, contenido)
+        self.assertIn('$ 249', contenido)   # México: Plan Básico
+        self.assertIn('$ 429', contenido)   # México: Plan Premium
         self.assertNotIn('Colombia', contenido)
-        self.assertNotIn('México', contenido)
 
     def test_footer_tiene_los_links_legales_en_cualquier_pagina(self):
         resp = self.client.get(reverse('hub'))
