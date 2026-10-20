@@ -40,7 +40,7 @@
                 <input type="radio" name="plan" value="basico" checked{% if not integracion_pendiente and 'basico' not in planes_disponibles %} disabled{% endif %}>
                 <span class="placa-precio-nombre">Plan Básico</span>
                 <span class="placa-precio-monto">{{ psicologo.pais.simbolo_moneda }} {{ psicologo.pais.precio_basico|miles }} <span>/ mes</span></span>
-                <span class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar buscando "psicólogo en {{ psicologo.pais.ciudad_ejemplo }}".</span>
+                <span class="placa-precio-incluye">Perfil publicado y optimizado para Google: te van a encontrar cuando busquen "psicólogo en tu ciudad" (por ejemplo, "psicólogo en {{ psicologo.pais.ciudad_ejemplo }}").</span>
             </label>
             <label class="placa-precio placa-precio-premium placa-precio-radio">
                 <input type="radio" name="plan" value="premium"{% if not integracion_pendiente and 'premium' not in planes_disponibles %} disabled{% endif %}>

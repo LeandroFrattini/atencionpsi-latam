@@ -89,10 +89,11 @@ class Pais(models.Model):
 
     @property
     def ciudad_ejemplo(self):
-        """Ciudad de referencia para el copy de marketing del Plan Básico
-        (2026-09-09): "te van a encontrar buscando 'psicólogo en Lima'" pega
-        más que un genérico "en tu país" -- la capital/ciudad más grande de
-        cada uno, la que la gente realmente escribe en Google."""
+        """Ciudad de referencia para el copy de marketing del Plan Básico:
+        "te van a encontrar cuando busquen 'psicólogo en tu ciudad' (por ejemplo,
+        'psicólogo en Lima')". Va SOLO como ejemplo -- si el copy nombra una
+        ciudad sin más, la gente entiende que el plan sirve solo para esa ciudad.
+        Es la capital/ciudad más grande de cada país, la que más se escribe en Google."""
         return {
             'peru': 'Lima', 'uruguay': 'Montevideo', 'chile': 'Santiago',
             'argentina': 'Buenos Aires', 'colombia': 'Bogotá', 'mexico': 'Ciudad de México',
