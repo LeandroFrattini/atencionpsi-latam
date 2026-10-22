@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import ContactoForm
 from .models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
 from . import buscador
-from .destacados import mezcla_de_psicologos
+from .destacados import CANTIDAD_DESTACADOS_INICIO, mezcla_de_psicologos
 from .taxonomia import clave
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def hub(request):
     return render(request, 'directorio/hub.html', {
         'paises': paises,
         # Mezcla distinta en cada visita, de todos los países activos.
-        'destacados': mezcla_de_psicologos(8),
+        'destacados': mezcla_de_psicologos(CANTIDAD_DESTACADOS_INICIO),
     })
 
 

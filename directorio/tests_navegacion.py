@@ -122,6 +122,31 @@ class MezclaTests(_Base):
             nombres = [d['nombre'] for d in destacados.mezcla_de_psicologos(4)]
             self.assertIn('Chi Unico', nombres)
 
+    def test_el_inicio_muestra_diez_profesionales_en_dos_filas_de_cinco(self):
+        """10 tarjetas más chicas (2 filas de 5) en vez de 8 (2 filas de 4)."""
+        self.assertEqual(destacados.CANTIDAD_DESTACADOS_INICIO, 10)
+        for i in range(8):
+            self._psi(self.peru, f'Pe{i}', f'pe{i}@example.com')
+        for i in range(8):
+            self._psi(self.chile, f'Chi{i}', f'ch{i}@example.com')
+        html = self.client.get(reverse('hub')).content.decode()
+        self.assertEqual(html.count('class="mini-card"'), 10)
+        # Y ambos países están representados (5 y 5), no solo el que tiene más.
+        self.assertEqual(html.count('img/flags/pe.svg'), html.count('img/flags/cl.svg'))
+
+    def test_si_hay_menos_de_diez_muestra_los_que_hay(self):
+        for i in range(3):
+            self._psi(self.peru, f'Pe{i}', f'pe{i}@example.com')
+        html = self.client.get(reverse('hub')).content.decode()
+        self.assertEqual(html.count('class="mini-card"'), 3)
+
+    def test_la_grilla_del_inicio_es_de_cinco_columnas(self):
+        import os
+        from django.conf import settings
+        with open(os.path.join(settings.BASE_DIR, 'static', 'css', 'base.css'), encoding='utf-8') as f:
+            css = f.read()
+        self.assertRegex(css, r'\.mix-grid \{[^}]*repeat\(5, minmax\(0, 1fr\)\)')
+
     def test_no_muestra_nada_si_no_hay_profesionales(self):
         self.assertNotContains(self.client.get(reverse('hub')), 'Psicólogos destacados')
 

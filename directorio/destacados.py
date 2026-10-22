@@ -18,6 +18,9 @@ from .models import Pais, Psicologo
 
 logger = logging.getLogger(__name__)
 
+# Cuántos profesionales se muestran en el inicio: 2 filas de 5 tarjetas (ver .mix-grid en base.css).
+CANTIDAD_DESTACADOS_INICIO = 10
+
 CACHE_KEY = 'destacados_feed_argentina'
 CACHE_SEGUNDOS = 600
 
@@ -71,7 +74,7 @@ def _feed_argentina(pais):
         return []
 
 
-def mezcla_de_psicologos(cantidad=8):
+def mezcla_de_psicologos(cantidad=CANTIDAD_DESTACADOS_INICIO):
     """Hasta `cantidad` profesionales de todos los países activos, en orden aleatorio
     y repartidos entre países (para que no domine el que más tiene)."""
     grupos = []
