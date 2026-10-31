@@ -105,8 +105,8 @@ class CallbackTests(TestCase):
         self.assertEqual(pedidos.get.call_args_list[0].kwargs['params']['client_secret'], 'secreto-de-prueba')
         self.assertEqual(pedidos.get.call_args_list[0].kwargs['params']['redirect_uri'], '')   # code del SDK de JS
         self.assertEqual(pedidos.post.call_args.kwargs['headers'], {'Authorization': 'Bearer TOKEN-SECRETO'})
-        pedidos.get.assert_any_call(mock.ANY, headers={'Authorization': 'Bearer TOKEN-SECRETO'},
-                                    params={'fields': 'id,verified_name,status'}, timeout=20)
+        campos = [c.kwargs.get('params', {}).get('fields') for c in pedidos.get.call_args_list]
+        self.assertIn('id,verified_name,status,platform_type,is_on_biz_app,code_verification_status,quality_rating', campos)
         self.assertTrue(pedidos.post.call_args.args[0].endswith('/555/subscribed_apps'))
 
     @mock.patch('wa_coexistencia.views.requests')
@@ -223,7 +223,7 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 6', html)
+        self.assertIn('versión 7', html)
 
 
 class TokenDelSistemaTests(TestCase):
@@ -308,3 +308,25 @@ class TokenDelSistemaTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['777', '888'])   # "abc" se descarta
         self.assertFalse(any(c.args[0].endswith('/debug_token') for c in pedidos.get.call_args_list))
+
+
+class DetalleDelNumeroTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_user('staff@example.com', password='ClaveSegura123', is_staff=True))
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_meta_rechaza_algun_campo_del_detalle_reintenta_con_los_basicos(self, pedidos):
+        pedidos.RequestException = Exception
+
+        def get(url, **kwargs):
+            if url.endswith('/phone_numbers'):
+                if 'platform_type' in kwargs['params']['fields']:
+                    return _respuesta({'error': {'message': 'campo inválido'}}, ok=False)
+                return _respuesta({'data': [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'DISCONNECTED'}]})
+            return _respuesta({})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 't', 'META_APP_SECRET': 'x', 'WHATSAPP_WABA_ID': '777'}):
+            resp = self.client.post(reverse('wa_coexistencia_token'), '{}', content_type='application/json')
+        numeros = resp.json()['cuentas'][0]['numeros']
+        self.assertEqual(numeros[0]['status'], 'DISCONNECTED')

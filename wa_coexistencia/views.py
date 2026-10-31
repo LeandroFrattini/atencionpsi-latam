@@ -22,10 +22,11 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 6
+VERSION = 7
 # Identificador del número de teléfono de LATAM (aparece en el Administrador de WhatsApp). Solo se usa para
 # comprobar si el token llega a ver el número cuando no encuentra la cuenta.
 PHONE_NUMBER_ID = "1228482323672734"
+CAMPOS_NUMERO_DETALLE = "id,verified_name,status,platform_type,is_on_biz_app,code_verification_status,quality_rating"
 
 
 @staff_member_required
@@ -125,8 +126,12 @@ def _conectar_cuenta(waba_id, token):
     """Suscribe la app a la cuenta (para recibir webhooks) y lista sus números. Sin datos sensibles."""
     cabecera = {"Authorization": f"Bearer {token}"}
     s = requests.post(f"{GRAPH}/{waba_id}/subscribed_apps", headers=cabecera, timeout=20)
-    n = requests.get(f"{GRAPH}/{waba_id}/phone_numbers", headers=cabecera,
-                     params={"fields": "id,verified_name,status"}, timeout=20)
+    # Primero con el detalle del estado (tipo de plataforma, si sigue en la app del celular...). Si Meta
+    # rechaza algún campo, se reintenta con los básicos para no perder la lista.
+    for campos in (CAMPOS_NUMERO_DETALLE, "id,verified_name,status"):
+        n = requests.get(f"{GRAPH}/{waba_id}/phone_numbers", headers=cabecera, params={"fields": campos}, timeout=20)
+        if n.ok:
+            break
     numeros = n.json().get("data") if n.ok else None
     return {
         "waba_id": waba_id,
