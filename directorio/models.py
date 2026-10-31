@@ -381,6 +381,8 @@ class Psicologo(models.Model):
     # que se mide desde fecha_alta.
     fecha_pago_confirmado = models.DateTimeField(null=True, blank=True)
     recordatorio_pago_enviado = models.BooleanField(default=False)
+    # Segundo aviso, a los 7 días de registrarse sin plan (el primero es a los 2).
+    recordatorio_pago_2_enviado = models.BooleanField(default=False)
     recordatorio_perfil_enviado = models.BooleanField(default=False)
 
     class Meta:

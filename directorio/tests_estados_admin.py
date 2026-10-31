@@ -51,9 +51,17 @@ class EstadoCalculadoTests(_Base):
         p = self.psi(completo=False, suscripcion_activa=True)
         self.assertEqual(self.estado(p), 'incompleto')
 
-    def test_perfil_completo_pero_sin_plan_es_el_contacto_caliente(self):
-        p = self.psi(completo=True)
+    def test_perfil_completo_que_ya_pidio_publicar_pero_sin_plan_es_el_contacto_caliente(self):
+        p = self.psi(completo=True, publicado_por_usuario=True)
         self.assertEqual(self.estado(p), 'por_pagar')
+
+    def test_perfil_completo_sin_plan_que_todavia_no_pidio_publicar(self):
+        p = self.psi(completo=True)
+        self.assertEqual(self.estado(p), 'perfil_listo')
+
+    def test_perfil_incompleto_aunque_haya_tocado_publicar_sigue_siendo_solo_cuenta(self):
+        p = self.psi(completo=False, publicado_por_usuario=True)
+        self.assertEqual(self.estado(p), 'sin_pago')
 
     def test_solo_cuenta(self):
         self.assertEqual(self.estado(self.psi(completo=False)), 'sin_pago')

@@ -13,7 +13,8 @@ from .models import Psicologo
 ESTADOS = [
     ('publicado', 'Publicado', 'Visible en el buscador.', '#2e7d32'),
     ('listo', 'Listo, sin publicar', 'Tiene todo para publicar, pero no tocó "Publicar" (o dejó de mostrarse).', '#1565c0'),
-    ('por_pagar', 'Perfil listo, falta el plan', 'Completó todo el perfil pero todavía no pagó ni tiene gratis: es quien más cerca está de publicar.', '#00838f'),
+    ('por_pagar', 'Pidió publicar, falta el plan', 'Completó el perfil y tocó "Publicar", pero no eligió o no terminó de pagar el plan: salió del paso a un solo pago. Es el contacto más caliente.', '#00838f'),
+    ('perfil_listo', 'Perfil listo, sin pedir publicar', 'Completó todo el perfil pero todavía no tocó "Publicar" ni tiene plan: está por decidir.', '#26a69a'),
     ('incompleto', 'Perfil incompleto', 'Ya puede publicar (pagó, tiene gratis o está exento) pero le faltan datos del perfil.', '#ef6c00'),
     ('vencido', 'Gratis vencido', 'Se le terminó el período gratis y no activó la suscripción: su perfil no se muestra.', '#8e24aa'),
     ('sin_pago', 'Solo cuenta', 'Hizo la cuenta y confirmó su email, pero no completó el perfil ni pagó.', '#757575'),
@@ -46,7 +47,8 @@ def con_estado(queryset):
         When(acceso & perfil_completo, then=Value('listo')),
         When(acceso, then=Value('incompleto')),
         When(gratis_hasta__isnull=False, then=Value('vencido')),
-        When(perfil_completo, then=Value('por_pagar')),
+        When(perfil_completo & Q(publicado_por_usuario=True), then=Value('por_pagar')),
+        When(perfil_completo, then=Value('perfil_listo')),
         default=Value('sin_pago'),
         output_field=CharField(),
     )
