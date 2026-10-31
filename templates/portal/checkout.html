@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load precio_tags %}
-{% block title %}Activar suscripción | Atención Psi{% endblock %}
+{% block title %}Elegí tu plan | Atención Psi{% endblock %}
 {% block content %}
 <div class="portal-card portal-card-ancho">
     {% if psicologo.en_periodo_fundador %}
@@ -15,8 +15,13 @@
         <h1>Si querés, ya podés elegir tu plan</h1>
         <p class="portal-lead">Opcional: activá tu suscripción cuando quieras para seguir publicado después del período gratis.</p>
     {% else %}
-        <h1>Un último paso: elegí tu plan</h1>
-        <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa.</p>
+        {% if psicologo.perfil_completo %}
+            <h1>Tu perfil está listo: elegí tu plan y publicalo</h1>
+            <p class="portal-lead">Apenas se confirme el pago, tu perfil aparece en el buscador de {{ psicologo.pais.nombre }}. <a href="{% url 'portal_vista_previa' %}" target="_blank" rel="noopener">Ver cómo te ven</a></p>
+        {% else %}
+            <h1>Elegí tu plan</h1>
+            <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa. Todavía te falta completar: {{ psicologo.faltantes_perfil|join:", " }}. <a href="{% url 'portal_editar_perfil' %}">Completar mi perfil</a></p>
+        {% endif %}
     {% endif %}
 
     {% if error_de_pago %}

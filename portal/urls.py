@@ -20,6 +20,7 @@ urlpatterns = [
     path('', views.dashboard, name='portal_dashboard'),
     path('perfil/', views.editar_perfil, name='portal_editar_perfil'),
     path('contrasena/', views.CambiarContrasenaView.as_view(), name='portal_cambiar_contrasena'),
+    path('vista-previa/', views.vista_previa, name='portal_vista_previa'),
     path('publicar/', views.publicar, name='portal_publicar'),
     path('despublicar/', views.despublicar, name='portal_despublicar'),
 

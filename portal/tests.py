@@ -146,7 +146,7 @@ class VerificacionEmailTests(TestCase):
 
     def test_link_valido_activa_la_cuenta_y_loguea(self):
         resp = self.client.get(self._link_del_mail())
-        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.assertRedirects(resp, reverse('portal_editar_perfil'))
         self.usuario.refresh_from_db()
         self.assertTrue(self.usuario.is_active)
         self.assertTrue(self.client.session.get('_auth_user_id'))
@@ -264,12 +264,32 @@ class PublicarDespublicarTests(TestCase):
         self.assertTrue(self.psicologo.publicado_por_usuario)
         self.assertTrue(self.psicologo.publicado)
 
-    def test_publicar_sin_requisitos_no_publica(self):
+    def test_publicar_con_el_perfil_incompleto_dice_que_falta_y_no_marca_nada(self):
+        self.psicologo.bio = ''
+        self.psicologo.save()
+        resp = self.client.post(reverse('portal_publicar'), follow=True)
+        self.assertRedirects(resp, reverse('portal_editar_perfil'))
+        self.assertContains(resp, 'te falta completar: tu descripción')
+        self.psicologo.refresh_from_db()
+        self.assertFalse(self.psicologo.publicado_por_usuario)
+
+    def test_publicar_sin_plan_lleva_a_elegirlo_y_queda_pendiente_de_pago(self):
+        self.psicologo.suscripcion_activa = False
+        self.psicologo.save()
+        resp = self.client.post(reverse('portal_publicar'))
+        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.psicologo.refresh_from_db()
+        self.assertTrue(self.psicologo.publicado_por_usuario)   # dejó dicho que quiere publicar
+        self.assertFalse(self.psicologo.publicado)              # pero no se ve hasta que pague
+
+    def test_al_activar_el_plan_el_perfil_que_ya_pidio_publicar_sale_solo(self):
         self.psicologo.suscripcion_activa = False
         self.psicologo.save()
         self.client.post(reverse('portal_publicar'))
         self.psicologo.refresh_from_db()
-        self.assertFalse(self.psicologo.publicado_por_usuario)
+        self.psicologo.activar_suscripcion(dlocal_subscription_id='SUB-1', plan='basico')
+        self.psicologo.refresh_from_db()
+        self.assertTrue(self.psicologo.publicado)
 
     def test_despublicar_apaga_el_perfil(self):
         self.psicologo.publicado_por_usuario = True
@@ -575,12 +595,14 @@ class RecordatoriosCommandTests(TestCase):
         datos.update(overrides)
         return Psicologo.objects.create(**datos)
 
-    def test_recordatorio_de_pago_solo_a_los_que_pasaron_24hs_sin_pagar(self):
-        hace_2_dias = timezone.now() - datetime.timedelta(days=2)
+    def test_recordatorio_de_pago_solo_a_los_que_pasaron_2_dias_sin_pagar(self):
+        hace_3_dias = timezone.now() - datetime.timedelta(days=3)
         p_viejo = self._psicologo('viejo@example.com')
-        Psicologo.objects.filter(pk=p_viejo.pk).update(fecha_alta=hace_2_dias)
+        Psicologo.objects.filter(pk=p_viejo.pk).update(fecha_alta=hace_3_dias)
 
         self._psicologo('reciente@example.com')  # se registró ahora, no le toca todavía
+        ayer = self._psicologo('ayer@example.com')
+        Psicologo.objects.filter(pk=ayer.pk).update(fecha_alta=timezone.now() - datetime.timedelta(days=1))
 
         from django.core.management import call_command
         call_command('enviar_recordatorios', '--apply')
@@ -591,7 +613,7 @@ class RecordatoriosCommandTests(TestCase):
         self.assertIn('viejo@example.com', mail.outbox[0].to)
 
     def test_dry_run_no_manda_nada(self):
-        hace_2_dias = timezone.now() - datetime.timedelta(days=2)
+        hace_2_dias = timezone.now() - datetime.timedelta(days=3)
         p = self._psicologo('viejo@example.com')
         Psicologo.objects.filter(pk=p.pk).update(fecha_alta=hace_2_dias)
 

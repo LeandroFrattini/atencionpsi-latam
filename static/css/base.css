@@ -1126,3 +1126,59 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
     display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
     background: #fff1d9; color: #946b1a; white-space: nowrap; cursor: help;
 }
+
+/* ---- Portal: editor de perfil con vista previa ---- */
+.editor-pagina { max-width: 1080px; margin: 0 auto; }
+.editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+.editor-form-card { max-width: none; margin: 0; }
+.editor-botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.editor-barra { display: none; }
+
+.previa { position: sticky; top: 16px; background: #fff; border: 1px solid var(--borde); border-radius: 14px; padding: 20px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.previa-titulo { font-size: 1.05rem; color: var(--texto-titulo); margin: 0 0 4px; }
+.previa-sub { color: var(--texto-secundario); font-size: 0.82rem; margin: 0 0 14px; }
+.previa-cerrar { display: none; }
+.previa-tarjeta .psicologo-card { max-width: 300px; margin: 0 auto; }
+.previa-card, .previa-card:hover { transform: none; box-shadow: 0 6px 18px rgba(74,60,45,0.1); }
+.previa-card .psicologo-card-botones span { text-align: center; cursor: default; }
+.previa-ver { display: block; text-align: center; margin-top: 14px; }
+.previa-nota { margin-top: 6px; }
+.previa-pasos { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--borde); }
+.previa-pasos h3 { font-size: 0.9rem; margin: 0 0 8px; color: var(--texto-titulo); }
+.previa-publicar { display: block; width: 100%; margin-top: 12px; text-align: center; }
+.previa-estado { font-size: 0.85rem; font-weight: 600; margin: 10px 0 0; }
+.previa-estado-ok { color: var(--verde-oscuro); }
+
+@media (max-width: 959px) {
+    .editor-grid { grid-template-columns: 1fr; padding-bottom: 84px; }
+    .previa { position: fixed; inset: 0; z-index: 300; max-height: none; border-radius: 0; border: none; display: none; padding: 20px 20px 96px; }
+    .previa.abierta { display: block; }
+    .previa-cerrar {
+        display: inline-flex; float: right; background: var(--verde-suave); color: var(--verde-oscuro);
+        border: none; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    }
+    .editor-barra {
+        display: flex; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 250;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--borde);
+    }
+    .editor-barra .btn-secundario, .editor-barra .btn-primario { flex: 1; text-align: center; min-height: 44px; }
+    .editor-botones { display: none; }
+}
+
+/* ---- Vista previa del perfil completo ---- */
+.previa-banner {
+    position: sticky; top: 0; z-index: 90; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    background: var(--verde-suave); border: 1px solid var(--verde-medio); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+    font-size: 0.9rem; color: var(--texto);
+}
+.previa-banner-texto strong { color: var(--verde-oscuro); margin-right: 6px; }
+.previa-banner-acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.previa-banner-acciones form { margin: 0; }
+.previa-aviso {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 400; max-width: 90vw;
+    background: #333; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+    .previa-banner { position: static; }
+}

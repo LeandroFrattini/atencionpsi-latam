@@ -9,35 +9,34 @@
     <div class="portal-estado">
         {% if p.publicado %}
             <span class="portal-badge portal-badge-ok">Publicado — visible en el buscador de {{ p.pais.nombre }}</span>
-        {% elif not p.tiene_acceso %}
-            <span class="portal-badge portal-badge-warn">Suscripción pendiente</span>
         {% elif not p.perfil_completo %}
-            <span class="portal-badge portal-badge-warn">Perfil incompleto</span>
+            <span class="portal-badge portal-badge-warn">Perfil incompleto — te falta: {{ faltantes|join:", " }}</span>
+        {% elif not p.tiene_acceso %}
+            <span class="portal-badge portal-badge-warn">Perfil listo — elegí tu plan para publicarlo</span>
         {% else %}
             <span class="portal-badge portal-badge-warn">Listo para publicar — todavía no lo publicaste</span>
         {% endif %}
     </div>
 
     <ul class="portal-checklist">
-        <li class="{% if p.tiene_acceso %}ok{% endif %}">{% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}Período de fundador: gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}{% else %}Suscripción activa{% endif %}</li>
         <li class="{% if p.foto %}ok{% endif %}">Foto de perfil</li>
         <li class="{% if p.bio %}ok{% endif %}">Descripción</li>
         <li class="{% if p.matricula %}ok{% endif %}">{{ p.pais.etiqueta_matricula }}</li>
         <li class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
         <li class="{% if p.orientaciones.exists %}ok{% endif %}">Al menos una orientación</li>
+        <li class="{% if p.tiene_acceso %}ok{% endif %}">{% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}Período de fundador: gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}{% else %}Plan activo (se elige al publicar){% endif %}</li>
         <li class="{% if agenda_lista %}ok{% endif %}">Agenda configurada (tipos de sesión + disponibilidad)</li>
     </ul>
 
     <div class="portal-acciones">
-        <a href="{% url 'portal_editar_perfil' %}" class="btn-secundario">Editar mi perfil</a>
-        {% if not p.tiene_acceso %}
-            <a href="{% url 'portal_checkout' %}" class="btn-primario">Activar suscripción</a>
-        {% elif p.publicado %}
+        <a href="{% url 'portal_editar_perfil' %}" class="btn-secundario">{% if p.perfil_completo %}Editar mi perfil{% else %}Completar mi perfil{% endif %}</a>
+        <a href="{% url 'portal_vista_previa' %}" target="_blank" rel="noopener" class="btn-secundario">Cómo me ven</a>
+        {% if p.publicado %}
             <form method="post" action="{% url 'portal_despublicar' %}" class="portal-inline-form">
                 {% csrf_token %}
                 <button type="submit" class="btn-secundario">Dejar de mostrarme</button>
             </form>
-        {% elif p.puede_publicar %}
+        {% elif p.perfil_completo %}
             <form method="post" action="{% url 'portal_publicar' %}" class="portal-inline-form">
                 {% csrf_token %}
                 <button type="submit" class="btn-primario">Publicar mi perfil</button>

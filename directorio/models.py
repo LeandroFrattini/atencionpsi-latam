@@ -464,6 +464,25 @@ class Psicologo(models.Model):
         campos_obligatorios = [self.nombre, self.matricula, self.whatsapp, self.foto, self.bio]
         return all(campos_obligatorios) and self.orientaciones.exists()
 
+    @property
+    def faltantes_perfil(self):
+        """Qué le falta al perfil para estar completo, en palabras para mostrarle al
+        profesional. Mismas reglas que `perfil_completo` (hay un test que las compara)."""
+        faltan = []
+        if not self.nombre:
+            faltan.append('tu nombre')
+        if not self.matricula:
+            faltan.append(self.pais.etiqueta_matricula)
+        if not self.whatsapp:
+            faltan.append('tu WhatsApp')
+        if not self.foto:
+            faltan.append('tu foto')
+        if not self.bio:
+            faltan.append('tu descripción')
+        if not self.orientaciones.exists():
+            faltan.append('al menos una orientación')
+        return faltan
+
     # ── Lo que ve el público ──────────────────────────────────────────────
     # Orientaciones, públicos y ciudad que el profesional escribió a mano
     # quedan pendientes hasta que la dueña los apruebe -- mientras tanto solo

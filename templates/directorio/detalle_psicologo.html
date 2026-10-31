@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static precio_tags %}
+{% block robots %}{% if vista_previa %}noindex, nofollow{% else %}index, follow{% endif %}{% endblock %}
 {% block title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}, {{ pais.nombre }} | Atención Psi{% endblock %}
 {% block meta_description %}{{ p.nombre }}, psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}). {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.especialidades_publicas %} &middot; {% for e in p.especialidades_publicas|slice:":3" %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas|slice:":3" %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Reservá tu turno o escribí por WhatsApp.{% endblock %}
 {% block og_title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}{% endblock %}
@@ -56,6 +57,29 @@
 </script>
 {% endblock %}
 {% block content %}
+{% if vista_previa %}
+<div class="previa-banner" role="region" aria-label="Vista previa de tu perfil">
+    <div class="previa-banner-texto">
+        <strong>Vista previa</strong>
+        {% if p.publicado %}
+            Así ven tu perfil los pacientes. <a href="{{ p.url_publica }}">Ver el perfil público</a>
+        {% elif faltantes %}
+            Así se vería tu perfil. Para publicarlo te falta: {{ faltantes|join:", " }}.
+        {% else %}
+            Así se va a ver tu perfil cuando lo publiques. Solo lo ves vos.
+        {% endif %}
+    </div>
+    <div class="previa-banner-acciones">
+        <a href="{% url 'portal_editar_perfil' %}" class="btn-secundario">&larr; Seguir editando</a>
+        {% if not p.publicado %}
+            <form method="post" action="{% url 'portal_publicar' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-primario">Publicar mi perfil</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 <div class="perfil-pagina">
     <nav class="migas" aria-label="Ruta de navegación">
         <a href="{% url 'buscador_pais' pais.slug %}">Psicólogos en {{ pais.nombre }}</a>
@@ -146,11 +170,12 @@
                 {% endif %}
                 <div class="perfil-acciones perfil-acciones-aside">
                     {% if sesiones %}
-                        <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-primario">Reservar turno</a>
+                        <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="{% url 'reserva_tipo' pais.slug p.pk %}"{% endif %} class="btn-primario">Reservar turno</a>
                     {% endif %}
-                    <a href="https://wa.me/{{ p.whatsapp_limpio }}" class="btn-whatsapp" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+                    <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="https://wa.me/{{ p.whatsapp_limpio }}" target="_blank" rel="noopener"{% endif %} class="btn-whatsapp">Escribir por WhatsApp</a>
                 </div>
 
+                {% if not vista_previa %}
                 {% with enlace=request.scheme|add:'://'|add:request.get_host|add:p.url_publica %}
                 {% with mensaje='Mirá el perfil de '|add:p.nombre|add:' en Atención Psi: '|add:enlace %}
                 <div class="compartir" id="compartir" data-url="{{ enlace }}" data-titulo="{{ p.nombre }} | Atención Psi" data-texto="Mirá el perfil de {{ p.nombre }} en Atención Psi">
@@ -167,6 +192,7 @@
                 </div>
                 {% endwith %}
                 {% endwith %}
+                {% endif %}
             </div>
         </aside>
     </div>
@@ -183,6 +209,21 @@
     </section>
     {% endif %}
 </div>
+{% if vista_previa %}
+<p class="previa-aviso" id="previa-aviso" role="status" aria-live="polite" hidden>Es una vista previa: este botón va a funcionar cuando tu perfil esté publicado.</p>
+<script>
+    (function () {
+        var aviso = document.getElementById('previa-aviso'), t = null;
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-vista-previa]')) return;
+            e.preventDefault();
+            aviso.hidden = false;
+            clearTimeout(t);
+            t = setTimeout(function () { aviso.hidden = true; }, 3500);
+        });
+    })();
+</script>
+{% endif %}
 <script>
     // Compartir perfil: en el celular abre el menú de compartir del sistema; en la
     // computadora muestra copiar link, WhatsApp y email.

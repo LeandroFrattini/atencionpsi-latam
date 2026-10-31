@@ -138,9 +138,8 @@ class RegistroConCodigoTests(_Base):
         del_usuario = [m for m in mail.outbox if 'nueva@example.com' in m.to]
         link = re.search(r'/portal/verificar/\S+/\S+/', del_usuario[-1].body).group(0)
         resp = self.client.get(link, follow=True)
-        self.assertRedirects(resp, reverse('portal_checkout'))
+        self.assertRedirects(resp, reverse('portal_editar_perfil'))
         self.assertContains(resp, 'Tenés gratis hasta el')
-        self.assertContains(resp, 'Continuar con tu perfil')
 
     def test_el_link_con_el_codigo_lo_trae_precargado(self):
         resp = self.client.get(reverse('portal_registro', args=['peru']) + '?codigo=fundador-abc123')
@@ -187,8 +186,8 @@ class PeriodoFundadorTests(_Base):
         psi = self._psi(timezone.now() - datetime.timedelta(days=1))
         self.client.force_login(psi.usuario)
         resp = self.client.get(reverse('portal_dashboard'))
-        self.assertContains(resp, 'Suscripción pendiente')
-        self.assertContains(resp, 'Activar suscripción')
+        self.assertContains(resp, 'Perfil listo — elegí tu plan para publicarlo')
+        self.assertContains(resp, 'Publicar mi perfil')
 
     def test_durante_el_periodo_puede_entrar_al_checkout_para_suscribirse(self):
         psi = self._psi(timezone.now() + datetime.timedelta(days=30))
@@ -203,14 +202,14 @@ class PeriodoFundadorTests(_Base):
         self.assertContains(resp, f'Tenés gratis hasta el {timezone.localtime(gratis_hasta):%d/%m/%Y}')
         self.assertContains(resp, 'Continuar con tu perfil')
         self.assertContains(resp, reverse('portal_editar_perfil'))
-        self.assertNotContains(resp, 'Un último paso')
+        self.assertNotContains(resp, 'elegí tu plan y publicalo')
 
     def test_el_checkout_no_muestra_el_cartel_si_el_periodo_ya_vencio(self):
         psi = self._psi(timezone.now() - datetime.timedelta(days=1))
         self.client.force_login(psi.usuario)
         resp = self.client.get(reverse('portal_checkout'))
         self.assertNotContains(resp, 'Continuar con tu perfil')
-        self.assertContains(resp, 'Un último paso')
+        self.assertContains(resp, 'elegí tu plan y publicalo')
 
 
 class RecordatoriosFundadorTests(_Base):

@@ -312,6 +312,12 @@ def perfil_psicologo(request, pais_slug, slug):
         # El nombre cambió o la URL está mal escrita: va a la correcta.
         return redirect(psicologo.url_publica, permanent=True)
 
+    return render(request, 'directorio/detalle_psicologo.html', contexto_perfil(pais, psicologo))
+
+
+def contexto_perfil(pais, psicologo, **extra):
+    """Todo lo que necesita la página del perfil de un profesional. Lo usa también la vista previa
+    del portal, así el profesional ve exactamente lo que va a ver el público."""
     ciudad_nombre = psicologo.ciudad_publica
     ciudad_obj = None
     otros = []
@@ -320,14 +326,15 @@ def perfil_psicologo(request, pais_slug, slug):
         ciudad_obj = next((c for c in Ciudad.objects.filter(pais=pais, aprobado=True) if clave(c.nombre) == k), None)
         otros = [p for p in _publicados(pais) if p.pk != psicologo.pk and clave(p.ciudad_publica) == k][:3]
 
-    return render(request, 'directorio/detalle_psicologo.html', {
+    return {
         'pais': pais,
         'p': psicologo,
         'formaciones': psicologo.formaciones.all(),
         'sesiones': list(psicologo.tipos_sesion.all()),
         'ciudad_obj': ciudad_obj,
         'otros_en_la_ciudad': otros,
-    })
+        **extra,
+    }
 
 
 def psicologos_en_ciudad(request, pais_slug, ciudad_slug):

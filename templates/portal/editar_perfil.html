@@ -1,31 +1,185 @@
 {% extends 'base.html' %}
-{% block title %}Editar perfil | Atención Psi{% endblock %}
+{% load static precio_tags %}
+{% block title %}Mi perfil | Atención Psi{% endblock %}
 {% block content %}
-<div class="portal-card">
-    <h1>Editar mi perfil</h1>
-    <form method="post" enctype="multipart/form-data" class="portal-form">
-        {% csrf_token %}
-        {% for field in form %}
-            <div class="portal-field">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.help_text %}<p class="portal-field-ayuda">{{ field.help_text }}</p>{% endif %}
-                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
-            </div>
-        {% endfor %}
+<div class="editor-pagina">
+    {% with seccion='perfil' %}{% include 'portal/_nav.html' %}{% endwith %}
 
-        <h2 class="portal-subtitulo">Formación</h2>
-        {{ formset.management_form }}
-        {% for f in formset %}
-            <div class="portal-formacion-fila">
-                {{ f.id }}
-                {{ f.descripcion }}
-                {% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} Eliminar</label>{% endif %}
-            </div>
-        {% endfor %}
+    <div class="editor-grid">
+        <div class="portal-card editor-form-card">
+            {% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}
+                <div class="portal-aviso-fundador">
+                    <p><strong>¡Tenés gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}!</strong> Sos de los primeros profesionales de Atención Psi: no hace falta que pagues nada ahora. Armá tu perfil y publicalo cuando quieras.</p>
+                </div>
+            {% endif %}
+            <h1>Mi perfil</h1>
+            <p class="portal-lead">Completalo a tu ritmo: a la derecha ves cómo te van a ver los pacientes, y se va armando mientras escribís. El plan se elige recién cuando decidas publicar.</p>
 
-        <button type="submit" class="btn-primario">Guardar</button>
-    </form>
-    <a href="{% url 'portal_dashboard' %}" class="portal-lead-sm">&larr; Volver</a>
+            <form method="post" enctype="multipart/form-data" class="portal-form" id="form-perfil">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="portal-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="portal-field-ayuda">{{ field.help_text }}</p>{% endif %}
+                        {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+                    </div>
+                {% endfor %}
+
+                <h2 class="portal-subtitulo">Formación</h2>
+                {{ formset.management_form }}
+                {% for f in formset %}
+                    <div class="portal-formacion-fila">
+                        {{ f.id }}
+                        {{ f.descripcion }}
+                        {% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} Eliminar</label>{% endif %}
+                    </div>
+                {% endfor %}
+
+                <div class="editor-botones">
+                    <button type="submit" class="btn-secundario">Guardar</button>
+                    {% if not p.publicado %}<button type="submit" name="accion" value="publicar" class="btn-primario">Guardar y publicar</button>{% endif %}
+                </div>
+            </form>
+            <a href="{% url 'portal_dashboard' %}" class="portal-lead-sm">&larr; Volver a mi cuenta</a>
+        </div>
+
+        <aside class="previa" id="previa" aria-label="Así te ven los pacientes"
+               data-foto-actual="{% if p.foto %}{{ p.foto.url }}{% endif %}"
+               data-muestra-precio="{{ pais.muestra_precio_sesion|yesno:'1,0' }}"
+               data-simbolo="{{ pais.simbolo_moneda }}">
+            <button type="button" class="previa-cerrar" id="previa-cerrar">Cerrar &times;</button>
+            <h2 class="previa-titulo">Así te ven los pacientes</h2>
+            <p class="previa-sub">Es tu tarjeta en el buscador de {{ pais.nombre }}. Se actualiza mientras completás.</p>
+
+            <div id="previa-tarjeta" class="previa-tarjeta" aria-live="polite"></div>
+
+            <a href="{% url 'portal_vista_previa' %}" target="_blank" rel="noopener" class="btn-secundario previa-ver">Ver mi perfil completo</a>
+            <p class="portal-field-ayuda previa-nota">Se abre en otra pestaña con lo último que guardaste. Solo lo ves vos.</p>
+
+            <div class="previa-pasos">
+                <h3>Para publicar</h3>
+                <ul class="portal-checklist" id="previa-pasos">
+                    <li data-paso="nombre" class="{% if p.nombre %}ok{% endif %}">Nombre</li>
+                    <li data-paso="matricula" class="{% if p.matricula %}ok{% endif %}">{{ pais.etiqueta_matricula }}</li>
+                    <li data-paso="whatsapp" class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
+                    <li data-paso="foto" class="{% if p.foto %}ok{% endif %}">Foto de perfil</li>
+                    <li data-paso="bio" class="{% if p.bio %}ok{% endif %}">Descripción</li>
+                    <li data-paso="orientacion" class="{% if 'al menos una orientación' not in faltantes %}ok{% endif %}">Al menos una orientación</li>
+                </ul>
+                {% if p.publicado %}
+                    <p class="previa-estado previa-estado-ok">Tu perfil está publicado.</p>
+                {% elif not p.tiene_acceso %}
+                    <p class="portal-field-ayuda previa-nota">Al tocar Publicar elegís tu plan (desde {{ pais.simbolo_moneda }} {{ pais.precio_basico|miles }} al mes). Hasta ese momento no pagás nada.</p>
+                {% endif %}
+                {% if not p.publicado %}
+                    <button type="submit" form="form-perfil" name="accion" value="publicar" class="btn-primario previa-publicar">Guardar y publicar</button>
+                {% endif %}
+            </div>
+        </aside>
+    </div>
+
+    <div class="editor-barra">
+        <button type="button" class="btn-secundario" id="previa-abrir">Cómo me ven</button>
+        {% if not p.publicado %}
+            <button type="submit" form="form-perfil" name="accion" value="publicar" class="btn-primario">Guardar y publicar</button>
+        {% else %}
+            <button type="submit" form="form-perfil" class="btn-primario">Guardar</button>
+        {% endif %}
+    </div>
 </div>
+
+<script>
+(function () {
+    var form = document.getElementById('form-perfil');
+    var panel = document.getElementById('previa');
+    var tarjeta = document.getElementById('previa-tarjeta');
+    if (!form || !panel || !tarjeta) return;
+
+    var fotoActual = panel.dataset.fotoActual || '';
+    var muestraPrecio = panel.dataset.muestraPrecio === '1';
+    var simbolo = panel.dataset.simbolo || '';
+    var fotoNueva = '';
+
+    function campo(nombre) { return form.elements[nombre]; }
+    function valor(nombre) { var c = campo(nombre); return c && c.value ? c.value.trim() : ''; }
+    function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+
+    // Etiquetas de las casillas tildadas. Lo "pendiente de aprobación" no se muestra al público.
+    function tildadas(nombre) {
+        return Array.prototype.slice.call(form.querySelectorAll('input[name="' + nombre + '"]:checked'))
+            .map(function (i) { var l = i.closest('label'); return l ? l.textContent.trim() : ''; })
+            .filter(function (t) { return t && t.indexOf('pendiente de aprobación') === -1; });
+    }
+
+    function ciudad() {
+        var sel = campo('ciudad');
+        if (!sel || !sel.value || sel.selectedIndex < 0) return '';
+        var t = sel.options[sel.selectedIndex].textContent;
+        return t.indexOf('pendiente de aprobación') === -1 ? t.trim() : '';
+    }
+
+    var ICONO_LUGAR = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICONO_PANTALLA = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+
+    function dibujar() {
+        var nombre = valor('nombre') || 'Tu nombre';
+        var foto = fotoNueva || fotoActual;
+        var modalidad = valor('modalidad');
+        var precio = muestraPrecio ? valor('precio_sesion') : '';
+        var lugar = ciudad();
+        var orient = tildadas('orientaciones');
+        var motivos = tildadas('especialidades').slice(0, 3);
+        var publicos = tildadas('publicos');
+
+        var h = '<div class="psicologo-card previa-card">';
+        h += '<div class="psicologo-foto-wrap">';
+        h += foto ? '<img src="' + esc(foto) + '" alt="" class="psicologo-foto">'
+                  : '<div class="psicologo-foto psicologo-foto-vacia">' + esc(nombre.charAt(0).toUpperCase()) + '</div>';
+        if (precio) h += '<span class="psicologo-precio-burbuja">' + esc(simbolo) + ' ' + esc(precio) + '</span>';
+        h += '</div><div class="psicologo-card-body">';
+        h += '<div class="psicologo-nombre">' + esc(nombre) + '</div>';
+        if (lugar) h += '<div class="psicologo-linea">' + ICONO_LUGAR + ' ' + esc(lugar) + '</div>';
+        h += '<div class="psicologo-linea psicologo-modalidad">';
+        if (modalidad === 'online' || modalidad === 'ambas') h += '<span>' + ICONO_PANTALLA + ' Online</span>';
+        if (modalidad === 'presencial' || modalidad === 'ambas') h += '<span>' + ICONO_LUGAR + ' Presencial</span>';
+        h += '</div>';
+        if (orient.length) h += '<div class="psicologo-orientacion">' + orient.map(esc).join(' &middot; ') + '</div>';
+        if (motivos.length) h += '<div class="psicologo-chips">' + motivos.map(function (m) { return '<span class="psicologo-chip psicologo-chip-verde">' + esc(m) + '</span>'; }).join('') + '</div>';
+        if (publicos.length) h += '<div class="psicologo-chips">' + publicos.map(function (m) { return '<span class="psicologo-chip">' + esc(m) + '</span>'; }).join('') + '</div>';
+        h += '<div class="psicologo-card-botones"><span class="btn-secundario-card">Ver perfil</span><span class="btn-whatsapp">WhatsApp</span></div>';
+        h += '</div></div>';
+        tarjeta.innerHTML = h;
+
+        marcar('nombre', valor('nombre'));
+        marcar('matricula', valor('matricula'));
+        marcar('whatsapp', valor('whatsapp'));
+        marcar('foto', foto);
+        marcar('bio', valor('bio'));
+        // También cuenta lo que ya estaba guardado aunque la lista de casillas se vea distinta.
+        marcar('orientacion', form.querySelectorAll('input[name="orientaciones"]:checked').length ? 'si' : '');
+    }
+
+    function marcar(paso, hay) {
+        var li = document.querySelector('#previa-pasos [data-paso="' + paso + '"]');
+        if (li) li.classList.toggle('ok', !!hay);
+    }
+
+    form.addEventListener('input', dibujar);
+    form.addEventListener('change', function (e) {
+        if (e.target && e.target.name === 'foto' && e.target.files && e.target.files[0]) {
+            if (fotoNueva) URL.revokeObjectURL(fotoNueva);
+            fotoNueva = URL.createObjectURL(e.target.files[0]);
+        }
+        dibujar();
+    });
+
+    // En el celular la vista previa es una pantalla aparte que se abre con el botón de abajo.
+    document.getElementById('previa-abrir').addEventListener('click', function () { panel.classList.add('abierta'); window.scrollTo(0, 0); });
+    document.getElementById('previa-cerrar').addEventListener('click', function () { panel.classList.remove('abierta'); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') panel.classList.remove('abierta'); });
+
+    dibujar();
+})();
+</script>
 {% endblock %}

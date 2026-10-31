@@ -3,7 +3,7 @@ import io
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.models import User
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
 from django.forms import inlineformset_factory
 from django.urls import reverse
 from django.utils.html import format_html
@@ -188,6 +188,7 @@ class PerfilForm(forms.ModelForm):
         # La opción en blanco que arma Django para un choices field opcional
         # sale en inglés por defecto ("- Select an option -") -- se pisa acá
         # en vez de una traducción global porque es la única del sitio.
+        self.fields['foto'].help_text = 'JPG o PNG, hasta 5 MB. Una foto de frente y con buena luz genera más confianza.'
         self.fields['sesiones_atendidas'].choices = (
             [('', 'Preferís no decir por ahora')] + Psicologo.SESIONES_CHOICES
         )
@@ -247,9 +248,19 @@ class PerfilForm(forms.ModelForm):
         esa ya pasó por acá una vez) -- un celular moderno sube fotos de
         varios MB, y eso pesa la carga de cada página del buscador."""
         foto = self.cleaned_data.get('foto')
-        if foto and hasattr(foto, 'file'):
+        if isinstance(foto, UploadedFile):
+            if foto.size > FOTO_MAXIMO_BYTES:
+                raise forms.ValidationError(
+                    f'La foto pesa {foto.size / 1024 / 1024:.1f} MB y el máximo es {FOTO_MAXIMO_BYTES // 1024 // 1024} MB. '
+                    'Probá con otra, o sacale una captura de pantalla a la foto y subí esa.'
+                )
             foto = _comprimir_foto(foto)
         return foto
+
+
+# Tope de lo que se acepta subir. Después se achica sola (ver _comprimir_foto): lo que queda guardado
+# pesa unos cientos de KB, así las cuentas que todavía no publicaron no llenan el almacenamiento.
+FOTO_MAXIMO_BYTES = 5 * 1024 * 1024
 
 
 def _comprimir_foto(archivo, lado_maximo=1200, calidad=82):

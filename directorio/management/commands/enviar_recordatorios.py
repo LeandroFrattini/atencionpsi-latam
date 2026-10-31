@@ -8,6 +8,7 @@ from django.utils import timezone
 from directorio.models import Psicologo
 
 VENTANA = datetime.timedelta(hours=24)
+VENTANA_PERFIL_SIN_PLAN = datetime.timedelta(days=2)
 AVISO_VENCIMIENTO = datetime.timedelta(days=7)
 
 
@@ -16,6 +17,28 @@ def _cierre():
     if settings.CONTACTO_TELEFONO:
         texto += f' o escribinos por WhatsApp al {settings.CONTACTO_TELEFONO}'
     return texto + '.'
+
+
+def _mensaje_casi_listo(p):
+    """Mail de los 2 días. Si el perfil ya está completo, solo falta elegir el plan y publicar; si no,
+    se le dice exactamente qué le falta. En los dos casos se aclara que el plan se elige al final."""
+    nombre = p.nombre_corto or p.nombre
+    faltan = p.faltantes_perfil
+    if faltan:
+        cuerpo = (
+            'Empezaste a armar tu perfil en Atención Psi y ya tenés buena parte hecha. '
+            f'Para poder publicarlo te falta: {", ".join(faltan)}.\n\n'
+            'Podés completarlo con calma y, mientras escribís, ves cómo te van a ver los pacientes. '
+            'El plan se elige recién cuando decidas publicar.\n\n'
+            'Seguí desde acá: https://atencionpsi.lat/portal/perfil/\n\n'
+        )
+    else:
+        cuerpo = (
+            'Tu perfil en Atención Psi está completo y se ve muy bien. Falta un solo paso: '
+            'elegir tu plan y publicarlo, así los pacientes empiezan a encontrarte en el buscador.\n\n'
+            'Mirá cómo te ven y publicalo desde acá: https://atencionpsi.lat/portal/\n\n'
+        )
+    return f'Hola {nombre},\n\n' + cuerpo + _cierre()
 
 
 class Command(BaseCommand):
@@ -34,13 +57,16 @@ class Command(BaseCommand):
         ahora = timezone.now()
         limite = ahora - VENTANA
 
+        # Se registraron, confirmaron el email y a los 2 días todavía no tienen plan: el mail depende de
+        # cuánto avanzaron (si falta completar el perfil, o si ya está listo y solo falta elegir el plan).
         pendientes_pago = Psicologo.objects.filter(
             suscripcion_activa=False,
             exento_de_pago=False,
             gratis_hasta__isnull=True,   # los fundadores no deben nada hasta que venza
             recordatorio_pago_enviado=False,
-            fecha_alta__lte=limite,
-        )
+            usuario__is_active=True,     # sin confirmar el email no pueden entrar: no tiene sentido invitarlos a completar
+            fecha_alta__lte=ahora - VENTANA_PERFIL_SIN_PLAN,
+        ).select_related('usuario', 'pais')
         pendientes_perfil = Psicologo.objects.filter(
             publicado_por_usuario=False,
             recordatorio_perfil_enviado=False,
@@ -56,19 +82,13 @@ class Command(BaseCommand):
             gratis_hasta__lte=ahora + AVISO_VENCIMIENTO,
         )
 
-        self.stdout.write(self.style.MIGRATE_HEADING('Recordatorio de pago pendiente'))
+        self.stdout.write(self.style.MIGRATE_HEADING('Recordatorio de perfil casi listo (sin plan)'))
         for p in pendientes_pago:
             self.stdout.write(f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- se registró el {p.fecha_alta:%d/%m %H:%M}')
             if aplicar:
                 send_mail(
-                    subject='Terminá de activar tu perfil en Atención Psi',
-                    message=(
-                        f'Hola {p.nombre},\n\n'
-                        'Empezaste a crear tu perfil en Atención Psi pero todavía no activaste tu suscripción. '
-                        'Sin eso tu perfil no se puede publicar.\n\n'
-                        f'Entrá a tu cuenta para terminar: https://atencionpsi.lat/portal/checkout/\n\n'
-                        + _cierre()
-                    ),
+                    subject='Tu perfil en Atención Psi está casi listo',
+                    message=_mensaje_casi_listo(p),
                     from_email=None,
                     recipient_list=[p.usuario.email],
                 )

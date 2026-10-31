@@ -25,6 +25,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt
 
 from directorio import dlocal_go, suscripciones, visitas
+from directorio.views import contexto_perfil
 from directorio.models import Ciudad, CodigoFundador, Especialidad, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 from directorio.taxonomia import buscar_o_proponer
 from turnos.models import Paciente, Turno
@@ -231,8 +232,9 @@ def verificar_email(request, uidb64, token):
     usuario.is_active = True
     usuario.save(update_fields=['is_active'])
     login(request, usuario, backend=_LOGIN_BACKEND)
-    messages.success(request, '¡Listo, tu email quedó confirmado!')
-    return redirect('portal_checkout')
+    # Directo a armar el perfil: el plan se elige al final, cuando toca "Publicar".
+    messages.success(request, '¡Listo, tu email quedó confirmado! Completá tu perfil con calma: abajo ves cómo te van a ver los pacientes.')
+    return redirect('portal_editar_perfil')
 
 
 def reenviar_verificacion(request):
@@ -330,7 +332,12 @@ def checkout_retorno(request):
             logger.exception('No se pudo confirmar el pago del profesional %s al volver de dLocal Go', psicologo.pk)
     psicologo.refresh_from_db()
     if psicologo.suscripcion_activa:
-        messages.success(request, '¡Listo! Tu suscripción está activa. Ya podés completar tu perfil y publicarlo.')
+        if psicologo.publicado:
+            messages.success(request, '¡Listo! Tu suscripción está activa y tu perfil ya está publicado en el buscador.')
+        elif psicologo.publicado_por_usuario:
+            messages.success(request, '¡Listo! Tu suscripción está activa. Completá lo que falta de tu perfil y se publica solo.')
+        else:
+            messages.success(request, '¡Listo! Tu suscripción está activa. Cuando quieras, publicá tu perfil.')
         return redirect('portal_dashboard')
     try:
         intento = int(request.GET.get('n', 0))
@@ -395,6 +402,7 @@ def dashboard(request):
                 .select_related('tipo_sesion').order_by('fecha_hora')[:5])
     return render(request, 'portal/dashboard.html', {
         'p': psicologo,
+        'faltantes': psicologo.faltantes_perfil,
         'proximos_turnos': proximos,
         'turnos_por_confirmar': psicologo.turnos.filter(fecha_hora__lt=ahora, estado='agendado').count(),
         'total_pacientes': psicologo.pacientes.count(),
@@ -424,7 +432,7 @@ def editar_perfil(request):
                 logger.exception('No se pudo guardar la foto del profesional %s en el almacenamiento', psicologo.pk)
                 form.add_error('foto', 'No pudimos guardar la foto en este momento. Probá de nuevo en unos minutos; '
                                        'si sigue pasando, guardá el resto de tu perfil sin cambiar la foto y escribinos.')
-                return render(request, 'portal/editar_perfil.html', {'p': psicologo, 'form': form, 'formset': formset})
+                return render(request, 'portal/editar_perfil.html', _contexto_editor(psicologo, form, formset))
             formset.save()
 
             # Lo escrito a mano no entra directo a la lista de todos: queda
@@ -468,27 +476,60 @@ def editar_perfil(request):
                     'la sumamos a la lista; mientras tanto la ves solo vos y no se muestra en tu perfil público.',
                 )
 
-            messages.success(request, 'Perfil actualizado.')
-            return redirect('portal_dashboard')
+            if request.POST.get('accion') == 'publicar':
+                # Se vuelve a leer: lo recién guardado (fotos, orientaciones) cambia lo que falta.
+                return _intentar_publicar(request, Psicologo.objects.select_related('pais').get(pk=psicologo.pk))
+            messages.success(request, 'Perfil guardado.')
+            return redirect('portal_editar_perfil')
     else:
         form = PerfilForm(instance=psicologo, pais=psicologo.pais)
         formset = FormacionFormSet(instance=psicologo)
 
-    return render(request, 'portal/editar_perfil.html', {'p': psicologo, 'form': form, 'formset': formset})
+    return render(request, 'portal/editar_perfil.html', _contexto_editor(psicologo, form, formset))
+
+
+def _contexto_editor(psicologo, form, formset):
+    return {
+        'p': psicologo, 'form': form, 'formset': formset,
+        'faltantes': psicologo.faltantes_perfil,
+        'pais': psicologo.pais,
+    }
+
+
+@psicologo_required
+def vista_previa(request):
+    """El perfil público tal cual lo ven los pacientes, pero visible solo para su dueño y sin importar si
+    ya está publicado. Con los cambios guardados (no los que está escribiendo)."""
+    psicologo = Psicologo.objects.select_related('pais').prefetch_related(
+        'orientaciones', 'publicos', 'especialidades', 'tipos_sesion', 'formaciones',
+    ).get(pk=request.user.psicologo.pk)
+    contexto = contexto_perfil(psicologo.pais, psicologo, vista_previa=True, faltantes=psicologo.faltantes_perfil)
+    return render(request, 'directorio/detalle_psicologo.html', contexto)
+
+
+def _intentar_publicar(request, psicologo):
+    """Lo que pasa al tocar "Publicar": si falta algo del perfil se avisa qué; si está completo se
+    deja dicho que quiere publicar, y si todavía no tiene plan se lo lleva a elegirlo."""
+    faltan = psicologo.faltantes_perfil
+    if faltan:
+        messages.warning(request, 'Para publicar te falta completar: ' + ', '.join(faltan) + '.')
+        return redirect('portal_editar_perfil')
+    # Quedó dicho que quiere publicar. Si todavía no tiene plan, el perfil no se muestra hasta
+    # que lo active, y en ese momento sale solo (`publicado` exige las dos cosas).
+    psicologo.publicado_por_usuario = True
+    psicologo.save()
+    if psicologo.tiene_acceso:
+        messages.success(request, '¡Tu perfil ya está publicado y visible en el buscador!')
+        return redirect('portal_dashboard')
+    messages.info(request, '¡Tu perfil está listo! Elegí tu plan y en cuanto se confirme el pago se publica solo.')
+    return redirect('portal_checkout')
 
 
 @psicologo_required
 def publicar(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
-    psicologo = request.user.psicologo
-    if psicologo.puede_publicar:
-        psicologo.publicado_por_usuario = True
-        psicologo.save()
-        messages.success(request, '¡Tu perfil ya está publicado y visible en el buscador!')
-    else:
-        messages.error(request, 'Todavía no cumplís los requisitos para publicar (perfil completo + suscripción activa).')
-    return redirect('portal_dashboard')
+    return _intentar_publicar(request, request.user.psicologo)
 
 
 @psicologo_required
