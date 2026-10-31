@@ -11,6 +11,7 @@ def _respuesta(datos, ok=True):
     r = mock.Mock()
     r.json.return_value = datos
     r.ok = ok
+    r.status_code = 200 if ok else 400
     return r
 
 
@@ -222,7 +223,7 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 5', html)
+        self.assertIn('versión 6', html)
 
 
 class TokenDelSistemaTests(TestCase):
@@ -273,5 +274,37 @@ class TokenDelSistemaTests(TestCase):
         with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 't', 'META_APP_SECRET': 'x'}):
             resp = self.client.post(self.url, '{}', content_type='application/json')
         self.assertEqual(resp.status_code, 400)
-        self.assertIn('Usuarios del sistema', resp.json()['error'])
+        self.assertIn('usuario del sistema', resp.json()['error'])
         pedidos.post.assert_not_called()
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_no_encuentra_cuentas_devuelve_un_diagnostico_sin_secretos(self, pedidos):
+        pedidos.RequestException = Exception
+
+        def get(url, **kwargs):
+            if url.endswith('/debug_token'):
+                return _respuesta({'data': {'type': 'SYSTEM_USER', 'is_valid': True, 'app_id': '895833073525544',
+                                            'scopes': ['business_management'], 'granular_scopes': []}})
+            return _respuesta({'error': {'message': 'sin permiso', 'code': 10}})
+        pedidos.get.side_effect = get
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-DEL-SISTEMA', 'META_APP_SECRET': 'secreto-x'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(datos['diagnostico']['debug_token']['tipo'], 'SYSTEM_USER')
+        self.assertEqual(datos['diagnostico']['debug_token']['permisos'], ['business_management'])
+        self.assertIn('ve_el_numero', datos['diagnostico'])
+        for secreto in ('TOKEN-DEL-SISTEMA', 'secreto-x'):
+            self.assertNotIn(secreto, resp.content.decode())
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_con_waba_id_configurado_no_busca_y_usa_solo_esa_cuenta(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.return_value = _respuesta({'data': [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'CONNECTED'}]})
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 't', 'META_APP_SECRET': 'x', 'WHATSAPP_WABA_ID': '777, abc, 888'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['777', '888'])   # "abc" se descarta
+        self.assertFalse(any(c.args[0].endswith('/debug_token') for c in pedidos.get.call_args_list))

@@ -22,7 +22,10 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 5
+VERSION = 6
+# Identificador del número de teléfono de LATAM (aparece en el Administrador de WhatsApp). Solo se usa para
+# comprobar si el token llega a ver el número cuando no encuentra la cuenta.
+PHONE_NUMBER_ID = "1228482323672734"
 
 
 @staff_member_required
@@ -90,6 +93,34 @@ def _cuentas_del_token(token, secreto):
     return ids
 
 
+def _diagnostico_del_token(token, secreto):
+    """Qué sabe Meta de este token (permisos, activos, vencimiento) y si llega a ver el número de LATAM.
+    Para entender por qué no aparece la cuenta. No incluye el token ni el secreto."""
+    cabecera = {"Authorization": f"Bearer {token}"}
+    d = requests.get(f"{GRAPH}/debug_token", params={
+        "input_token": token, "access_token": f"{APP_ID}|{secreto}",
+    }, timeout=20).json()
+    datos = d.get("data") or {}
+    numero = requests.get(f"{GRAPH}/{PHONE_NUMBER_ID}", headers=cabecera,
+                          params={"fields": "id,verified_name,status"}, timeout=20)
+    return {
+        "debug_token": {
+            "error": d.get("error"),
+            "tipo": datos.get("type"), "valido": datos.get("is_valid"), "app_id": datos.get("app_id"),
+            "vence": datos.get("expires_at"), "permisos": datos.get("scopes"),
+            "activos_por_permiso": datos.get("granular_scopes"),
+        },
+        "ve_el_numero": {"http": numero.status_code, "respuesta": numero.json()},
+    }
+
+
+def _wabas_configuradas():
+    """IDs de cuenta fijados en WHATSAPP_WABA_ID (separados por coma), o [] si no está. Con esto no hace
+    falta buscar y se evita tocar cualquier otra cuenta a la que el token tenga acceso."""
+    ids = [w.strip() for w in os.environ.get("WHATSAPP_WABA_ID", "").split(",") if w.strip()]
+    return [w for w in ids if w.isdigit()]
+
+
 def _conectar_cuenta(waba_id, token):
     """Suscribe la app a la cuenta (para recibir webhooks) y lista sus números. Sin datos sensibles."""
     cabecera = {"Authorization": f"Bearer {token}"}
@@ -118,13 +149,15 @@ def coexistencia_con_token(request):
         return JsonResponse({"ok": False, "version": VERSION,
                              "error": "Falta configurar en el servidor: " + ", ".join(faltan)}, status=500)
     try:
-        wabas = _cuentas_del_token(token, secreto)
+        wabas = _wabas_configuradas() or _cuentas_del_token(token, secreto)
         if not wabas:
             return JsonResponse({
                 "ok": False, "version": VERSION, "paso": "cuentas",
-                "error": "El token no tiene acceso a ninguna cuenta de WhatsApp Business. En Usuarios del sistema "
-                         "hay que asignarle la cuenta (con control total) y generar el token con los permisos "
-                         "whatsapp_business_management y whatsapp_business_messaging.",
+                "error": "El token no lista ninguna cuenta de WhatsApp Business. Revisá que el usuario del sistema "
+                         "tenga la cuenta asignada (control total) y la app, y que el token se haya generado con los "
+                         "permisos whatsapp_business_management y whatsapp_business_messaging. Si ya está así, "
+                         "cargá el ID de la cuenta en la variable WHATSAPP_WABA_ID.",
+                "diagnostico": _diagnostico_del_token(token, secreto),
             }, status=400)
         cuentas = [_conectar_cuenta(w, token) for w in wabas]
     except (requests.RequestException, ValueError):
