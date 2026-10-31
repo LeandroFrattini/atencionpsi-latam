@@ -22,7 +22,7 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 7
+VERSION = 8
 # Identificador del número de teléfono de LATAM (aparece en el Administrador de WhatsApp). Solo se usa para
 # comprobar si el token llega a ver el número cuando no encuentra la cuenta.
 PHONE_NUMBER_ID = "1228482323672734"
@@ -115,6 +115,33 @@ def _diagnostico_del_token(token, secreto):
     }
 
 
+def _waba_del_numero(token):
+    """Busca la cuenta de WhatsApp Business que contiene el número de LATAM. Los tokens de usuario del
+    sistema no traen la lista de cuentas, así que se mira el negocio al que pertenece el usuario y se recorren
+    sus cuentas; solo se devuelve la que tiene PHONE_NUMBER_ID (nunca otra, como la de Argentina).
+    Devuelve ([waba_id] o [], pasos) con lo que respondió Meta en cada paso, para diagnosticar."""
+    cabecera = {"Authorization": f"Bearer {token}"}
+    pasos = []
+    yo = requests.get(f"{GRAPH}/me", headers=cabecera, params={"fields": "id,name,business"}, timeout=20).json()
+    pasos.append({"paso": "usuario", "respuesta": yo})
+    negocio = str((yo.get("business") or {}).get("id") or "")
+    candidatas = []
+    if negocio.isdigit():
+        for relacion in ("owned_whatsapp_business_accounts", "client_whatsapp_business_accounts"):
+            r = requests.get(f"{GRAPH}/{negocio}/{relacion}", headers=cabecera,
+                             params={"fields": "id,name", "limit": 50}, timeout=20)
+            cuerpo = r.json()
+            pasos.append({"paso": relacion, "http": r.status_code, "respuesta": cuerpo})
+            for cuenta in cuerpo.get("data") or []:
+                if str(cuenta.get("id", "")).isdigit() and str(cuenta["id"]) not in candidatas:
+                    candidatas.append(str(cuenta["id"]))
+    for waba in candidatas:
+        r = requests.get(f"{GRAPH}/{waba}/phone_numbers", headers=cabecera, params={"fields": "id"}, timeout=20)
+        if r.ok and any(str(n.get("id")) == PHONE_NUMBER_ID for n in r.json().get("data") or []):
+            return [waba], pasos
+    return [], pasos
+
+
 def _wabas_configuradas():
     """IDs de cuenta fijados en WHATSAPP_WABA_ID (separados por coma), o [] si no está. Con esto no hace
     falta buscar y se evita tocar cualquier otra cuenta a la que el token tenga acceso."""
@@ -154,7 +181,12 @@ def coexistencia_con_token(request):
         return JsonResponse({"ok": False, "version": VERSION,
                              "error": "Falta configurar en el servidor: " + ", ".join(faltan)}, status=500)
     try:
+        busqueda = []
+        origen = "token del sistema"
         wabas = _wabas_configuradas() or _cuentas_del_token(token, secreto)
+        if not wabas:
+            wabas, busqueda = _waba_del_numero(token)
+            origen = "cuenta buscada por el número de LATAM"
         if not wabas:
             return JsonResponse({
                 "ok": False, "version": VERSION, "paso": "cuentas",
@@ -162,7 +194,7 @@ def coexistencia_con_token(request):
                          "tenga la cuenta asignada (control total) y la app, y que el token se haya generado con los "
                          "permisos whatsapp_business_management y whatsapp_business_messaging. Si ya está así, "
                          "cargá el ID de la cuenta en la variable WHATSAPP_WABA_ID.",
-                "diagnostico": _diagnostico_del_token(token, secreto),
+                "diagnostico": {**_diagnostico_del_token(token, secreto), "busqueda_por_negocio": busqueda},
             }, status=400)
         cuentas = [_conectar_cuenta(w, token) for w in wabas]
     except (requests.RequestException, ValueError):
@@ -171,7 +203,7 @@ def coexistencia_con_token(request):
     return JsonResponse({
         "ok": all(c["suscripcion_ok"] for c in cuentas),
         "version": VERSION,
-        "origen_waba": "token del sistema",
+        "origen_waba": origen,
         "cuentas": cuentas,
     })
 

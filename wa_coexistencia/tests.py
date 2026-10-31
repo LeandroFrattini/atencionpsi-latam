@@ -223,7 +223,7 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 7', html)
+        self.assertIn('versión 8', html)
 
 
 class TokenDelSistemaTests(TestCase):
@@ -330,3 +330,57 @@ class DetalleDelNumeroTests(TestCase):
             resp = self.client.post(reverse('wa_coexistencia_token'), '{}', content_type='application/json')
         numeros = resp.json()['cuentas'][0]['numeros']
         self.assertEqual(numeros[0]['status'], 'DISCONNECTED')
+
+
+class BusquedaPorNumeroTests(TestCase):
+    """Los tokens de usuario del sistema no traen la lista de cuentas: se busca la que tiene el número de LATAM."""
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_user('staff@example.com', password='ClaveSegura123', is_staff=True))
+        self.url = reverse('wa_coexistencia_token')
+
+    def _get(self, cuentas, numeros_por_cuenta):
+        def get(url, **kwargs):
+            if url.endswith('/debug_token'):
+                return _respuesta({'data': {'type': 'SYSTEM_USER', 'granular_scopes': [{'scope': 'whatsapp_business_management'}]}})
+            if url.endswith('/me'):
+                return _respuesta({'id': '5', 'name': 'wa-api', 'business': {'id': '55', 'name': 'Atención Psi'}})
+            if url.endswith('/owned_whatsapp_business_accounts'):
+                return _respuesta({'data': [{'id': c, 'name': 'x'} for c in cuentas]})
+            if url.endswith('/client_whatsapp_business_accounts'):
+                return _respuesta({'data': []})
+            if url.endswith('/phone_numbers'):
+                waba = url.rsplit('/', 2)[-2]
+                if kwargs['params']['fields'] == 'id':
+                    return _respuesta({'data': [{'id': n} for n in numeros_por_cuenta.get(waba, [])]})
+                return _respuesta({'data': [{'id': '1228482323672734', 'verified_name': 'Atencion Psi Latinoamerica',
+                                             'status': 'DISCONNECTED'}]})
+            return _respuesta({})
+        return get
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_se_suscribe_solo_la_cuenta_que_tiene_el_numero_de_latam(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.side_effect = self._get(['900', '901'], {'900': ['111'], '901': ['1228482323672734']})
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-X', 'META_APP_SECRET': 'secreto-x'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['901'])
+        self.assertEqual(datos['origen_waba'], 'cuenta buscada por el número de LATAM')
+        self.assertEqual(pedidos.post.call_count, 1)                      # la de Argentina ('900') no se toca
+        self.assertTrue(pedidos.post.call_args.args[0].endswith('/901/subscribed_apps'))
+        self.assertNotIn('TOKEN-X', resp.content.decode())
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_ninguna_cuenta_tiene_el_numero_no_suscribe_nada_y_muestra_la_busqueda(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.side_effect = self._get(['900'], {'900': ['111']})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-X', 'META_APP_SECRET': 'secreto-x'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 400)
+        pedidos.post.assert_not_called()
+        pasos = [p['paso'] for p in datos['diagnostico']['busqueda_por_negocio']]
+        self.assertEqual(pasos, ['usuario', 'owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts'])
