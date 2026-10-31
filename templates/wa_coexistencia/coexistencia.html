@@ -29,6 +29,8 @@
   // Meta envía los IDs (waba_id, phone_number_id) por este evento
   window.addEventListener('message', (event) => {
     if (!event.origin.endsWith('facebook.com')) return;
+    // Diagnóstico: todo lo que manda Meta queda en el cuadro (recortado).
+    log('Mensaje de ' + event.origin + ': ' + (typeof event.data === 'string' ? event.data : JSON.stringify(event.data)).slice(0, 300));
     let data = event.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { return; } }   // mensajes que no son JSON
     if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
@@ -59,11 +61,12 @@
         log('Se canceló o no volvió el código: ' + JSON.stringify(response));
         return;
       }
-      // Espera a que llegue el evento con los IDs (hasta 15 segundos). Si no llega, se manda igual
-      // y el cuadro muestra qué evento mandó Meta (por ejemplo CANCEL) para ver dónde se cortó.
+      log('Meta devolvió el código (estado: ' + response.status + '). Esperando los datos de la cuenta…');
+      // Espera a que llegue el evento con los IDs (hasta 8 segundos; el código vence a los ~30). Si no
+      // llega, se manda igual y el servidor busca la cuenta a partir del token.
       const t0 = Date.now();
       (function esperar() {
-        if (sessionInfo.waba_id || Date.now() - t0 > 15000) enviar(response.authResponse.code);
+        if (sessionInfo.waba_id || Date.now() - t0 > 8000) enviar(response.authResponse.code);
         else setTimeout(esperar, 300);
       })();
     }, {

@@ -42,7 +42,7 @@ class AccesoTests(TestCase):
         self.client.force_login(self.staff)
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
         self.assertIn('function enviar(code)', html)
-        self.assertIn('sessionInfo.waba_id || Date.now() - t0 > 15000', html)
+        self.assertIn('sessionInfo.waba_id || Date.now() - t0 > 8000', html)
         self.assertIn("typeof data === 'string'", html)   # acepta el mensaje de Meta como texto o como objeto
         self.assertNotIn('}, 1500)', html)
 
@@ -67,9 +67,8 @@ class CallbackTests(TestCase):
         resp = self.client.post(self.url, 'no es json', content_type='application/json')
         self.assertEqual(resp.status_code, 400)
 
-    def test_falta_el_code_o_el_waba(self):
+    def test_falta_el_code(self):
         self.assertEqual(self._post({'waba_id': '123'}).status_code, 400)
-        self.assertEqual(self._post({'code': 'abc'}).status_code, 400)
 
     def test_waba_id_con_caracteres_raros_se_rechaza(self):
         with mock.patch.dict(os.environ, {'META_APP_SECRET': 'x'}):
@@ -94,12 +93,18 @@ class CallbackTests(TestCase):
             resp = self._post({'code': 'abc', 'waba_id': '555', 'phone_number_id': '777'})
         datos = resp.json()
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(datos, {'ok': True, 'waba_id': '555', 'phone_number_id': '777', 'suscripcion': {'success': True}})
+        self.assertEqual(datos['ok'], True)
+        self.assertEqual(datos['origen_waba'], 'navegador')
+        self.assertEqual(datos['phone_number_id'], '777')
+        self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['555'])
+        self.assertEqual(datos['cuentas'][0]['suscripcion'], {'success': True})
         self.assertNotIn('TOKEN-SECRETO', resp.content.decode())
         self.assertNotIn('secreto-de-prueba', resp.content.decode())
         # El canje usa el secreto del entorno y la suscripción va con el token en el encabezado.
-        self.assertEqual(pedidos.get.call_args.kwargs['params']['client_secret'], 'secreto-de-prueba')
+        self.assertEqual(pedidos.get.call_args_list[0].kwargs['params']['client_secret'], 'secreto-de-prueba')
         self.assertEqual(pedidos.post.call_args.kwargs['headers'], {'Authorization': 'Bearer TOKEN-SECRETO'})
+        pedidos.get.assert_any_call(mock.ANY, headers={'Authorization': 'Bearer TOKEN-SECRETO'},
+                                    params={'fields': 'id,verified_name,status'}, timeout=20)
         self.assertTrue(pedidos.post.call_args.args[0].endswith('/555/subscribed_apps'))
 
     @mock.patch('wa_coexistencia.views.requests')
@@ -122,3 +127,44 @@ class CallbackTests(TestCase):
             with self.assertLogs('wa_coexistencia.views', level='ERROR'):
                 resp = self._post({'code': 'abc', 'waba_id': '555'})
         self.assertEqual(resp.status_code, 502)
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_el_navegador_no_mando_el_waba_se_busca_en_el_token(self, pedidos):
+        pedidos.RequestException = Exception
+
+        def get(url, **kwargs):
+            if url.endswith('/oauth/access_token'):
+                return _respuesta({'access_token': 'TOKEN-SECRETO'})
+            if url.endswith('/debug_token'):
+                return _respuesta({'data': {'granular_scopes': [
+                    {'scope': 'whatsapp_business_management', 'target_ids': ['900', '901']},
+                    {'scope': 'whatsapp_business_messaging', 'target_ids': ['900']},
+                    {'scope': 'business_management', 'target_ids': ['999']},
+                ]}})
+            return _respuesta({'data': [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'CONNECTED'}]})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'META_APP_SECRET': 'secreto-de-prueba'}):
+            resp = self._post({'code': 'abc'})
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(datos['ok'])
+        self.assertEqual(datos['origen_waba'], 'token')
+        self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['900', '901'])   # sin repetidos y sin otros permisos
+        self.assertEqual(datos['cuentas'][0]['numeros'], [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'CONNECTED'}])
+        self.assertNotIn('TOKEN-SECRETO', resp.content.decode())
+        self.assertNotIn('secreto-de-prueba', resp.content.decode())
+        # debug_token se consulta con el token de la app (id|secreto), no con el del usuario.
+        llamada = [c for c in pedidos.get.call_args_list if c.args[0].endswith('/debug_token')][0]
+        self.assertEqual(llamada.kwargs['params']['access_token'], '895833073525544|secreto-de-prueba')
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_el_token_no_trae_cuentas_lo_dice(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.side_effect = lambda url, **kw: _respuesta(
+            {'access_token': 'T'} if url.endswith('/oauth/access_token') else {'data': {'granular_scopes': []}})
+        with mock.patch.dict(os.environ, {'META_APP_SECRET': 'x'}):
+            resp = self._post({'code': 'abc'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['paso'], 'cuentas')
+        pedidos.post.assert_not_called()
