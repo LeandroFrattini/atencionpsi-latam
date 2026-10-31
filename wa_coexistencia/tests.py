@@ -38,6 +38,14 @@ class AccesoTests(TestCase):
         self.assertIn('csrftoken', resp.cookies)
         self.assertNotContains(resp, 'META_APP_SECRET')
 
+    def test_espera_los_ids_de_meta_en_vez_de_un_tiempo_fijo(self):
+        self.client.force_login(self.staff)
+        html = self.client.get(reverse('wa_coexistencia')).content.decode()
+        self.assertIn('function enviar(code)', html)
+        self.assertIn('sessionInfo.waba_id || Date.now() - t0 > 15000', html)
+        self.assertIn("typeof data === 'string'", html)   # acepta el mensaje de Meta como texto o como objeto
+        self.assertNotIn('}, 1500)', html)
+
     def test_la_pagina_deja_abrir_la_ventana_de_meta(self):
         self.client.force_login(self.staff)
         resp = self.client.get(reverse('wa_coexistencia'))

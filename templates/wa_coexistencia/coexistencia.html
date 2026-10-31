@@ -29,18 +29,28 @@
   // Meta envía los IDs (waba_id, phone_number_id) por este evento
   window.addEventListener('message', (event) => {
     if (!event.origin.endsWith('facebook.com')) return;
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'WA_EMBEDDED_SIGNUP') {
-        log('Evento: ' + data.event + ' ' + JSON.stringify(data.data));
-        if (data.data && data.data.waba_id) sessionInfo = data.data;
-      }
-    } catch (e) { /* mensajes que no son JSON */ }
+    let data = event.data;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { return; } }   // mensajes que no son JSON
+    if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
+      log('Evento: ' + data.event + ' ' + JSON.stringify(data.data));
+      if (data.data && data.data.waba_id) sessionInfo = data.data;
+    }
   });
 
   function csrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? m[1] : '';
+  }
+
+  function enviar(code) {
+    fetch('{% url "wa_coexistencia_callback" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ code: code, ...sessionInfo }),
+    })
+      .then(r => r.json())
+      .then(j => log('Servidor: ' + JSON.stringify(j, null, 2)))
+      .catch(e => log('Error: ' + e));
   }
 
   document.getElementById('conectar').addEventListener('click', () => {
@@ -49,17 +59,13 @@
         log('Se canceló o no volvió el código: ' + JSON.stringify(response));
         return;
       }
-      // Pequeña espera para que llegue el evento con los IDs
-      setTimeout(() => {
-        fetch('{% url "wa_coexistencia_callback" %}', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
-          body: JSON.stringify({ code: response.authResponse.code, ...sessionInfo }),
-        })
-          .then(r => r.json())
-          .then(j => log('Servidor: ' + JSON.stringify(j, null, 2)))
-          .catch(e => log('Error: ' + e));
-      }, 1500);
+      // Espera a que llegue el evento con los IDs (hasta 15 segundos). Si no llega, se manda igual
+      // y el cuadro muestra qué evento mandó Meta (por ejemplo CANCEL) para ver dónde se cortó.
+      const t0 = Date.now();
+      (function esperar() {
+        if (sessionInfo.waba_id || Date.now() - t0 > 15000) enviar(response.authResponse.code);
+        else setTimeout(esperar, 300);
+      })();
     }, {
       config_id: '{{ config_id }}',
       response_type: 'code',
