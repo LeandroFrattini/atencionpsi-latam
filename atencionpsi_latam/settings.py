@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'directorio',
     'portal',
     'turnos',
+    'wa_coexistencia',  # conexión única del WhatsApp Business a la API (solo staff)
     'axes',  # Bloqueo por fuerza bruta en el login del portal
     'django.contrib.sitemaps',
 ]

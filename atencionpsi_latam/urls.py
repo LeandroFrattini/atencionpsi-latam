@@ -6,6 +6,7 @@ from django.urls import include, path
 
 from directorio.sitemaps import CiudadesSitemap, EspecialidadesSitemap, PaisesSitemap, PsicologosSitemap
 from directorio.views import robots_txt
+from wa_coexistencia import views as wa_views
 
 sitemaps = {
     'paises': PaisesSitemap,
@@ -19,6 +20,8 @@ urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('portal/', include('portal.urls')),
+    path('wa-coexistencia/', wa_views.coexistencia, name='wa_coexistencia'),
+    path('wa-coexistencia/callback/', wa_views.coexistencia_callback, name='wa_coexistencia_callback'),
     path('', include('turnos.urls')),
     path('', include('directorio.urls')),
 ]
