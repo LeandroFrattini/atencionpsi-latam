@@ -223,7 +223,7 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 8', html)
+        self.assertIn('versión 9', html)
 
 
 class TokenDelSistemaTests(TestCase):
@@ -335,36 +335,59 @@ class DetalleDelNumeroTests(TestCase):
 class BusquedaPorNumeroTests(TestCase):
     """Los tokens de usuario del sistema no traen la lista de cuentas: se busca la que tiene el número de LATAM."""
 
+    NUMERO = '1228482323672734'
+
     def setUp(self):
         self.client.force_login(User.objects.create_user('staff@example.com', password='ClaveSegura123', is_staff=True))
         self.url = reverse('wa_coexistencia_token')
 
-    def _get(self, cuentas, numeros_por_cuenta):
+    def _get(self, numero=None, asignadas=(), negocios_usuario=(), negocio_app=None, cuentas_del_negocio=(),
+             numeros_por_cuenta=None):
+        """Simula a Meta. Cada parámetro es lo que responde una de las formas de llegar a la cuenta."""
+        numeros_por_cuenta = numeros_por_cuenta or {}
+        error = {'error': {'message': 'campo o permiso inválido', 'code': 100}}
+
         def get(url, **kwargs):
             if url.endswith('/debug_token'):
                 return _respuesta({'data': {'type': 'SYSTEM_USER', 'granular_scopes': [{'scope': 'whatsapp_business_management'}]}})
-            if url.endswith('/me'):
-                return _respuesta({'id': '5', 'name': 'wa-api', 'business': {'id': '55', 'name': 'Atención Psi'}})
+            if url.endswith(f'/{self.NUMERO}'):
+                return _respuesta({'whatsapp_business_account': {'id': numero}} if numero else error)
+            if url.endswith('/me/assigned_whatsapp_business_accounts'):
+                return _respuesta({'data': [{'id': c} for c in asignadas]})
+            if url.endswith('/me/businesses'):
+                return _respuesta({'data': [{'id': n} for n in negocios_usuario]})
+            if url.endswith('/895833073525544'):
+                return _respuesta({'id': '895833073525544', 'business': {'id': negocio_app}} if negocio_app else error)
             if url.endswith('/owned_whatsapp_business_accounts'):
-                return _respuesta({'data': [{'id': c, 'name': 'x'} for c in cuentas]})
+                return _respuesta({'data': [{'id': c} for c in cuentas_del_negocio]})
             if url.endswith('/client_whatsapp_business_accounts'):
                 return _respuesta({'data': []})
             if url.endswith('/phone_numbers'):
                 waba = url.rsplit('/', 2)[-2]
                 if kwargs['params']['fields'] == 'id':
                     return _respuesta({'data': [{'id': n} for n in numeros_por_cuenta.get(waba, [])]})
-                return _respuesta({'data': [{'id': '1228482323672734', 'verified_name': 'Atencion Psi Latinoamerica',
+                return _respuesta({'data': [{'id': self.NUMERO, 'verified_name': 'Atencion Psi Latinoamerica',
                                              'status': 'DISCONNECTED'}]})
-            return _respuesta({})
+            return _respuesta(error)
         return get
 
-    @mock.patch('wa_coexistencia.views.requests')
-    def test_se_suscribe_solo_la_cuenta_que_tiene_el_numero_de_latam(self, pedidos):
+    def _correr(self, pedidos, **simulado):
         pedidos.RequestException = Exception
-        pedidos.get.side_effect = self._get(['900', '901'], {'900': ['111'], '901': ['1228482323672734']})
+        pedidos.get.side_effect = self._get(**simulado)
         pedidos.post.return_value = _respuesta({'success': True})
         with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-X', 'META_APP_SECRET': 'secreto-x'}):
-            resp = self.client.post(self.url, '{}', content_type='application/json')
+            return self.client.post(self.url, '{}', content_type='application/json')
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_el_numero_dice_a_que_cuenta_pertenece(self, pedidos):
+        resp = self._correr(pedidos, numero='901')
+        self.assertEqual([c['waba_id'] for c in resp.json()['cuentas']], ['901'])
+        self.assertEqual(pedidos.post.call_count, 1)
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_por_el_negocio_de_la_app_se_suscribe_solo_la_que_tiene_el_numero(self, pedidos):
+        resp = self._correr(pedidos, negocio_app='55', cuentas_del_negocio=['900', '901'],
+                            numeros_por_cuenta={'900': ['111'], '901': [self.NUMERO]})
         datos = resp.json()
         self.assertEqual(resp.status_code, 200)
         self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['901'])
@@ -372,15 +395,28 @@ class BusquedaPorNumeroTests(TestCase):
         self.assertEqual(pedidos.post.call_count, 1)                      # la de Argentina ('900') no se toca
         self.assertTrue(pedidos.post.call_args.args[0].endswith('/901/subscribed_apps'))
         self.assertNotIn('TOKEN-X', resp.content.decode())
+        self.assertNotIn('secreto-x', resp.content.decode())
 
     @mock.patch('wa_coexistencia.views.requests')
-    def test_si_ninguna_cuenta_tiene_el_numero_no_suscribe_nada_y_muestra_la_busqueda(self, pedidos):
-        pedidos.RequestException = Exception
-        pedidos.get.side_effect = self._get(['900'], {'900': ['111']})
-        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-X', 'META_APP_SECRET': 'secreto-x'}):
-            resp = self.client.post(self.url, '{}', content_type='application/json')
+    def test_por_las_cuentas_asignadas_o_los_negocios_del_usuario(self, pedidos):
+        resp = self._correr(pedidos, asignadas=['901'], numeros_por_cuenta={'901': [self.NUMERO]})
+        self.assertEqual([c['waba_id'] for c in resp.json()['cuentas']], ['901'])
+        resp = self._correr(pedidos, negocios_usuario=['55'], cuentas_del_negocio=['902'],
+                            numeros_por_cuenta={'902': [self.NUMERO]})
+        self.assertEqual([c['waba_id'] for c in resp.json()['cuentas']], ['902'])
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_una_cuenta_asignada_sin_el_numero_no_se_suscribe(self, pedidos):
+        resp = self._correr(pedidos, asignadas=['900'], numeros_por_cuenta={'900': ['111']})
+        self.assertEqual(resp.status_code, 400)
+        pedidos.post.assert_not_called()
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_nada_funciona_no_suscribe_y_muestra_cada_paso(self, pedidos):
+        resp = self._correr(pedidos)
         datos = resp.json()
         self.assertEqual(resp.status_code, 400)
         pedidos.post.assert_not_called()
         pasos = [p['paso'] for p in datos['diagnostico']['busqueda_por_negocio']]
-        self.assertEqual(pasos, ['usuario', 'owned_whatsapp_business_accounts', 'client_whatsapp_business_accounts'])
+        self.assertEqual(pasos, ['numero', 'asignadas', 'negocios_del_usuario', 'negocio_de_la_app'])
+        self.assertNotIn('secreto-x', resp.content.decode())

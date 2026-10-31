@@ -22,7 +22,7 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 8
+VERSION = 9
 # Identificador del número de teléfono de LATAM (aparece en el Administrador de WhatsApp). Solo se usa para
 # comprobar si el token llega a ver el número cuando no encuentra la cuenta.
 PHONE_NUMBER_ID = "1228482323672734"
@@ -115,29 +115,59 @@ def _diagnostico_del_token(token, secreto):
     }
 
 
-def _waba_del_numero(token):
+def _ids(cuerpo):
+    """IDs numéricos de una respuesta de Meta con forma {"data": [{"id": ...}]}."""
+    datos = cuerpo.get("data") if isinstance(cuerpo, dict) else None
+    if not isinstance(datos, list):
+        return []
+    return [str(x["id"]) for x in datos if isinstance(x, dict) and str(x.get("id", "")).isdigit()]
+
+
+def _waba_del_numero(token, secreto):
     """Busca la cuenta de WhatsApp Business que contiene el número de LATAM. Los tokens de usuario del
-    sistema no traen la lista de cuentas, así que se mira el negocio al que pertenece el usuario y se recorren
-    sus cuentas; solo se devuelve la que tiene PHONE_NUMBER_ID (nunca otra, como la de Argentina).
+    sistema no traen la lista de cuentas, así que se prueban varias formas de llegar a ella (el propio
+    número, las cuentas asignadas al usuario, los negocios del usuario y de la app). Solo se devuelve la que
+    tiene PHONE_NUMBER_ID: nunca otra, como la de Argentina.
     Devuelve ([waba_id] o [], pasos) con lo que respondió Meta en cada paso, para diagnosticar."""
     cabecera = {"Authorization": f"Bearer {token}"}
     pasos = []
-    yo = requests.get(f"{GRAPH}/me", headers=cabecera, params={"fields": "id,name,business"}, timeout=20).json()
-    pasos.append({"paso": "usuario", "respuesta": yo})
-    negocio = str((yo.get("business") or {}).get("id") or "")
-    candidatas = []
-    if negocio.isdigit():
+
+    def sondear(nombre, url, params, con_token_de_app=False):
+        if con_token_de_app:
+            params = {**params, "access_token": f"{APP_ID}|{secreto}"}
+        r = requests.get(url, headers={} if con_token_de_app else cabecera, params=params, timeout=20)
+        cuerpo = r.json()
+        pasos.append({"paso": nombre, "http": r.status_code, "respuesta": cuerpo})
+        return cuerpo
+
+    # 1) El propio número puede decir a qué cuenta pertenece (no hace falta verificarla: sale de él).
+    cuerpo = sondear("numero", f"{GRAPH}/{PHONE_NUMBER_ID}", {"fields": "whatsapp_business_account"})
+    directa = str((cuerpo.get("whatsapp_business_account") or {}).get("id") or "")
+    if directa.isdigit():
+        return [directa], pasos
+
+    # 2) Cuentas asignadas al usuario del sistema.
+    candidatas = _ids(sondear("asignadas", f"{GRAPH}/me/assigned_whatsapp_business_accounts", {"fields": "id,name"}))
+
+    # 3) Negocios del usuario y de la app, y las cuentas de cada uno.
+    negocios = _ids(sondear("negocios_del_usuario", f"{GRAPH}/me/businesses", {"fields": "id,name"}))
+    app = sondear("negocio_de_la_app", f"{GRAPH}/{APP_ID}", {"fields": "id,business"}, con_token_de_app=True)
+    negocio_app = str((app.get("business") or {}).get("id") or "")
+    if negocio_app.isdigit() and negocio_app not in negocios:
+        negocios.append(negocio_app)
+    for negocio in negocios:
         for relacion in ("owned_whatsapp_business_accounts", "client_whatsapp_business_accounts"):
-            r = requests.get(f"{GRAPH}/{negocio}/{relacion}", headers=cabecera,
-                             params={"fields": "id,name", "limit": 50}, timeout=20)
-            cuerpo = r.json()
-            pasos.append({"paso": relacion, "http": r.status_code, "respuesta": cuerpo})
-            for cuenta in cuerpo.get("data") or []:
-                if str(cuenta.get("id", "")).isdigit() and str(cuenta["id"]) not in candidatas:
-                    candidatas.append(str(cuenta["id"]))
+            candidatas += _ids(sondear(f"{relacion}_de_{negocio}", f"{GRAPH}/{negocio}/{relacion}",
+                                       {"fields": "id,name", "limit": 50}))
+
+    # Se verifica cada candidata: solo vale la que tiene el número de LATAM.
+    vistas = []
     for waba in candidatas:
+        if waba in vistas:
+            continue
+        vistas.append(waba)
         r = requests.get(f"{GRAPH}/{waba}/phone_numbers", headers=cabecera, params={"fields": "id"}, timeout=20)
-        if r.ok and any(str(n.get("id")) == PHONE_NUMBER_ID for n in r.json().get("data") or []):
+        if r.ok and PHONE_NUMBER_ID in _ids(r.json()):
             return [waba], pasos
     return [], pasos
 
@@ -185,7 +215,7 @@ def coexistencia_con_token(request):
         origen = "token del sistema"
         wabas = _wabas_configuradas() or _cuentas_del_token(token, secreto)
         if not wabas:
-            wabas, busqueda = _waba_del_numero(token)
+            wabas, busqueda = _waba_del_numero(token, secreto)
             origen = "cuenta buscada por el número de LATAM"
         if not wabas:
             return JsonResponse({
