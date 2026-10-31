@@ -222,4 +222,56 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 4', html)
+        self.assertIn('versión 5', html)
+
+
+class TokenDelSistemaTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_user('staff@example.com', password='ClaveSegura123', is_staff=True))
+        self.url = reverse('wa_coexistencia_token')
+
+    def test_solo_staff_y_solo_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.post(self.url).status_code, 302)
+
+    def test_sin_las_variables_de_entorno_avisa_cuales_faltan(self):
+        with mock.patch.dict(os.environ, clear=False):
+            os.environ.pop('WHATSAPP_TOKEN', None)
+            os.environ['META_APP_SECRET'] = 'x'
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        self.assertEqual(resp.status_code, 500)
+        self.assertIn('WHATSAPP_TOKEN', resp.json()['error'])
+        self.assertNotIn('META_APP_SECRET', resp.json()['error'])
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_busca_las_cuentas_del_token_las_suscribe_y_no_devuelve_secretos(self, pedidos):
+        pedidos.RequestException = Exception
+
+        def get(url, **kwargs):
+            if url.endswith('/debug_token'):
+                return _respuesta({'data': {'granular_scopes': [
+                    {'scope': 'whatsapp_business_management', 'target_ids': ['900']}]}})
+            return _respuesta({'data': [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'CONNECTED'}]})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-DEL-SISTEMA', 'META_APP_SECRET': 'secreto-x'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(datos['ok'])
+        self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['900'])
+        self.assertEqual(datos['cuentas'][0]['numeros'][0]['status'], 'CONNECTED')
+        self.assertEqual(pedidos.post.call_args.kwargs['headers'], {'Authorization': 'Bearer TOKEN-DEL-SISTEMA'})
+        for secreto in ('TOKEN-DEL-SISTEMA', 'secreto-x'):
+            self.assertNotIn(secreto, resp.content.decode())
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_el_token_no_tiene_cuentas_explica_que_asignar(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.return_value = _respuesta({'data': {'granular_scopes': []}})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 't', 'META_APP_SECRET': 'x'}):
+            resp = self.client.post(self.url, '{}', content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('Usuarios del sistema', resp.json()['error'])
+        pedidos.post.assert_not_called()

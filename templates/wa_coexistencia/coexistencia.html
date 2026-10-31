@@ -15,6 +15,9 @@
 <h1>Conectar el número de WhatsApp a la API</h1>
 <p>Tené abierta la app WhatsApp Business en el celular del número. Cuando te lo pida, ingresá ese número y confirmá desde el celular.</p>
 <button id="conectar">Conectar número</button>
+<h2>Con token del sistema</h2>
+<p>Si el registro de Meta no devuelve los datos de la cuenta, esta opción usa el token de un usuario del sistema (guardado en el servidor, no se muestra) para suscribir la app a la cuenta de WhatsApp y listar los números.</p>
+<button id="con-token" type="button">Usar token del sistema</button>
 <h2>Resultado</h2>
 <pre id="log">Esperando… (versión {{ version }})</pre>
 
@@ -55,6 +58,18 @@
       .then(j => log('Servidor: ' + JSON.stringify(j, null, 2)))
       .catch(e => log('Error: ' + e));
   }
+
+  document.getElementById('con-token').addEventListener('click', () => {
+    log('Probando con el token del sistema…');
+    fetch('{% url "wa_coexistencia_token" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: '{}',
+    })
+      .then(r => r.json())
+      .then(j => log('Servidor: ' + JSON.stringify(j, null, 2)))
+      .catch(e => log('Error: ' + e));
+  });
 
   document.getElementById('conectar').addEventListener('click', () => {
     FB.login((response) => {

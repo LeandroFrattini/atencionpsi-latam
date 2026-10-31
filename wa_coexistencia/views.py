@@ -22,7 +22,7 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 4
+VERSION = 5
 
 
 @staff_member_required
@@ -103,6 +103,39 @@ def _conectar_cuenta(waba_id, token):
         "suscripcion": s.json(),
         "numeros": numeros,
     }
+
+
+@staff_member_required
+@require_POST
+def coexistencia_con_token(request):
+    """Camino alternativo, sin el code de Meta: usa un token de usuario del sistema del Business Manager
+    (variable de entorno WHATSAPP_TOKEN, nunca en el código). Busca las cuentas de WhatsApp Business a las que
+    ese token tiene acceso, suscribe la app a cada una y lista sus números. No devuelve el token."""
+    token = os.environ.get("WHATSAPP_TOKEN")
+    secreto = os.environ.get("META_APP_SECRET")
+    if not token or not secreto:
+        faltan = [n for n, v in (("WHATSAPP_TOKEN", token), ("META_APP_SECRET", secreto)) if not v]
+        return JsonResponse({"ok": False, "version": VERSION,
+                             "error": "Falta configurar en el servidor: " + ", ".join(faltan)}, status=500)
+    try:
+        wabas = _cuentas_del_token(token, secreto)
+        if not wabas:
+            return JsonResponse({
+                "ok": False, "version": VERSION, "paso": "cuentas",
+                "error": "El token no tiene acceso a ninguna cuenta de WhatsApp Business. En Usuarios del sistema "
+                         "hay que asignarle la cuenta (con control total) y generar el token con los permisos "
+                         "whatsapp_business_management y whatsapp_business_messaging.",
+            }, status=400)
+        cuentas = [_conectar_cuenta(w, token) for w in wabas]
+    except (requests.RequestException, ValueError):
+        logger.exception("Falló la conexión con la API de Meta al usar el token del sistema")
+        return JsonResponse({"ok": False, "error": "No se pudo hablar con Meta. Probá de nuevo en un momento."}, status=502)
+    return JsonResponse({
+        "ok": all(c["suscripcion_ok"] for c in cuentas),
+        "version": VERSION,
+        "origen_waba": "token del sistema",
+        "cuentas": cuentas,
+    })
 
 
 @staff_member_required

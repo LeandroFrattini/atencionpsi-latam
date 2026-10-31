@@ -22,6 +22,7 @@ urlpatterns = [
     path('portal/', include('portal.urls')),
     path('wa-coexistencia/', wa_views.coexistencia, name='wa_coexistencia'),
     path('wa-coexistencia/callback/', wa_views.coexistencia_callback, name='wa_coexistencia_callback'),
+    path('wa-coexistencia/token/', wa_views.coexistencia_con_token, name='wa_coexistencia_token'),
     path('', include('turnos.urls')),
     path('', include('directorio.urls')),
 ]
