@@ -14,8 +14,9 @@ from django.contrib.admin import helpers
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.utils.html import format_html
 
-from . import dlocal_go, planes_dlocal, suscripciones, visitas
+from . import dlocal_go, estados, planes_dlocal, suscripciones, visitas
 from .models import Visita, VisitaPerfil, Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
@@ -206,11 +207,31 @@ class FormacionInline(admin.TabularInline):
     extra = 1
 
 
+class EstadoFilter(admin.SimpleListFilter):
+    """Filtra por el punto en el que está cada profesional: publicado, solo cuenta, etc."""
+    title = 'estado'
+    parameter_name = 'estado'
+
+    def lookups(self, request, model_admin):
+        return [(codigo, etiqueta) for codigo, etiqueta, *_ in estados.ESTADOS]
+
+    def queryset(self, request, queryset):
+        if self.value() in estados.CODIGOS:
+            return queryset.filter(estado_codigo=self.value())
+        return queryset
+
+
 @admin.register(Psicologo)
 class PsicologoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'pais', 'ciudad', 'modalidad', 'plan', 'suscripcion_activa', 'exento_de_pago', 'gratis_hasta', 'instagram', 'quiere_colaborar', 'publicado', 'destacado')
-    list_filter = ('pais', 'modalidad', 'plan', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'destacado', 'orientaciones', 'especialidades', 'publicos')
-    search_fields = ('nombre', 'matricula', 'whatsapp')
+    # Primero los países, y dentro de cada uno, los publicados arriba y los que solo hicieron la
+    # cuenta al final. El estado se calcula con las mismas reglas que usa el sitio (ver estados.py).
+    list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
+                    'fecha_alta_visible', 'visitas_30_visible')
+    list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago',
+                   'destacado', 'orientaciones', 'especialidades', 'publicos')
+    search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
+    list_per_page = 50
+    list_select_related = ('pais', 'usuario')
     filter_horizontal = ('orientaciones', 'especialidades', 'publicos')
     inlines = [FormacionInline]
     fieldsets = (
@@ -221,6 +242,62 @@ class PsicologoAdmin(admin.ModelAdmin):
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action',
                'dar_gratis_hasta_action', 'quitar_gratis_action']
+
+    def get_queryset(self, request):
+        # Primero se calcula el estado y recién después se ordena (el orden usa ese estado).
+        queryset = estados.con_estado(self.model._default_manager.get_queryset())
+        return queryset.order_by(*self.get_ordering(request))
+
+    def get_ordering(self, request):
+        return ('pais__orden', 'pais__nombre', 'estado_orden', 'nombre')
+
+    @admin.display(description='Estado', ordering='estado_orden')
+    def estado_visible(self, obj):
+        codigo = obj.estado_codigo
+        return format_html(
+            '<span title="{}" style="display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;'
+            'font-size:11px;font-weight:600;white-space:nowrap;background:{}">{}</span>',
+            estados.EXPLICACIONES[codigo], estados.COLORES[codigo], estados.ETIQUETAS[codigo],
+        )
+
+    @admin.display(description='Acceso')
+    def acceso_visible(self, obj):
+        ahora = timezone.now()
+        if obj.suscripcion_activa:
+            return f'Paga ({obj.get_plan_display()})'
+        if obj.exento_de_pago:
+            return 'Exento de pago'
+        if obj.gratis_hasta:
+            fecha = timezone.localtime(obj.gratis_hasta).strftime('%d/%m/%Y')
+            return f'Gratis hasta {fecha}' if obj.gratis_hasta > ahora else f'Gratis venció el {fecha}'
+        return '—'
+
+    @admin.display(description='Email', ordering='usuario__email')
+    def email_visible(self, obj):
+        return obj.usuario.email
+
+    @admin.display(description='WhatsApp')
+    def whatsapp_visible(self, obj):
+        numero = obj.whatsapp_limpio()
+        if not numero:
+            return '—'
+        codigo = obj.pais.codigo_telefono
+        if codigo and not numero.startswith(codigo):
+            # Sin el código de país, el link de WhatsApp de su perfil no funciona.
+            return format_html(
+                '<a href="https://wa.me/{}" target="_blank" rel="noopener" title="Le falta el código de país (+{}): '
+                'el link de WhatsApp de su perfil no funciona. Avisale que lo corrija.">&#9888; {}</a>',
+                numero, codigo, obj.whatsapp,
+            )
+        return format_html('<a href="https://wa.me/{}" target="_blank" rel="noopener">{}</a>', numero, obj.whatsapp)
+
+    @admin.display(description='Alta', ordering='fecha_alta')
+    def fecha_alta_visible(self, obj):
+        return timezone.localtime(obj.fecha_alta).strftime('%d/%m/%y')
+
+    @admin.display(description='Visitas (30 d)', ordering='visitas_30')
+    def visitas_30_visible(self, obj):
+        return obj.visitas_30 or 0
 
     # ---- Período gratis (sin código): se le da a quien elijas, hasta la fecha que elijas ----
     @admin.action(description='Dar acceso gratis hasta una fecha…')

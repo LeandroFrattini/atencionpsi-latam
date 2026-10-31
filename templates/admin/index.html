@@ -13,6 +13,40 @@
 </div>
 {% endif %}
 {% if perms.directorio.change_psicologo %}
+{% resumen_profesionales as resumen %}
+{% if resumen.paises %}
+<div style="margin-bottom: 24px; padding: 16px 20px; background: #fff; border: 1px solid #d9d9d9; border-radius: 6px;">
+    <strong>Profesionales por país y estado</strong>
+    <p style="margin: 6px 0 12px; color: #555;">Tocá un número para ver esa lista. Pasá el mouse por cada estado para ver qué significa.</p>
+    <table style="width:100%">
+        <thead>
+            <tr>
+                <th>Estado</th>
+                {% for pais in resumen.paises %}
+                    <th style="text-align:right"><a href="{% url 'admin:directorio_psicologo_changelist' %}?pais__id__exact={{ pais.pk }}">{{ pais.nombre }}</a></th>
+                {% endfor %}
+                <th style="text-align:right"><a href="{% url 'admin:directorio_psicologo_changelist' %}">Total</a></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for e in resumen.estados %}
+            <tr>
+                <td title="{{ e.explicacion }}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ e.color }};margin-right:7px"></span>{{ e.etiqueta }}</td>
+                {% for c in e.celdas %}
+                    <td style="text-align:right">{% if c.n %}<a href="{% url 'admin:directorio_psicologo_changelist' %}?pais__id__exact={{ c.pais_id }}&amp;estado={{ e.codigo }}">{{ c.n }}</a>{% else %}<span style="color:#bbb">0</span>{% endif %}</td>
+                {% endfor %}
+                <td style="text-align:right;font-weight:bold">{% if e.total %}<a href="{% url 'admin:directorio_psicologo_changelist' %}?estado={{ e.codigo }}">{{ e.total }}</a>{% else %}<span style="color:#bbb">0</span>{% endif %}</td>
+            </tr>
+        {% endfor %}
+            <tr style="font-weight:bold;border-top:2px solid #ccc">
+                <td>Todos los estados</td>
+                {% for n in resumen.totales_pais %}<td style="text-align:right">{{ n }}</td>{% endfor %}
+                <td style="text-align:right">{{ resumen.total }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
 <div style="margin-bottom: 24px; padding: 16px 20px; background: #eef6ef; border: 1px solid #a9c9ae; border-radius: 6px;">
     <strong>Tareas de cobros y avisos</strong>
     <p style="margin: 6px 0 12px; color: #555;">Corrélas cuando quieras: sincronizar una vez por semana (o cuando alguien cancele o rechacen una tarjeta) y los recordatorios cada 2 o 3 días.</p>

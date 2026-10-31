@@ -24,3 +24,18 @@ def propuestas_pendientes():
                 'url': reverse(url_name) + '?aprobado__exact=0',
             })
     return items
+
+
+@register.simple_tag
+def resumen_profesionales():
+    """Cuadro del inicio del admin: una fila por estado y una columna por país."""
+    from directorio import estados
+
+    filas, total = estados.resumen_por_pais()
+    renglones = []
+    for codigo, etiqueta, explicacion, color in estados.ESTADOS:
+        renglones.append({
+            'codigo': codigo, 'etiqueta': etiqueta, 'explicacion': explicacion, 'color': color,
+            'celdas': [{'n': f['estados'][codigo], 'pais_id': f['pais'].pk} for f in filas], 'total': total['estados'][codigo],
+        })
+    return {'paises': [f['pais'] for f in filas], 'totales_pais': [f['total'] for f in filas], 'total': total['total'], 'estados': renglones}
