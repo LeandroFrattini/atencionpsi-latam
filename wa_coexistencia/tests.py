@@ -102,6 +102,7 @@ class CallbackTests(TestCase):
         self.assertNotIn('secreto-de-prueba', resp.content.decode())
         # El canje usa el secreto del entorno y la suscripción va con el token en el encabezado.
         self.assertEqual(pedidos.get.call_args_list[0].kwargs['params']['client_secret'], 'secreto-de-prueba')
+        self.assertEqual(pedidos.get.call_args_list[0].kwargs['params']['redirect_uri'], '')   # code del SDK de JS
         self.assertEqual(pedidos.post.call_args.kwargs['headers'], {'Authorization': 'Bearer TOKEN-SECRETO'})
         pedidos.get.assert_any_call(mock.ANY, headers={'Authorization': 'Bearer TOKEN-SECRETO'},
                                     params={'fields': 'id,verified_name,status'}, timeout=20)
@@ -168,3 +169,38 @@ class CallbackTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()['paso'], 'cuentas')
         pedidos.post.assert_not_called()
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_meta_pide_otro_redirect_uri_se_prueban_las_alternativas(self, pedidos):
+        pedidos.RequestException = Exception
+        intentos = []
+
+        def get(url, **kwargs):
+            if url.endswith('/oauth/access_token'):
+                intentos.append(kwargs['params']['redirect_uri'])
+                if kwargs['params']['redirect_uri'] == '':
+                    return _respuesta({'error': {'code': 100, 'error_subcode': 36008, 'message': 'redirect_uri'}})
+                return _respuesta({'access_token': 'TOKEN-SECRETO'})
+            return _respuesta({'data': []})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'META_APP_SECRET': 'x'}):
+            resp = self._post({'code': 'abc', 'waba_id': '555'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(intentos[0], '')
+        self.assertEqual(len(intentos), 2)
+        self.assertTrue(resp.json()['redirect_uri'].endswith('/wa-coexistencia/'))
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_otro_error_del_canje_no_reintenta(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.return_value = _respuesta({'error': {'code': 100, 'error_subcode': 36007, 'message': 'code vencido'}})
+        with mock.patch.dict(os.environ, {'META_APP_SECRET': 'x'}):
+            resp = self._post({'code': 'abc', 'waba_id': '555'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(pedidos.get.call_count, 1)
+
+    def test_la_pagina_oculta_el_code_en_los_mensajes_de_diagnostico(self):
+        self.client.get(reverse('wa_coexistencia'))
+        html = self.client.get(reverse('wa_coexistencia')).content.decode()
+        self.assertIn('code=(oculto)', html)

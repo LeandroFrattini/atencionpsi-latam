@@ -37,6 +37,26 @@ def coexistencia(request):
     return resp
 
 
+def _canjear_code(code, secreto, request):
+    """Canjea el code por un token. Un code que sale del SDK de JavaScript de Facebook se canjea con
+    redirect_uri VACÍO; si Meta responde 36008 ("redirect_uri distinto") se prueban las alternativas
+    razonables. Devuelve (token, respuesta_de_meta, redirect_uri_usado)."""
+    candidatas = ["", request.build_absolute_uri(request.path.replace("callback/", "")), f"{request.scheme}://{request.get_host()}/"]
+    respuesta = {}
+    for redirect_uri in candidatas:
+        respuesta = requests.get(f"{GRAPH}/oauth/access_token", params={
+            "client_id": APP_ID,
+            "client_secret": secreto,
+            "redirect_uri": redirect_uri,
+            "code": code,
+        }, timeout=20).json()
+        if respuesta.get("access_token"):
+            return respuesta["access_token"], respuesta, redirect_uri
+        if (respuesta.get("error") or {}).get("error_subcode") != 36008:
+            break   # otro error (code vencido, secreto mal...): probar otro redirect_uri no sirve
+    return None, respuesta, None
+
+
 def _cuentas_del_token(token, secreto):
     """IDs de las cuentas de WhatsApp Business (WABA) a las que el token da acceso. Sirve cuando el
     navegador no recibió el evento de Meta con el waba_id: el token sabe a qué cuentas se le dio permiso."""
@@ -89,13 +109,7 @@ def coexistencia_callback(request):
 
     try:
         # 1) Canjear el code por un token (el code vence en ~30 segundos)
-        r = requests.get(f"{GRAPH}/oauth/access_token", params={
-            "client_id": APP_ID,
-            "client_secret": secreto,
-            "code": code,
-        }, timeout=20)
-        tok = r.json()
-        token = tok.get("access_token")
+        token, tok, redirect_uri = _canjear_code(code, secreto, request)
         if not token:
             return JsonResponse({"ok": False, "paso": "canje", "respuesta": tok}, status=400)
 
@@ -118,6 +132,7 @@ def coexistencia_callback(request):
     return JsonResponse({
         "ok": all(c["suscripcion_ok"] for c in cuentas),
         "origen_waba": "navegador" if waba_id else "token",
+        "redirect_uri": redirect_uri or "(vacío)",
         "phone_number_id": phone_number_id,
         "cuentas": cuentas,
     })

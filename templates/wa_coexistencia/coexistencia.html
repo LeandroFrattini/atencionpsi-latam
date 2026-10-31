@@ -30,7 +30,8 @@
   window.addEventListener('message', (event) => {
     if (!event.origin.endsWith('facebook.com')) return;
     // Diagnóstico: todo lo que manda Meta queda en el cuadro (recortado).
-    log('Mensaje de ' + event.origin + ': ' + (typeof event.data === 'string' ? event.data : JSON.stringify(event.data)).slice(0, 300));
+    // El código de acceso se oculta: es de un solo uso, pero no tiene por qué quedar a la vista.
+    log('Mensaje de ' + event.origin + ': ' + (typeof event.data === 'string' ? event.data : JSON.stringify(event.data)).replace(/code=[^&\s"]+/g, 'code=(oculto)').slice(0, 300));
     let data = event.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { return; } }   // mensajes que no son JSON
     if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
