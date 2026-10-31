@@ -215,3 +215,21 @@ class WhatsappSinCodigoTests(_Base):
         self.assertContains(resp, 'Chile')
         self.assertContains(resp, f'?pais__id__exact={self.chile.pk}&amp;estado=sin_pago')
         self.assertContains(resp, f'?pais__id__exact={self.peru.pk}&amp;estado=publicado')
+
+
+class OtrasPantallasDelAdminTests(_Base):
+    """El orden por estado no tiene que romper los formularios que eligen un profesional."""
+
+    def test_los_formularios_con_un_desplegable_de_profesionales_cargan(self):
+        self.psi('Ana', suscripcion_activa=True)
+        for nombre in ('turnos_disponibilidadsemanal_add', 'turnos_tiposesion_add', 'turnos_paciente_add',
+                       'directorio_ciudad_add', 'directorio_visitaperfil_changelist', 'directorio_ciudad_changelist'):
+            resp = self.client.get(reverse(f'admin:{nombre}'))
+            self.assertIn(resp.status_code, (200, 403), nombre)   # 403: solo lectura, pero sin error del servidor
+
+    def test_el_desplegable_ofrece_a_los_profesionales_por_nombre(self):
+        self.psi('Zoe')
+        self.psi('Ana')
+        resp = self.client.get(reverse('admin:turnos_disponibilidadsemanal_add'))
+        html = resp.content.decode()
+        self.assertLess(html.index('>Ana (PE)<'), html.index('>Zoe (PE)<'))

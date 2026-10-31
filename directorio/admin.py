@@ -249,7 +249,11 @@ class PsicologoAdmin(admin.ModelAdmin):
         return queryset.order_by(*self.get_ordering(request))
 
     def get_ordering(self, request):
-        return ('pais__orden', 'pais__nombre', 'estado_orden', 'nombre')
+        # El orden por estado solo vale en la lista de profesionales. En los desplegables de otras
+        # pantallas del admin (que eligen un profesional) ese estado no existe: ahí, por nombre.
+        if request.path == reverse('admin:directorio_psicologo_changelist'):
+            return ('pais__orden', 'pais__nombre', 'estado_orden', 'nombre')
+        return ('nombre',)
 
     @admin.display(description='Estado', ordering='estado_orden')
     def estado_visible(self, obj):
