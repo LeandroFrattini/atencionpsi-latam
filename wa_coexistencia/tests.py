@@ -204,3 +204,22 @@ class CallbackTests(TestCase):
         self.client.get(reverse('wa_coexistencia'))
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
         self.assertIn('code=(oculto)', html)
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_un_error_de_dominio_191_tambien_prueba_la_siguiente_y_se_informa_cada_intento(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos.get.return_value = _respuesta({'error': {'code': 191, 'message': 'dominio no incluido'}})
+        with mock.patch.dict(os.environ, {'META_APP_SECRET': 'x'}):
+            resp = self._post({'code': 'abc', 'waba_id': '555'})
+        datos = resp.json()
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(datos['paso'], 'canje')
+        self.assertEqual(len(datos['intentos']), 5)
+        self.assertEqual(datos['intentos'][0]['redirect_uri'], '(vacío)')
+        self.assertEqual(datos['intentos'][0]['codigo'], 191)
+        self.assertIn('version', datos)
+        self.assertNotIn('abc', json.dumps(datos['intentos']))   # el code no se devuelve
+
+    def test_la_pagina_muestra_la_version_desplegada(self):
+        html = self.client.get(reverse('wa_coexistencia')).content.decode()
+        self.assertIn('versión 4', html)

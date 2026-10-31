@@ -21,6 +21,8 @@ GRAPH = "https://graph.facebook.com/v25.0"
 # Identificadores públicos de la app de Meta y de la configuración de registro (no son secretos).
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
+# Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
+VERSION = 4
 
 
 @staff_member_required
@@ -30,6 +32,7 @@ def coexistencia(request):
     resp = render(request, "wa_coexistencia/coexistencia.html", {
         "app_id": APP_ID,
         "config_id": CONFIG_ID,
+        "version": VERSION,
     })
     # Django manda por defecto "same-origin", que corta la comunicación con la ventana emergente de Meta
     # y el registro se cuelga. Solo para esta página: "same-origin-allow-popups".
@@ -39,10 +42,18 @@ def coexistencia(request):
 
 def _canjear_code(code, secreto, request):
     """Canjea el code por un token. Un code que sale del SDK de JavaScript de Facebook se canjea con
-    redirect_uri VACÍO; si Meta responde 36008 ("redirect_uri distinto") se prueban las alternativas
-    razonables. Devuelve (token, respuesta_de_meta, redirect_uri_usado)."""
-    candidatas = ["", request.build_absolute_uri(request.path.replace("callback/", "")), f"{request.scheme}://{request.get_host()}/"]
-    respuesta = {}
+    redirect_uri VACÍO, pero Meta a veces pide otro: se prueban las alternativas razonables mientras el
+    error sea de redirect_uri (36008) o de dominio (191). Devuelve (token, última_respuesta, redirect_uri_usado,
+    intentos), donde `intentos` resume qué respondió Meta en cada prueba (sin datos sensibles)."""
+    origen = f"{request.scheme}://{request.get_host()}"
+    candidatas = [
+        "",
+        request.build_absolute_uri(request.path.replace("callback/", "")),
+        origen + "/",
+        origen,
+        "https://www.facebook.com/connect/login_success.html",
+    ]
+    respuesta, intentos = {}, []
     for redirect_uri in candidatas:
         respuesta = requests.get(f"{GRAPH}/oauth/access_token", params={
             "client_id": APP_ID,
@@ -51,10 +62,16 @@ def _canjear_code(code, secreto, request):
             "code": code,
         }, timeout=20).json()
         if respuesta.get("access_token"):
-            return respuesta["access_token"], respuesta, redirect_uri
-        if (respuesta.get("error") or {}).get("error_subcode") != 36008:
+            intentos.append({"redirect_uri": redirect_uri or "(vacío)", "resultado": "ok"})
+            return respuesta["access_token"], respuesta, redirect_uri, intentos
+        error = respuesta.get("error") or {}
+        intentos.append({
+            "redirect_uri": redirect_uri or "(vacío)",
+            "codigo": error.get("code"), "subcodigo": error.get("error_subcode"), "mensaje": error.get("message"),
+        })
+        if error.get("error_subcode") != 36008 and error.get("code") != 191:
             break   # otro error (code vencido, secreto mal...): probar otro redirect_uri no sirve
-    return None, respuesta, None
+    return None, respuesta, None, intentos
 
 
 def _cuentas_del_token(token, secreto):
@@ -109,9 +126,9 @@ def coexistencia_callback(request):
 
     try:
         # 1) Canjear el code por un token (el code vence en ~30 segundos)
-        token, tok, redirect_uri = _canjear_code(code, secreto, request)
+        token, tok, redirect_uri, intentos = _canjear_code(code, secreto, request)
         if not token:
-            return JsonResponse({"ok": False, "paso": "canje", "respuesta": tok}, status=400)
+            return JsonResponse({"ok": False, "version": VERSION, "paso": "canje", "intentos": intentos}, status=400)
 
         # 2) Cuentas a conectar: la que mandó el navegador o, si no llegó el evento de Meta, las que
         #    figuran en el token.
@@ -131,6 +148,7 @@ def coexistencia_callback(request):
     # En coexistencia NO se llama a /register: el número ya está registrado.
     return JsonResponse({
         "ok": all(c["suscripcion_ok"] for c in cuentas),
+        "version": VERSION,
         "origen_waba": "navegador" if waba_id else "token",
         "redirect_uri": redirect_uri or "(vacío)",
         "phone_number_id": phone_number_id,
