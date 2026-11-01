@@ -1130,7 +1130,19 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 /* ---- Portal: editor de perfil con vista previa ---- */
 .editor-pagina { max-width: 1080px; margin: 0 auto; }
 .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
-.editor-form-card { max-width: none; margin: 0; }
+.editor-form-card { max-width: none; margin: 0; min-width: 0; }
+.editor-grid > * { min-width: 0; }
+.solo-celular { display: none; }
+@media (max-width: 959px) {
+    .solo-escritorio { display: none; }
+    .solo-celular { display: inline; }
+}
+/* El campo de la foto trae una casilla ("Limpiar"), y la regla de los campos con casilla los pone en fila:
+   quedaban título, enlace, casilla y selector de archivo apretados. Ese campo va en columna. */
+.portal-field:has(input[type="file"]) { flex-direction: column; align-items: stretch; gap: 5px; }
+.editor-form-card .portal-field { min-width: 0; }
+.editor-form-card .portal-field input[type="file"] { max-width: 100%; min-width: 0; }
+.editor-form-card .portal-field a { overflow-wrap: anywhere; }
 .editor-botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .editor-barra { display: none; }
 
@@ -1150,7 +1162,7 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 .previa-estado-ok { color: var(--verde-oscuro); }
 
 @media (max-width: 959px) {
-    .editor-grid { grid-template-columns: 1fr; padding-bottom: 84px; }
+    .editor-grid { grid-template-columns: minmax(0, 1fr); padding-bottom: 84px; }
     .previa { position: fixed; inset: 0; z-index: 300; max-height: none; border-radius: 0; border: none; display: none; padding: 20px 20px 96px; }
     .previa.abierta { display: block; }
     .previa-cerrar {
