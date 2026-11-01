@@ -57,10 +57,19 @@ class RespuestaPais(models.Model):
 
 
 class ContactoWhatsApp(models.Model):
-    """A quién ya se le respondió y cuándo (solo el teléfono, no el contenido de los mensajes)."""
+    """Quién escribió y a quién ya se le respondió (solo el teléfono y las fechas, no el contenido)."""
     telefono = models.CharField(max_length=30, unique=True)
-    ultima_respuesta = models.DateTimeField(null=True, blank=True)
+    ultimo_mensaje = models.DateTimeField('Último mensaje recibido', null=True, blank=True)
+    ultima_respuesta = models.DateTimeField('Última respuesta automática', null=True, blank=True)
+    ultimo_error = models.CharField(
+        'Último error al responder', max_length=300, blank=True,
+        help_text='Lo que contestó Meta si rechazó el envío. Vacío si la última respuesta salió bien.',
+    )
     creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Contacto de WhatsApp'
+        verbose_name_plural = 'Contactos de WhatsApp'
 
     def __str__(self):
         return self.telefono

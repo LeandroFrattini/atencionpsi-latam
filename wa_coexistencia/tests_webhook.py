@@ -248,3 +248,47 @@ class PoliticaDePrivacidadTests(TestCase):
         self.assertContains(resp, 'Si nos escribís por WhatsApp')
         self.assertContains(resp, 'WhatsApp (Meta)')
         self.assertContains(resp, 'id="eliminar-datos"')
+
+
+class ContactosTests(_Base):
+    @mock.patch('wa_coexistencia.webhook.requests')
+    def test_con_las_respuestas_apagadas_igual_queda_anotado_que_escribieron(self, pedidos):
+        self.config.activa = False
+        self.config.save()
+        self.enviar_aviso(_aviso('51999111222'))
+        contacto = ContactoWhatsApp.objects.get(telefono='51999111222')
+        self.assertIsNotNone(contacto.ultimo_mensaje)
+        self.assertIsNone(contacto.ultima_respuesta)
+        pedidos.post.assert_not_called()
+
+    @mock.patch('wa_coexistencia.webhook.requests')
+    def test_si_responde_bien_queda_la_fecha_y_sin_error(self, pedidos):
+        pedidos.post.return_value = _ok()
+        self.enviar_aviso(_aviso('51999111222'))
+        contacto = ContactoWhatsApp.objects.get()
+        self.assertIsNotNone(contacto.ultima_respuesta)
+        self.assertEqual(contacto.ultimo_error, '')
+
+    @mock.patch('wa_coexistencia.webhook.requests')
+    def test_si_meta_rechaza_queda_el_motivo_para_verlo_en_el_admin(self, pedidos):
+        pedidos.post.return_value = mock.Mock(ok=False, status_code=400, text='{"error":{"message":"pago"}}')
+        with self.assertLogs('wa_coexistencia.webhook', level='ERROR'):
+            self.enviar_aviso(_aviso('51999111222'))
+        contacto = ContactoWhatsApp.objects.get()
+        self.assertIn('400', contacto.ultimo_error)
+        self.assertIn('pago', contacto.ultimo_error)
+        self.assertIsNone(contacto.ultima_respuesta)
+
+    @mock.patch('wa_coexistencia.webhook.requests')
+    def test_sin_token_de_envio_queda_anotado(self, pedidos):
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': ''}):
+            with self.assertLogs('wa_coexistencia.webhook', level='ERROR'):
+                self.enviar_aviso(_aviso('51999111222'))
+        self.assertIn('WHATSAPP_TOKEN', ContactoWhatsApp.objects.get().ultimo_error)
+
+    def test_el_admin_lista_los_contactos_pero_no_deja_editarlos(self):
+        ContactoWhatsApp.objects.create(telefono='51999111222', ultimo_mensaje=timezone.now())
+        self.client.force_login(User.objects.create_superuser('a@example.com', 'a@example.com', 'ClaveSegura123'))
+        resp = self.client.get(reverse('admin:wa_coexistencia_contactowhatsapp_changelist'))
+        self.assertContains(resp, '51999111222')
+        self.assertEqual(self.client.get(reverse('admin:wa_coexistencia_contactowhatsapp_add')).status_code, 403)

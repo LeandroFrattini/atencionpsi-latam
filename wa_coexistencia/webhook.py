@@ -50,7 +50,7 @@ def pais_del_telefono(telefono):
 
 
 def _enviar(token, telefono, contenido):
-    """Manda un mensaje por la API. Devuelve True si Meta lo aceptó."""
+    """Manda un mensaje por la API. Devuelve (True, '') si Meta lo aceptó, o (False, motivo)."""
     r = requests.post(
         f'{GRAPH}/{PHONE_NUMBER_ID}/messages',
         headers={'Authorization': f'Bearer {token}'},
@@ -59,7 +59,8 @@ def _enviar(token, telefono, contenido):
     )
     if not r.ok:
         logger.error('Meta rechazó un mensaje automático (%s): %s', r.status_code, r.text[:300])
-    return r.ok
+        return False, f'{r.status_code}: {r.text}'[:300]
+    return True, ''
 
 
 def _contenido_con_archivo(request, respuesta):
@@ -82,16 +83,17 @@ def _contenido_con_archivo(request, respuesta):
     return [{'type': clave, clave: archivo}, {'type': 'text', 'text': {'body': texto}}]
 
 
-def _responder(request, telefono):
+def _responder(request, contacto, ahora):
+    telefono = contacto.telefono
     config = ConfiguracionWhatsApp.obtener()
     if not config.activa:
         return
     token = os.environ.get('WHATSAPP_TOKEN')
     if not token:
         logger.error('No se puede responder por WhatsApp: falta WHATSAPP_TOKEN')
+        contacto.ultimo_error = 'Falta configurar WHATSAPP_TOKEN en el servidor'
+        contacto.save(update_fields=['ultimo_error'])
         return
-    ahora = timezone.now()
-    contacto, _ = ContactoWhatsApp.objects.get_or_create(telefono=telefono)
     if contacto.ultima_respuesta and ahora - contacto.ultima_respuesta < datetime.timedelta(hours=config.horas_entre_respuestas):
         return
 
@@ -104,12 +106,15 @@ def _responder(request, telefono):
         mensajes.append({'type': 'text', 'text': {'body': config.texto_otro_pais.strip()}})
 
     # Se marca al contacto apenas se manda la bienvenida: si algo falla después no se le repite todo.
+    contacto.ultimo_error = ''
     for i, contenido in enumerate(mensajes):
-        if not _enviar(token, telefono, contenido):
+        ok, motivo = _enviar(token, telefono, contenido)
+        if not ok:
+            contacto.ultimo_error = motivo
             break
         if i == 0:
             contacto.ultima_respuesta = ahora
-            contacto.save(update_fields=['ultima_respuesta'])
+    contacto.save(update_fields=['ultima_respuesta', 'ultimo_error'])
 
 
 @csrf_exempt
@@ -151,4 +156,8 @@ def _atender(request, mensaje):
     _, nuevo = MensajeRecibido.objects.get_or_create(wa_id=wa_id)
     if not nuevo:
         return   # reintento de Meta: ya se atendió
-    _responder(request, telefono)
+    ahora = timezone.now()
+    contacto, _ = ContactoWhatsApp.objects.get_or_create(telefono=telefono)
+    contacto.ultimo_mensaje = ahora   # queda anotado aunque las respuestas estén apagadas: sirve para ver que llegan
+    contacto.save(update_fields=['ultimo_mensaje'])
+    _responder(request, contacto, ahora)
