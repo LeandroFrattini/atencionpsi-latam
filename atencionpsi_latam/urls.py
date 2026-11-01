@@ -7,6 +7,7 @@ from django.urls import include, path
 from directorio.sitemaps import CiudadesSitemap, EspecialidadesSitemap, PaisesSitemap, PsicologosSitemap
 from directorio.views import robots_txt
 from wa_coexistencia import views as wa_views
+from wa_coexistencia import webhook as wa_webhook
 
 sitemaps = {
     'paises': PaisesSitemap,
@@ -23,6 +24,7 @@ urlpatterns = [
     path('wa-coexistencia/', wa_views.coexistencia, name='wa_coexistencia'),
     path('wa-coexistencia/callback/', wa_views.coexistencia_callback, name='wa_coexistencia_callback'),
     path('wa-coexistencia/token/', wa_views.coexistencia_con_token, name='wa_coexistencia_token'),
+    path('wa-coexistencia/webhook/', wa_webhook.recibir, name='wa_webhook'),
     path('', include('turnos.urls')),
     path('', include('directorio.urls')),
 ]
