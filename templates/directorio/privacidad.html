@@ -13,6 +13,7 @@
             <li><strong>Si reservás un turno como paciente:</strong> nombre, apellido, teléfono, email, edad (opcional) y el motivo de consulta que quieras contarnos (opcional). Se los pasamos directo al profesional que elegiste, para que sepa quién le escribe.</li>
             <li><strong>Si te registrás como profesional:</strong> nombre, email, WhatsApp y contraseña al crear la cuenta; después, para publicar tu perfil, además tu matrícula/colegiatura, foto, formación, orientación, ciudad y modalidad de atención.</li>
             <li><strong>Si nos escribís por el formulario de contacto:</strong> nombre, email y tu mensaje.</li>
+            <li><strong>Si nos escribís por WhatsApp:</strong> tu número de teléfono, el nombre de tu perfil de WhatsApp y el contenido de tus mensajes. Los mensajes quedan en la aplicación de WhatsApp Business de Atención Psi; nuestro sitio guarda únicamente tu número y la fecha de la última respuesta automática que te enviamos.</li>
         </ul>
     </section>
 
@@ -22,6 +23,7 @@
             <li>Mostrar tu perfil público (si sos profesional) o confirmarte el turno reservado (si sos paciente).</li>
             <li>Mandarte los mails operativos del servicio: confirmación de turno, aviso al profesional de una nueva reserva, recordatorios de suscripción o de perfil incompleto, y las respuestas a tus consultas de contacto.</li>
             <li>Procesar el pago de la suscripción de los profesionales (ver más abajo quién procesa eso realmente).</li>
+            <li>Responderte cuando nos escribís por WhatsApp: un mensaje automático de bienvenida y otro con información según tu país, que se envían una sola vez cada cierto tiempo.</li>
             <li>Prevenir spam y uso abusivo del sitio.</li>
         </ul>
         <p>No usamos tus datos para nada más que esto: no los vendemos ni los cedemos con fines publicitarios de terceros.</p>
@@ -32,6 +34,7 @@
         <ul>
             <li><strong>El profesional que elegiste</strong> (si reservaste un turno): recibe tus datos de contacto y motivo de consulta para poder atenderte.</li>
             <li><strong>Supabase</strong> (almacenamiento): ahí se guardan las fotos de perfil de los profesionales.</li>
+            <li><strong>WhatsApp (Meta)</strong>: por su plataforma circulan los mensajes que intercambiás con nuestro número de WhatsApp, bajo las políticas de privacidad de WhatsApp y de Meta.</li>
             <li><strong>Brevo</strong> (envío de mails): por ahí salen los mails transaccionales del sitio (confirmaciones, recordatorios, contacto).</li>
             <li><strong>dLocal Go</strong> (pasarela de pago): procesa el cobro de la suscripción de los profesionales. <strong>Atención Psi nunca ve ni guarda el número de tarjeta ni ningún otro dato de pago</strong> -- eso lo maneja dLocal Go directamente, bajo sus propias políticas de seguridad (PCI-DSS).</li>
         </ul>
@@ -48,9 +51,9 @@
         <p>El sitio usa las cookies estrictamente necesarias para funcionar (mantener tu sesión iniciada, protección contra ataques). Si en algún momento activamos analítica de tráfico (por ejemplo, Google Analytics), vas a ver un aviso pidiendo tu consentimiento antes de que se activen esas cookies adicionales.</p>
     </section>
 
-    <section class="terminos-seccion">
+    <section class="terminos-seccion" id="eliminar-datos">
         <h2>6. Tus derechos</h2>
-        <p>Podés pedirnos en cualquier momento acceder a tus datos, corregirlos o eliminarlos, escribiéndonos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %}, por WhatsApp al <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">{{ contacto_telefono }}</a>{% endif %} o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Vamos a responderte a la brevedad.</p>
+        <p>Podés pedirnos en cualquier momento acceder a tus datos, corregirlos o eliminarlos (incluido tu número de WhatsApp, si nos escribiste), escribiéndonos a <a href="mailto:{{ contacto_email }}">{{ contacto_email }}</a>{% if contacto_whatsapp %}, por WhatsApp al <a href="https://wa.me/{{ contacto_whatsapp }}" target="_blank" rel="noopener">{{ contacto_telefono }}</a>{% endif %} o desde el <a href="{% url 'contacto' %}">formulario de contacto</a>. Vamos a responderte a la brevedad.</p>
     </section>
 
     <section class="terminos-seccion">

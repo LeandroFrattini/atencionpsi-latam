@@ -238,3 +238,13 @@ class AdminTests(_Base):
         resp = self.client.post(reverse('admin:wa_coexistencia_configuracionwhatsapp_delete', args=[1]), {'post': 'yes'})
         self.assertEqual(resp.status_code, 403)
         self.assertTrue(ConfiguracionWhatsApp.objects.exists())
+
+
+class PoliticaDePrivacidadTests(TestCase):
+    """Meta pide que la política cubra WhatsApp y una forma de eliminar los datos."""
+
+    def test_menciona_whatsapp_y_tiene_el_ancla_de_eliminacion_de_datos(self):
+        resp = self.client.get(reverse('privacidad'))
+        self.assertContains(resp, 'Si nos escribís por WhatsApp')
+        self.assertContains(resp, 'WhatsApp (Meta)')
+        self.assertContains(resp, 'id="eliminar-datos"')
