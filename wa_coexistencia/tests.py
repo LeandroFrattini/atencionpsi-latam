@@ -153,7 +153,8 @@ class CallbackTests(TestCase):
         self.assertTrue(datos['ok'])
         self.assertEqual(datos['origen_waba'], 'token')
         self.assertEqual([c['waba_id'] for c in datos['cuentas']], ['900', '901'])   # sin repetidos y sin otros permisos
-        self.assertEqual(datos['cuentas'][0]['numeros'], [{'id': '111', 'verified_name': 'Atencion Psi', 'status': 'CONNECTED'}])
+        numero = datos['cuentas'][0]['numeros'][0]
+        self.assertEqual((numero['id'], numero['verified_name'], numero['status']), ('111', 'Atencion Psi', 'CONNECTED'))
         self.assertNotIn('TOKEN-SECRETO', resp.content.decode())
         self.assertNotIn('secreto-de-prueba', resp.content.decode())
         # debug_token se consulta con el token de la app (id|secreto), no con el del usuario.
@@ -223,7 +224,7 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 9', html)
+        self.assertIn('versión 10', html)
 
 
 class TokenDelSistemaTests(TestCase):
@@ -420,3 +421,49 @@ class BusquedaPorNumeroTests(TestCase):
         pasos = [p['paso'] for p in datos['diagnostico']['busqueda_por_negocio']]
         self.assertEqual(pasos, ['numero', 'asignadas', 'negocios_del_usuario', 'negocio_de_la_app'])
         self.assertNotIn('secreto-x', resp.content.decode())
+
+
+class SaludDelNumeroTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_user('staff@example.com', password='ClaveSegura123', is_staff=True))
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_cada_numero_trae_su_salud_con_los_motivos_de_bloqueo(self, pedidos):
+        pedidos.RequestException = Exception
+
+        def get(url, **kwargs):
+            if url.endswith('/phone_numbers'):
+                return _respuesta({'data': [{'id': '111', 'status': 'DISCONNECTED'}]})
+            if url.endswith('/111'):
+                return _respuesta({'health_status': {'can_send_message': 'BLOCKED', 'entities': [
+                    {'entity_type': 'PHONE_NUMBER', 'id': '111', 'can_send_message': 'BLOCKED',
+                     'errors': [{'error_code': 141006, 'error_description': 'falta método de pago'}]}]}})
+            return _respuesta({})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 'TOKEN-X', 'META_APP_SECRET': 'x', 'WHATSAPP_WABA_ID': '777'}):
+            resp = self.client.post(reverse('wa_coexistencia_token'), '{}', content_type='application/json')
+        numero = resp.json()['cuentas'][0]['numeros'][0]
+        self.assertEqual(numero['salud']['health_status']['can_send_message'], 'BLOCKED')
+        self.assertNotIn('TOKEN-X', resp.content.decode())
+
+    @mock.patch('wa_coexistencia.views.requests')
+    def test_si_meta_rechaza_algun_campo_de_salud_reintenta_solo_con_health_status(self, pedidos):
+        pedidos.RequestException = Exception
+        pedidos_campos = []
+
+        def get(url, **kwargs):
+            if url.endswith('/phone_numbers'):
+                return _respuesta({'data': [{'id': '111'}]})
+            if url.endswith('/111'):
+                pedidos_campos.append(kwargs['params']['fields'])
+                if 'account_mode' in kwargs['params']['fields']:
+                    return _respuesta({'error': {'message': 'campo inválido'}}, ok=False)
+                return _respuesta({'health_status': {'can_send_message': 'AVAILABLE'}})
+            return _respuesta({})
+        pedidos.get.side_effect = get
+        pedidos.post.return_value = _respuesta({'success': True})
+        with mock.patch.dict(os.environ, {'WHATSAPP_TOKEN': 't', 'META_APP_SECRET': 'x', 'WHATSAPP_WABA_ID': '777'}):
+            resp = self.client.post(reverse('wa_coexistencia_token'), '{}', content_type='application/json')
+        self.assertEqual(resp.json()['cuentas'][0]['numeros'][0]['salud']['health_status']['can_send_message'], 'AVAILABLE')
+        self.assertEqual(pedidos_campos[-1], 'health_status')
