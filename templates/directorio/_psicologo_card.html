@@ -36,23 +36,25 @@ contexto. Extraída del buscador para reutilizarla también en los
             {% endif %}
         </div>
 
-        {% if p.orientaciones_publicas %}
+        {# Topes para que todas las tarjetas tengan un alto parecido: 2 orientaciones, 3 motivos, 3 públicos y "+N" con lo que sobra. #}
+        {# (La vista previa del editor, en portal/editar_perfil.html, usa los mismos números.) #}
+        {% with ors=p.orientaciones_publicas %}{% if ors %}
             <div class="psicologo-orientacion">
-                {% for o in p.orientaciones_publicas %}{{ o.nombre }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+                {% for o in ors|slice:":2" %}{{ o.nombre }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}{% if ors|length > 2 %} <span class="psicologo-mas">+{{ ors|length|add:"-2" }}</span>{% endif %}
             </div>
-        {% endif %}
+        {% endif %}{% endwith %}
 
-        {% if p.especialidades_publicas %}
+        {% with es=p.especialidades_publicas %}{% if es %}
             <div class="psicologo-chips">
-                {% for e in p.especialidades_publicas|slice:":3" %}<span class="psicologo-chip psicologo-chip-verde">{{ e.nombre }}</span>{% endfor %}
+                {% for e in es|slice:":3" %}<span class="psicologo-chip psicologo-chip-verde">{{ e.nombre }}</span>{% endfor %}{% if es|length > 3 %}<span class="psicologo-chip psicologo-chip-mas">+{{ es|length|add:"-3" }} más</span>{% endif %}
             </div>
-        {% endif %}
+        {% endif %}{% endwith %}
 
-        {% if p.publicos_publicos %}
+        {% with pus=p.publicos_publicos %}{% if pus %}
             <div class="psicologo-chips">
-                {% for pu in p.publicos_publicos %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}
+                {% for pu in pus|slice:":3" %}<span class="psicologo-chip">{{ pu.nombre }}</span>{% endfor %}{% if pus|length > 3 %}<span class="psicologo-chip psicologo-chip-mas">+{{ pus|length|add:"-3" }} más</span>{% endif %}
             </div>
-        {% endif %}
+        {% endif %}{% endwith %}
 
         <div class="psicologo-card-botones">
             <a href="{{ p.url_publica }}" class="btn-secundario-card">Ver perfil</a>

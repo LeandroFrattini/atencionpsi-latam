@@ -223,7 +223,9 @@ main {
     box-shadow: 0 4px 14px rgba(0,0,0,0.18);
 }
 
-.psicologo-card-body { padding: 22px 22px 24px; text-align: center; }
+/* El cuerpo ocupa todo el alto de la tarjeta y los botones se van al fondo: en una misma fila
+   los botones quedan alineados aunque una tarjeta tenga menos texto que otra. */
+.psicologo-card-body { padding: 22px 22px 24px; text-align: center; flex: 1; display: flex; flex-direction: column; }
 
 .psicologo-nombre-link { display: block; }
 .psicologo-nombre { font-weight: 700; color: var(--texto-titulo); font-size: 1.15rem; }
@@ -244,7 +246,11 @@ main {
     color: var(--verde-oscuro);
     margin-top: 14px;
     line-height: 1.1;
+    /* Tope de 3 renglones: si las orientaciones son larguísimas se corta con "…" en vez de estirar la tarjeta. */
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* "+3": cuántas orientaciones más tiene que no entran en la tarjeta */
+.psicologo-mas { font-family: 'Montserrat', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--texto-tenue); white-space: nowrap; }
 
 .psicologo-chips {
     display: flex; flex-wrap: wrap; justify-content: center; gap: 7px;
@@ -255,8 +261,10 @@ main {
     font-size: 0.76rem; font-weight: 600;
     padding: 5px 12px; border-radius: 999px;
 }
+/* "+2 más": lo que no entra en la tarjeta, en gris para que no compita con los chips reales */
+.psicologo-chip-mas { background: #f1eeea; color: var(--texto-secundario); }
 
-.psicologo-card-botones { display: flex; flex-direction: column; gap: 9px; width: 100%; margin-top: 22px; }
+.psicologo-card-botones { display: flex; flex-direction: column; gap: 9px; width: 100%; margin-top: auto; padding-top: 22px; }
 .btn-secundario-card {
     display: block; text-align: center;
     background: #fff; color: var(--texto-titulo); font-weight: 700;

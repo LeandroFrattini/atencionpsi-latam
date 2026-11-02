@@ -138,8 +138,13 @@
         var precio = muestraPrecio ? valor('precio_sesion') : '';
         var lugar = ciudad();
         var orient = tildadas('orientaciones');
-        var motivos = tildadas('especialidades').slice(0, 3);
-        var publicos = tildadas('publicos');
+        // Mismos topes que la tarjeta real (templates/directorio/_psicologo_card.html).
+        var motivosTodos = tildadas('especialidades');
+        var motivos = motivosTodos.slice(0, 3);
+        var publicosTodos = tildadas('publicos');
+        var publicos = publicosTodos.slice(0, 3);
+        var orientTodas = orient;
+        orient = orient.slice(0, 2);
 
         var h = '<div class="psicologo-card previa-card">';
         h += '<div class="psicologo-foto-wrap">';
@@ -153,9 +158,10 @@
         if (modalidad === 'online' || modalidad === 'ambas') h += '<span>' + ICONO_PANTALLA + ' Online</span>';
         if (modalidad === 'presencial' || modalidad === 'ambas') h += '<span>' + ICONO_LUGAR + ' Presencial</span>';
         h += '</div>';
-        if (orient.length) h += '<div class="psicologo-orientacion">' + orient.map(esc).join(' &middot; ') + '</div>';
-        if (motivos.length) h += '<div class="psicologo-chips">' + motivos.map(function (m) { return '<span class="psicologo-chip psicologo-chip-verde">' + esc(m) + '</span>'; }).join('') + '</div>';
-        if (publicos.length) h += '<div class="psicologo-chips">' + publicos.map(function (m) { return '<span class="psicologo-chip">' + esc(m) + '</span>'; }).join('') + '</div>';
+        function mas(total, tope) { return total > tope ? '<span class="psicologo-chip psicologo-chip-mas">+' + (total - tope) + ' más</span>' : ''; }
+        if (orient.length) h += '<div class="psicologo-orientacion">' + orient.map(esc).join(' &middot; ') + (orientTodas.length > 2 ? ' <span class="psicologo-mas">+' + (orientTodas.length - 2) + '</span>' : '') + '</div>';
+        if (motivos.length) h += '<div class="psicologo-chips">' + motivos.map(function (m) { return '<span class="psicologo-chip psicologo-chip-verde">' + esc(m) + '</span>'; }).join('') + mas(motivosTodos.length, 3) + '</div>';
+        if (publicos.length) h += '<div class="psicologo-chips">' + publicos.map(function (m) { return '<span class="psicologo-chip">' + esc(m) + '</span>'; }).join('') + mas(publicosTodos.length, 3) + '</div>';
         h += '<div class="psicologo-card-botones"><span class="btn-secundario-card">Ver perfil</span><span class="btn-whatsapp">WhatsApp</span></div>';
         h += '</div></div>';
         tarjeta.innerHTML = h;
