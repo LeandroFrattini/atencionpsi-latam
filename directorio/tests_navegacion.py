@@ -226,3 +226,33 @@ class SaludoDelProfesionalTests(_Base):
     def test_nombre_corto_saca_los_titulos(self):
         for nombre, esperado in (('Lic. María Gonzales', 'María'), ('Mg. Dr. Pedro Pérez', 'Pedro'), ('Camila Torres', 'Camila'), ('  Dra.   Ana', 'Ana')):
             self.assertEqual(Psicologo(nombre=nombre).nombre_corto, esperado)
+
+
+class TarjetaDePsicologoTests(TestCase):
+    """Todas las tarjetas de profesionales tienen la foto en una caja de la misma forma, sin
+    importar el tamaño de la imagen original (una foto muy alta rompía el diseño)."""
+
+    def _css(self):
+        import os
+        from django.conf import settings
+        with open(os.path.join(settings.BASE_DIR, 'static', 'css', 'base.css'), encoding='utf-8') as f:
+            return f.read()
+
+    def _regla(self, css, selector):
+        import re
+        m = re.search(re.escape(selector) + r'\s*\{([^}]*)\}', css)
+        self.assertIsNotNone(m, selector)
+        return m.group(1)
+
+    def test_la_caja_de_la_foto_tiene_proporcion_fija_y_recorta(self):
+        caja = self._regla(self._css(), '.psicologo-foto-wrap')
+        self.assertIn('aspect-ratio: 4 / 5', caja)
+        self.assertIn('overflow: hidden', caja)
+
+    def test_la_foto_no_define_el_alto_de_la_tarjeta(self):
+        foto = self._regla(self._css(), '.psicologo-foto')
+        self.assertIn('position: absolute', foto)
+        self.assertIn('object-fit: cover', foto)
+
+    def test_la_tarjeta_no_se_ensancha_por_el_contenido(self):
+        self.assertIn('min-width: 0', self._regla(self._css(), '.psicologo-card'))
