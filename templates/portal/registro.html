@@ -26,12 +26,16 @@
     <form method="post" class="portal-form">
         {% csrf_token %}
         {% for field in form %}
+            {% if field.is_hidden %}
+                {{ field }}
+            {% else %}
             <div class="portal-field">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% if field.help_text %}<p class="portal-field-ayuda">{{ field.help_text }}</p>{% endif %}
                 {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
             </div>
+            {% endif %}
         {% endfor %}
         <button type="submit" class="btn-primario">Crear mi cuenta</button>
     </form>

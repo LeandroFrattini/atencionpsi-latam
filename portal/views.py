@@ -154,6 +154,8 @@ def registro(request, pais_slug):
                     codigo = form.cleaned_data.get('codigo_fundador')
                     if codigo:
                         _canjear_codigo(request, psicologo, codigo, pais)
+                    elif getattr(form, 'invitacion_no_valida', False):
+                        messages.warning(request, MENSAJE_INVITACION_NO_VIGENTE)
             except (OperationalError, InterfaceError):
                 logger.exception('Falló la base de datos al registrar a %s', form.cleaned_data['email'])
                 close_old_connections()
@@ -183,6 +185,14 @@ def registro(request, pais_slug):
     return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
 
 
+# La invitación llega por link (?codigo=...) y la gente no ve ningún "código": los avisos hablan de
+# "invitación" y de los meses gratis, sin nombrar códigos ni fundadores.
+MENSAJE_INVITACION_NO_VIGENTE = (
+    'Tu cuenta se creó, pero esa invitación ya no está vigente (ya se usó, venció o es de otro país). '
+    'Si creés que es un error, escribinos desde Contacto y lo resolvemos.'
+)
+
+
 def _canjear_codigo(request, psicologo, codigo, pais):
     """Canjea el código de fundador con la fila bloqueada, para que dos
     personas no puedan usar a la vez un código de un solo uso."""
@@ -190,10 +200,10 @@ def _canjear_codigo(request, psicologo, codigo, pais):
         bloqueado = CodigoFundador.objects.select_for_update().get(pk=codigo.pk)
         motivo = bloqueado.motivo_de_rechazo(pais)
         if motivo:
-            messages.warning(request, f'Tu cuenta se creó, pero el código no se pudo aplicar: {motivo}')
+            messages.warning(request, MENSAJE_INVITACION_NO_VIGENTE)
             return
         psicologo.canjear_codigo_fundador(bloqueado)
-    messages.success(request, f'Código aplicado: {bloqueado.meses_gratis} meses gratis.')
+    messages.success(request, f'¡Listo! Tenés {bloqueado.meses_gratis} meses gratis para armar y publicar tu perfil.')
 
 
 class CambiarContrasenaView(SuccessMessageMixin, PasswordChangeView):

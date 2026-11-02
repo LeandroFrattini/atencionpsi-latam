@@ -76,10 +76,10 @@ class RegistroForm(HoneypotMixin, forms.Form):
     email = forms.EmailField(label='Email')
     whatsapp = forms.CharField(label='WhatsApp', max_length=30)
     password = forms.CharField(label='Contraseña', widget=forms.PasswordInput, min_length=8)
-    codigo_fundador = forms.CharField(
-        label='Código de fundador (si tenés uno)', max_length=30, required=False,
-        help_text='Si te invitamos a ser de los primeros, ingresá acá tu código para tener meses gratis.',
-    )
+    # Invisible para la gente: la invitación llega en el link de registro (?codigo=...) y viaja
+    # en este campo oculto. Si el código no sirve, el registro NO se bloquea (nadie podría
+    # corregirlo porque no lo ve): se crea la cuenta igual y se avisa (ver views._canjear_codigo).
+    codigo_fundador = forms.CharField(max_length=30, required=False, widget=forms.HiddenInput)
     # dLocal Go pidió consentimiento explícito, no implícito por el solo
     # hecho de registrarse -- checkbox propio, sin marcar por defecto.
     acepto_terminos = forms.BooleanField(
@@ -104,16 +104,16 @@ class RegistroForm(HoneypotMixin, forms.Form):
         return email
 
     def clean_codigo_fundador(self):
-        """Devuelve el CodigoFundador (o None si lo dejó vacío)."""
+        """Devuelve el CodigoFundador, o None si no vino o no existe. Nunca da error: si no
+        sirve (usado, vencido, de otro país) la vista lo detecta al canjearlo y avisa, sin
+        impedir que la persona se registre."""
         texto = (self.cleaned_data.get('codigo_fundador') or '').strip().upper()
+        self.invitacion_no_valida = False
         if not texto:
             return None
         codigo = CodigoFundador.objects.filter(codigo=texto).select_related('pais').first()
         if not codigo:
-            raise forms.ValidationError('No encontramos ese código. Revisalo o escribinos desde Contacto.')
-        motivo = codigo.motivo_de_rechazo(self.pais)
-        if motivo:
-            raise forms.ValidationError(motivo)
+            self.invitacion_no_valida = True
         return codigo
 
 

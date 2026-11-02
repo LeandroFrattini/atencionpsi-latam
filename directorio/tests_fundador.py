@@ -81,32 +81,53 @@ class RegistroConCodigoTests(_Base):
         self._registrar('  ' + c.codigo.lower() + ' ')
         self.assertTrue(Psicologo.objects.get(usuario__username='nueva@example.com').en_periodo_fundador)
 
+    def _sin_meses_gratis(self, email):
+        psi = Psicologo.objects.get(usuario__username=email)
+        self.assertIsNone(psi.gratis_hasta)
+        self.assertIsNone(psi.codigo_fundador)
+        return psi
+
     def test_un_codigo_de_un_solo_uso_no_se_puede_usar_dos_veces(self):
+        """La invitación ya usada NO bloquea el registro (el campo es invisible: nadie podría
+        corregirlo): se crea la cuenta sin meses gratis y se avisa."""
         c = CodigoFundador.objects.create()
         self._registrar(c.codigo)
         resp = self._registrar(c.codigo, email='otra@example.com', nombre='Otra Persona')
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'ya fue utilizado')
-        self.assertFalse(User.objects.filter(username='otra@example.com').exists())
+        self.assertContains(resp, 'esa invitación ya no está vigente')
+        self._sin_meses_gratis('otra@example.com')
+        self.assertEqual(c.usos, 1)
 
     def test_un_codigo_con_varios_usos_alcanza_hasta_el_maximo(self):
         c = CodigoFundador.objects.create(usos_maximos=2)
         self._registrar(c.codigo, email='a@example.com')
         self._registrar(c.codigo, email='b@example.com')
         resp = self._registrar(c.codigo, email='c@example.com')
-        self.assertContains(resp, 'ya fue utilizado')
+        self.assertContains(resp, 'esa invitación ya no está vigente')
+        self._sin_meses_gratis('c@example.com')
         self.assertEqual(c.usos, 2)
 
-    def test_codigo_inexistente_muestra_error_y_no_crea_la_cuenta(self):
+    def test_codigo_inexistente_no_bloquea_el_registro_pero_avisa(self):
         resp = self._registrar('FUNDADOR-NOEXISTE')
-        self.assertContains(resp, 'No encontramos ese código')
-        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'esa invitación ya no está vigente')
+        self._sin_meses_gratis('nueva@example.com')
 
-    def test_codigo_de_otro_pais_se_rechaza(self):
+    def test_codigo_de_otro_pais_no_bloquea_el_registro_pero_avisa(self):
         c = CodigoFundador.objects.create(pais=self.chile)
         resp = self._registrar(c.codigo, pais='peru')
-        self.assertContains(resp, 'Ese código es para Chile')
-        self.assertFalse(User.objects.filter(username='nueva@example.com').exists())
+        self.assertContains(resp, 'esa invitación ya no está vigente')
+        self._sin_meses_gratis('nueva@example.com')
+        self.assertEqual(c.usos, 0)
+
+    def test_los_avisos_nunca_hablan_de_codigos_ni_de_fundadores(self):
+        c = CodigoFundador.objects.create(pais=self.chile)
+        malo = self._registrar(c.codigo, pais='peru').content.decode().lower()
+        bueno = self._registrar(CodigoFundador.objects.create().codigo, email='ok@example.com').content.decode().lower()
+        for html in (malo, bueno):
+            self.assertNotIn('código', html)
+            self.assertNotIn('fundador', html)
+        self.assertIn('tenés 3 meses gratis', bueno)
 
     def test_si_la_base_se_corta_al_canjear_no_queda_una_cuenta_a_medias(self):
         """Caso real: "connection already closed" justo al aplicar el código.
@@ -272,3 +293,38 @@ class AdminCodigosFundadorTests(_Base):
         resp = self.client.post(reverse('admin:directorio_codigofundador_generar'), {'cantidad': 0, 'meses_gratis': 3})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(CodigoFundador.objects.count(), 0)
+
+
+class RegistroSinCampoDeCodigoTests(_Base):
+    """La gente no ve ningún "código de fundador": la invitación viaja en el link y en un campo oculto."""
+
+    def test_la_pagina_de_registro_no_muestra_ni_nombra_codigos(self):
+        import re
+        html = self.client.get(reverse('portal_registro', args=['peru'])).content.decode().lower()
+        # El campo oculto se llama codigo_fundador por dentro (un nombre que nadie ve): se descarta
+        # y se revisa solo lo que aparece en pantalla.
+        visible = re.sub(r'<input[^>]*codigo_fundador[^>]*>', '', html)
+        self.assertNotIn('código de fundador', visible)
+        self.assertNotIn('fundador', visible)
+        self.assertNotIn('si tenés uno', visible)
+
+    def test_el_link_con_codigo_lo_lleva_en_un_campo_oculto(self):
+        html = self.client.get(reverse('portal_registro', args=['peru']) + '?codigo=FUNDADOR.PE').content.decode()
+        self.assertRegex(html, r'<input[^>]*type="hidden"[^>]*name="codigo_fundador"[^>]*value="FUNDADOR\.PE"|'
+                               r'<input[^>]*name="codigo_fundador"[^>]*type="hidden"[^>]*value="FUNDADOR\.PE"')
+        self.assertNotIn('<label for="id_codigo_fundador"', html)
+
+    def test_el_link_con_codigo_sigue_dando_los_meses_gratis(self):
+        c = CodigoFundador.objects.create(pais=self.peru)
+        self._registrar(c.codigo)
+        self.assertTrue(Psicologo.objects.get(usuario__username='nueva@example.com').en_periodo_fundador)
+
+    def test_el_panel_dice_periodo_gratis_y_no_periodo_de_fundador(self):
+        c = CodigoFundador.objects.create(pais=self.peru)
+        self._registrar(c.codigo)
+        usuario = User.objects.get(username='nueva@example.com')
+        User.objects.filter(pk=usuario.pk).update(is_active=True)
+        self.client.force_login(usuario)
+        html = self.client.get(reverse('portal_dashboard')).content.decode()
+        self.assertIn('Período gratis: hasta el', html)
+        self.assertNotIn('Período de fundador', html)

@@ -24,7 +24,7 @@
         <li class="{% if p.matricula %}ok{% endif %}">{{ p.pais.etiqueta_matricula }}</li>
         <li class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
         <li class="{% if p.orientaciones.exists %}ok{% endif %}">Al menos una orientación</li>
-        <li class="{% if p.tiene_acceso %}ok{% endif %}">{% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}Período de fundador: gratis hasta el {{ p.gratis_hasta|date:"d/m/Y" }}{% else %}Plan activo (se elige al publicar){% endif %}</li>
+        <li class="{% if p.tiene_acceso %}ok{% endif %}">{% if p.en_periodo_fundador and not p.suscripcion_activa and not p.exento_de_pago %}Período gratis: hasta el {{ p.gratis_hasta|date:"d/m/Y" }}{% else %}Plan activo (se elige al publicar){% endif %}</li>
         <li class="{% if agenda_lista %}ok{% endif %}">Agenda configurada (tipos de sesión + disponibilidad)</li>
     </ul>
 
