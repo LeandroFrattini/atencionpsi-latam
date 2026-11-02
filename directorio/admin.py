@@ -226,7 +226,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     # Primero los países, y dentro de cada uno, los publicados arriba y los que solo hicieron la
     # cuenta al final. El estado se calcula con las mismas reglas que usa el sitio (ver estados.py).
     list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
-                    'fecha_alta_visible', 'visitas_30_visible')
+                    'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible')
     list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago',
                    'destacado', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
@@ -237,11 +237,12 @@ class PsicologoAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
+        ('Seguimiento por mail', {'fields': ('no_enviar_seguimiento', 'seguimientos_enviados', 'ultimo_seguimiento')}),
         ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
     )
-    readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde')
+    readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde', 'seguimientos_enviados', 'ultimo_seguimiento')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action',
-               'dar_gratis_hasta_action', 'quitar_gratis_action']
+               'dar_gratis_hasta_action', 'quitar_gratis_action', 'pausar_seguimiento_action', 'reanudar_seguimiento_action']
 
     def get_queryset(self, request):
         # Primero se calcula el estado y recién después se ordena (el orden usa ese estado).
@@ -299,9 +300,29 @@ class PsicologoAdmin(admin.ModelAdmin):
     def fecha_alta_visible(self, obj):
         return timezone.localtime(obj.fecha_alta).strftime('%d/%m/%y')
 
+    @admin.display(description='Seguimiento')
+    def seguimiento_visible(self, obj):
+        if obj.no_enviar_seguimiento:
+            return 'Pausado'
+        if not obj.seguimientos_enviados:
+            return '—'
+        ultimo = timezone.localtime(obj.ultimo_seguimiento).strftime('%d/%m') if obj.ultimo_seguimiento else '?'
+        return f'{obj.seguimientos_enviados} aviso(s) · último {ultimo}'
+
     @admin.display(description='Visitas (30 d)', ordering='visitas_30')
     def visitas_30_visible(self, obj):
         return obj.visitas_30 or 0
+
+    # ---- Seguimiento por mail de los perfiles sin publicar ----
+    @admin.action(description='Pausar el seguimiento por mail')
+    def pausar_seguimiento_action(self, request, queryset):
+        hechos = queryset.update(no_enviar_seguimiento=True)
+        self.message_user(request, f'Seguimiento pausado para {hechos} profesional(es).', level=messages.SUCCESS)
+
+    @admin.action(description='Reanudar el seguimiento por mail (empieza de nuevo)')
+    def reanudar_seguimiento_action(self, request, queryset):
+        hechos = queryset.update(no_enviar_seguimiento=False, seguimientos_enviados=0, ultimo_seguimiento=None)
+        self.message_user(request, f'Seguimiento reanudado para {hechos} profesional(es).', level=messages.SUCCESS)
 
     # ---- Período gratis (sin código): se le da a quien elijas, hasta la fecha que elijas ----
     @admin.action(description='Dar acceso gratis hasta una fecha…')
@@ -413,7 +434,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     @method_decorator(require_POST)
     def recordatorios_view(self, request):
         """Muestra (modo=simular) o manda (modo=enviar) los mails de recordatorio:
-        terminar el pago, completar el perfil y fin del período de fundador."""
+        seguimiento a quien no publicó su perfil (cada 3 días) y fin del período de fundador."""
         if not self.has_change_permission(request):
             raise PermissionDenied
         enviar = request.POST.get('modo') == 'enviar'

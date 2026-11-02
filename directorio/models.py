@@ -383,6 +383,14 @@ class Psicologo(models.Model):
     recordatorio_pago_enviado = models.BooleanField(default=False)
     # Segundo aviso, a los 7 días de registrarse sin plan (el primero es a los 2).
     recordatorio_pago_2_enviado = models.BooleanField(default=False)
+    # Seguimiento por mail a quien todavía no publicó (ver management/commands/enviar_recordatorios.py):
+    # cuántos avisos se le mandaron, cuándo fue el último y si se lo pausó a mano.
+    seguimientos_enviados = models.PositiveSmallIntegerField('Avisos de seguimiento enviados', default=0)
+    ultimo_seguimiento = models.DateTimeField('Último aviso de seguimiento', null=True, blank=True)
+    no_enviar_seguimiento = models.BooleanField(
+        'No enviar avisos de seguimiento', default=False,
+        help_text='Tildalo si la persona pidió no recibir más estos mails.',
+    )
     recordatorio_perfil_enviado = models.BooleanField(default=False)
 
     class Meta:

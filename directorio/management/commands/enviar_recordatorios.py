@@ -1,16 +1,38 @@
 import datetime
+import logging
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
+from directorio import estados
 from directorio.models import Psicologo
 
-VENTANA = datetime.timedelta(hours=24)
-VENTANA_PERFIL_SIN_PLAN = datetime.timedelta(days=2)
-VENTANA_SEGUNDO_AVISO = datetime.timedelta(days=7)
+logger = logging.getLogger(__name__)
+
 AVISO_VENCIMIENTO = datetime.timedelta(days=7)
+
+# Seguimiento a quien todavía no publicó su perfil (esté incompleto, completo sin plan, o completo sin publicar):
+# primer aviso a los 2 días de registrarse y después uno cada 3 días, hasta MAX_SEGUIMIENTOS avisos en total
+# (unas dos semanas y media). Después se frena solo: no se insiste para siempre.
+PRIMER_SEGUIMIENTO = datetime.timedelta(days=2)
+ENTRE_SEGUIMIENTOS = datetime.timedelta(days=3)
+MAX_SEGUIMIENTOS = 6
+# Quedan afuera: los publicados, los que no confirmaron el email y los que se les venció el período gratis
+# (esos tienen su propio aviso de fin de período).
+ESTADOS_CON_SEGUIMIENTO = ('sin_pago', 'incompleto', 'por_pagar', 'perfil_listo', 'listo')
+PASOS_TOTALES = 6   # nombre, matrícula, WhatsApp, foto, descripción y una orientación
+
+ASUNTOS = [
+    'Tu perfil en Atención Psi está casi listo',
+    'Te falta muy poco para publicar tu perfil',
+    '¿Te damos una mano para terminar tu perfil?',
+    'Tu perfil en Atención Psi sigue esperándote',
+    'Tu perfil todavía no está publicado',
+    'Último aviso sobre tu perfil en Atención Psi',
+]
 
 
 def _cierre():
@@ -20,56 +42,66 @@ def _cierre():
     return texto + '.'
 
 
-def _mensaje_casi_listo(p):
-    """Mail de los 2 días. Si el perfil ya está completo, solo falta elegir el plan y publicar; si no,
-    se le dice exactamente qué le falta. En los dos casos se aclara que el plan se elige al final."""
+def pendientes_de_seguimiento(ahora=None):
+    """Profesionales a los que hoy les toca un aviso de seguimiento."""
+    ahora = ahora or timezone.now()
+    base = estados.con_estado(Psicologo.objects.all()).filter(
+        estado_codigo__in=ESTADOS_CON_SEGUIMIENTO,
+        usuario__is_active=True,          # sin confirmar el email no pueden entrar
+        no_enviar_seguimiento=False,      # pausado a mano desde el admin
+        seguimientos_enviados__lt=MAX_SEGUIMIENTOS,
+    ).select_related('usuario', 'pais')
+    return base.filter(
+        Q(seguimientos_enviados=0, fecha_alta__lte=ahora - PRIMER_SEGUIMIENTO)
+        | Q(seguimientos_enviados__gt=0, ultimo_seguimiento__lte=ahora - ENTRE_SEGUIMIENTOS)
+    )
+
+
+def _asunto(p):
+    return ASUNTOS[min(p.seguimientos_enviados, len(ASUNTOS) - 1)]
+
+
+def _mensaje(p):
+    """Mail de seguimiento. Dice dónde quedó el perfil: qué falta, o que solo falta elegir el plan, o que ya
+    puede publicarlo. Cambia el asunto con cada aviso y el último avisa que no habrá más."""
     nombre = p.nombre_corto or p.nombre
     faltan = p.faltantes_perfil
     if faltan:
+        hechos = PASOS_TOTALES - len(faltan)
         cuerpo = (
-            'Empezaste a armar tu perfil en Atención Psi y ya tenés buena parte hecha. '
-            f'Para poder publicarlo te falta: {", ".join(faltan)}.\n\n'
-            'Podés completarlo con calma y, mientras escribís, ves cómo te van a ver los pacientes. '
-            'El plan se elige recién cuando decidas publicar.\n\n'
-            'Seguí desde acá: https://atencionpsi.lat/portal/perfil/\n\n'
+            f'Todavía no completaste tu perfil, ¡pero estás muy cerca! Ya tenés {hechos} de {PASOS_TOTALES} pasos hechos. '
+            f'Te falta: {", ".join(faltan)}.\n\n'
+            'Mientras lo completás ves cómo te van a ver los pacientes.'
+        )
+        if not p.tiene_acceso:
+            cuerpo += ' El plan se elige recién cuando decidas publicar; hasta ese momento no pagás nada.'
+        cuerpo += '\n\nSeguí desde acá: https://atencionpsi.lat/portal/perfil/'
+    elif not p.tiene_acceso:
+        cuerpo = (
+            'Tu perfil está completo y se ve muy bien. Falta un solo paso: elegir tu plan y publicarlo, '
+            'así los pacientes empiezan a encontrarte en el buscador.\n\n'
+            'Mirá cómo te ven y publicalo desde acá: https://atencionpsi.lat/portal/'
         )
     else:
         cuerpo = (
-            'Tu perfil en Atención Psi está completo y se ve muy bien. Falta un solo paso: '
-            'elegir tu plan y publicarlo, así los pacientes empiezan a encontrarte en el buscador.\n\n'
-            'Mirá cómo te ven y publicalo desde acá: https://atencionpsi.lat/portal/\n\n'
+            'Tu perfil está completo y ya podés publicarlo: entrá y tocá "Publicar mi perfil" para que los '
+            'pacientes empiecen a encontrarte en el buscador.\n\n'
+            'Entrá desde acá: https://atencionpsi.lat/portal/'
         )
-    return f'Hola {nombre},\n\n' + cuerpo + _cierre()
-
-
-def _mensaje_segundo_aviso(p):
-    """Mail de los 7 días, para quien ya recibió el primero y sigue sin plan. Más corto y sin presión:
-    recuerda dónde quedó y que el plan se elige recién al publicar."""
-    nombre = p.nombre_corto or p.nombre
-    faltan = p.faltantes_perfil
-    if faltan:
-        cuerpo = (
-            'Pasó una semana desde que armaste tu cuenta en Atención Psi y tu perfil todavía está en borrador. '
-            f'Para poder publicarlo te falta: {", ".join(faltan)}.\n\n'
-            'Lleva unos minutos y no pagás nada hasta el momento de publicar.\n\n'
-            'Retomalo desde acá: https://atencionpsi.lat/portal/perfil/\n\n'
-        )
-    else:
-        cuerpo = (
-            'Tu perfil en Atención Psi quedó completo pero todavía no está publicado, así que los pacientes '
-            f'de {p.pais.nombre} no pueden encontrarte en el buscador.\n\n'
-            'Cuando quieras, elegí tu plan y publicalo; en cuanto se confirme el pago aparece solo.\n\n'
-            'Entrá desde acá: https://atencionpsi.lat/portal/\n\n'
-        )
-    return f'Hola {nombre},\n\n' + cuerpo + _cierre()
+    final = ''
+    if p.seguimientos_enviados + 1 >= MAX_SEGUIMIENTOS:
+        final = 'Este es el último aviso automático que te enviamos. '
+    return (
+        f'Hola {nombre},\n\n{cuerpo}\n\n{final}'
+        'Si no querés recibir más estos avisos, respondé este mail y los pausamos.\n\n' + _cierre()
+    )
 
 
 class Command(BaseCommand):
     help = (
-        'Manda recordatorios a profesionales que se registraron pero no terminaron '
-        'de pagar, o que pagaron pero no completaron y publicaron el perfil. '
-        'Corre dry-run por defecto: usar --apply para mandar los mails de verdad. '
-        'Pensado para correr una vez por día (Render Cron Job).'
+        'Manda recordatorios por mail: seguimiento a quien todavía no publicó su perfil (un aviso a los 2 días y '
+        'después uno cada 3, hasta 6) y el aviso de fin del período de fundador. '
+        'Corre dry-run por defecto: usar --apply para mandar los mails de verdad.'
     )
 
     def add_arguments(self, parser):
@@ -78,91 +110,38 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         aplicar = options['apply']
         ahora = timezone.now()
-        limite = ahora - VENTANA
 
-        # Se registraron, confirmaron el email y a los 2 días todavía no tienen plan: el mail depende de
-        # cuánto avanzaron (si falta completar el perfil, o si ya está listo y solo falta elegir el plan).
-        pendientes_pago = Psicologo.objects.filter(
-            suscripcion_activa=False,
-            exento_de_pago=False,
-            gratis_hasta__isnull=True,   # los fundadores no deben nada hasta que venza
-            recordatorio_pago_enviado=False,
-            usuario__is_active=True,     # sin confirmar el email no pueden entrar: no tiene sentido invitarlos a completar
-            fecha_alta__lte=ahora - VENTANA_PERFIL_SIN_PLAN,
-        ).select_related('usuario', 'pais')
-        pendientes_perfil = Psicologo.objects.filter(
-            publicado_por_usuario=False,
-            recordatorio_perfil_enviado=False,
-            fecha_pago_confirmado__isnull=False,
-            fecha_pago_confirmado__lte=limite,
-        )
-
-        # Segundo aviso: ya recibieron el primero y siguen sin plan a los 7 días. Se arma como lista ya
-        # ahora (antes de mandar los primeros) para que nadie reciba los dos en la misma corrida.
-        segundo_aviso = list(Psicologo.objects.filter(
-            suscripcion_activa=False,
-            exento_de_pago=False,
-            gratis_hasta__isnull=True,
-            recordatorio_pago_enviado=True,
-            recordatorio_pago_2_enviado=False,
-            usuario__is_active=True,
-            fecha_alta__lte=ahora - VENTANA_SEGUNDO_AVISO,
-        ).select_related('usuario', 'pais'))
-        pendientes_pago = list(pendientes_pago)
-
-        por_vencer = Psicologo.objects.filter(
+        # Se arma la lista antes de mandar: lo que se manda en esta corrida no entra de nuevo en ella.
+        seguimiento = list(pendientes_de_seguimiento(ahora))
+        por_vencer = list(Psicologo.objects.filter(
             suscripcion_activa=False,
             exento_de_pago=False,
             recordatorio_vencimiento_enviado=False,
             gratis_hasta__gt=ahora,
             gratis_hasta__lte=ahora + AVISO_VENCIMIENTO,
-        )
+        ).select_related('usuario', 'pais'))
 
-        self.stdout.write(self.style.MIGRATE_HEADING('Recordatorio de perfil casi listo (sin plan)'))
-        for p in pendientes_pago:
-            self.stdout.write(f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- se registró el {p.fecha_alta:%d/%m %H:%M}')
-            if aplicar:
-                send_mail(
-                    subject='Tu perfil en Atención Psi está casi listo',
-                    message=_mensaje_casi_listo(p),
-                    from_email=None,
-                    recipient_list=[p.usuario.email],
-                )
-                p.recordatorio_pago_enviado = True
-                p.save(update_fields=['recordatorio_pago_enviado'])
-
-        self.stdout.write(self.style.MIGRATE_HEADING('Segundo aviso de perfil casi listo (7 días)'))
-        for p in segundo_aviso:
-            self.stdout.write(f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- se registró el {p.fecha_alta:%d/%m %H:%M}')
-            if aplicar:
-                send_mail(
-                    subject='¿Retomamos tu perfil en Atención Psi?',
-                    message=_mensaje_segundo_aviso(p),
-                    from_email=None,
-                    recipient_list=[p.usuario.email],
-                )
-                p.recordatorio_pago_2_enviado = True
-                p.save(update_fields=['recordatorio_pago_2_enviado'])
-
-        self.stdout.write(self.style.MIGRATE_HEADING('Recordatorio de perfil sin publicar'))
-        for p in pendientes_perfil:
-            self.stdout.write(f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- pagó el {p.fecha_pago_confirmado:%d/%m %H:%M}')
-            if aplicar:
-                send_mail(
-                    subject='Completá tu perfil y publicalo',
-                    message=(
-                        f'Hola {p.nombre},\n\n'
-                        'Ya activaste tu suscripción en Atención Psi, pero tu perfil todavía no está '
-                        'publicado en el buscador.\n\n'
-                        f'Entrá a tu cuenta, completá los datos que falten y tocá "Publicar mi perfil": '
-                        'https://atencionpsi.lat/portal/\n\n'
-                        + _cierre()
-                    ),
-                    from_email=None,
-                    recipient_list=[p.usuario.email],
-                )
-                p.recordatorio_perfil_enviado = True
-                p.save(update_fields=['recordatorio_perfil_enviado'])
+        fallos = 0
+        self.stdout.write(self.style.MIGRATE_HEADING('Seguimiento de perfiles sin publicar'))
+        for p in seguimiento:
+            numero = p.seguimientos_enviados + 1
+            etiqueta = estados.ETIQUETAS.get(p.estado_codigo, p.estado_codigo)
+            self.stdout.write(
+                f'  {p.nombre} <{p.usuario.email}> ({p.pais.nombre}) -- aviso {numero} de {MAX_SEGUIMIENTOS} -- {etiqueta}'
+            )
+            if not aplicar:
+                continue
+            try:
+                send_mail(subject=_asunto(p), message=_mensaje(p), from_email=None, recipient_list=[p.usuario.email])
+            except Exception:
+                # Un mail que falla (casilla inexistente, problema del proveedor) no frena a los demás ni se cuenta.
+                fallos += 1
+                logger.exception('No se pudo mandar el seguimiento a %s', p.usuario.email)
+                self.stdout.write(self.style.ERROR(f'    (no se pudo mandar a {p.usuario.email})'))
+                continue
+            p.seguimientos_enviados = numero
+            p.ultimo_seguimiento = ahora
+            p.save(update_fields=['seguimientos_enviados', 'ultimo_seguimiento'])
 
         self.stdout.write(self.style.MIGRATE_HEADING('Aviso de fin del período de fundador'))
         for p in por_vencer:
@@ -183,9 +162,12 @@ class Command(BaseCommand):
                 p.recordatorio_vencimiento_enviado = True
                 p.save(update_fields=['recordatorio_vencimiento_enviado'])
 
-        total = len(pendientes_pago) + len(segundo_aviso) + pendientes_perfil.count() + por_vencer.count()
+        total = len(seguimiento) + len(por_vencer)
         if aplicar:
-            self.stdout.write(self.style.SUCCESS(f'Listo, se mandaron {total} recordatorios.'))
+            enviados = total - fallos
+            self.stdout.write(self.style.SUCCESS(f'Listo, se mandaron {enviados} recordatorios.'))
+            if fallos:
+                self.stdout.write(self.style.WARNING(f'{fallos} no se pudieron mandar; se reintentan en la próxima corrida.'))
         else:
             self.stdout.write(self.style.WARNING(
                 f'Esto fue solo una simulación (dry-run) -- {total} recordatorios sin mandar. '
