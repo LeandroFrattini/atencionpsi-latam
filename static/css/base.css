@@ -1151,6 +1151,7 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 .editor-form-card .portal-field input[type="file"] { max-width: 100%; min-width: 0; }
 .editor-form-card .portal-field a { overflow-wrap: anywhere; }
 .editor-botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.editor-ayuda-parcial { margin-top: 10px; }
 .editor-barra { display: none; }
 
 .previa { position: sticky; top: 16px; background: #fff; border: 1px solid var(--borde); border-radius: 14px; padding: 20px; max-height: calc(100vh - 32px); overflow-y: auto; }
@@ -1180,7 +1181,11 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
         display: flex; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 250;
         padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--borde);
     }
-    .editor-barra .btn-secundario, .editor-barra .btn-primario { flex: 1; text-align: center; min-height: 44px; }
+    /* Hasta 3 botones (Cómo me ven / Guardar avance / Guardar y publicar): letra y relleno más chicos para que entren. */
+    .editor-barra .btn-secundario, .editor-barra .btn-primario {
+        flex: 1; min-width: 0; min-height: 44px; padding: 8px 6px; font-size: 0.85rem; line-height: 1.2;
+        display: flex; align-items: center; justify-content: center; text-align: center;
+    }
     .editor-botones { display: none; }
 }
 

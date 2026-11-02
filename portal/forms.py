@@ -179,8 +179,15 @@ class PerfilForm(forms.ModelForm):
         'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
 
-    def __init__(self, *args, pais=None, **kwargs):
+    def __init__(self, *args, pais=None, parcial=False, **kwargs):
         super().__init__(*args, **kwargs)
+        # Guardado parcial ("Guardar avance"): se puede guardar lo que se tenga, sin que
+        # nombre / habilitación / WhatsApp sean obligatorios. Para PUBLICAR siguen siéndolo
+        # (eso se chequea con perfil_completo al publicar, no acá).
+        self.parcial = parcial
+        if parcial:
+            for campo in ('nombre', 'matricula', 'whatsapp'):
+                self.fields[campo].required = False
         if pais:
             self.fields['matricula'].label = pais.etiqueta_matricula
             if not pais.muestra_precio_sesion:
@@ -239,6 +246,11 @@ class PerfilForm(forms.ModelForm):
 
     def clean(self):
         datos = super().clean()
+        if self.parcial and self.instance.pk:
+            # Un campo obligatorio que se dejó vacío NO se pisa: queda lo que ya tenía guardado.
+            for campo in ('nombre', 'whatsapp'):
+                if not (datos.get(campo) or '').strip():
+                    datos[campo] = getattr(self.instance, campo)
         if datos.get('quiere_colaborar') and not datos.get('instagram') and 'instagram' not in self.errors:
             self.add_error('instagram', 'Para ser colaborador/a necesitamos tu usuario de Instagram.')
         return datos

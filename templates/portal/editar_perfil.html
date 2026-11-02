@@ -37,9 +37,17 @@
                 {% endfor %}
 
                 <div class="editor-botones">
-                    <button type="submit" class="btn-secundario">Guardar</button>
-                    {% if not p.publicado %}<button type="submit" name="accion" value="publicar" class="btn-primario">Guardar y publicar</button>{% endif %}
+                    {% if not p.publicado %}
+                        {# formnovalidate: deja guardar sin completar nombre / habilitación / WhatsApp (se exigen recién al publicar) #}
+                        <button type="submit" name="accion" value="parcial" formnovalidate class="btn-secundario">Guardar avance</button>
+                        <button type="submit" name="accion" value="publicar" class="btn-primario">Guardar y publicar</button>
+                    {% else %}
+                        <button type="submit" class="btn-secundario">Guardar</button>
+                    {% endif %}
                 </div>
+                {% if not p.publicado %}
+                    <p class="portal-field-ayuda editor-ayuda-parcial">¿No tenés todo a mano? Tocá <strong>«Guardar avance»</strong> y seguí cuando puedas: queda guardado lo que cargaste y no se pierde nada.</p>
+                {% endif %}
             </form>
             <a href="{% url 'portal_dashboard' %}" class="portal-lead-sm">&larr; Volver a mi cuenta</a>
         </div>
@@ -82,6 +90,7 @@
     <div class="editor-barra">
         <button type="button" class="btn-secundario" id="previa-abrir">Cómo me ven</button>
         {% if not p.publicado %}
+            <button type="submit" form="form-perfil" name="accion" value="parcial" formnovalidate class="btn-secundario">Guardar avance</button>
             <button type="submit" form="form-perfil" name="accion" value="publicar" class="btn-primario">Guardar y publicar</button>
         {% else %}
             <button type="submit" form="form-perfil" class="btn-primario">Guardar</button>

@@ -415,7 +415,9 @@ def dashboard(request):
 def editar_perfil(request):
     psicologo = request.user.psicologo
     if request.method == 'POST':
-        form = PerfilForm(request.POST, request.FILES, instance=psicologo, pais=psicologo.pais)
+        # "Guardar avance": guarda lo que haya, sin exigir lo obligatorio para publicar.
+        parcial = request.POST.get('accion') == 'parcial'
+        form = PerfilForm(request.POST, request.FILES, instance=psicologo, pais=psicologo.pais, parcial=parcial)
         formset = FormacionFormSet(request.POST, instance=psicologo)
         if form.is_valid() and formset.is_valid():
             try:
@@ -479,7 +481,19 @@ def editar_perfil(request):
             if request.POST.get('accion') == 'publicar':
                 # Se vuelve a leer: lo recién guardado (fotos, orientaciones) cambia lo que falta.
                 return _intentar_publicar(request, Psicologo.objects.select_related('pais').get(pk=psicologo.pk))
-            messages.success(request, 'Perfil guardado.')
+            if parcial:
+                # Se vuelve a leer para contar lo recién guardado (foto, orientaciones...).
+                faltan = Psicologo.objects.select_related('pais').get(pk=psicologo.pk).faltantes_perfil
+                if faltan:
+                    messages.success(
+                        request,
+                        'Guardamos tu avance. Podés seguir cuando quieras: está todo lo que cargaste. '
+                        'Para publicar te falta: ' + ', '.join(faltan) + '.',
+                    )
+                else:
+                    messages.success(request, 'Guardamos tu avance. Ya tenés todo para publicar tu perfil.')
+            else:
+                messages.success(request, 'Perfil guardado.')
             return redirect('portal_editar_perfil')
     else:
         form = PerfilForm(instance=psicologo, pais=psicologo.pais)
