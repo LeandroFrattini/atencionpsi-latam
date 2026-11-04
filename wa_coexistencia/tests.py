@@ -224,7 +224,8 @@ class CallbackTests(TestCase):
 
     def test_la_pagina_muestra_la_version_desplegada(self):
         html = self.client.get(reverse('wa_coexistencia')).content.decode()
-        self.assertIn('versión 10', html)
+        from .views import VERSION
+        self.assertIn(f'versión {VERSION}', html)   # sin número fijo: no se rompe cada vez que sube la versión
 
 
 class TokenDelSistemaTests(TestCase):
