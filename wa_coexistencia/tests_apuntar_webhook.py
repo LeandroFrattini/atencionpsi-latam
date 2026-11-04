@@ -56,3 +56,36 @@ class ApuntarAvisosTests(TestCase):
             cuenta = _conectar_cuenta('555', 'TOKEN-SECRETO')
         self.assertNotIn('frase-secreta-123', str(cuenta))
         self.assertNotIn('TOKEN-SECRETO', str(cuenta))
+
+
+class ConcurrenciaDelServidorTests(TestCase):
+    """Con un solo pedido a la vez, conectar WhatsApp se bloqueaba a sí mismo: la web esperaba a Meta y Meta
+    esperaba a la web (error #2200 por tiempo). El servidor tiene que poder atender varios pedidos juntos."""
+
+    def _config(self):
+        import runpy
+        from django.conf import settings
+        return runpy.run_path(os.path.join(settings.BASE_DIR, 'gunicorn.conf.py'))
+
+    def test_gunicorn_atiende_varios_pedidos_a_la_vez(self):
+        config = self._config()
+        self.assertGreaterEqual(config['threads'] * config['workers'], 2)
+
+    def test_hay_margen_de_tiempo_para_hablar_con_servicios_externos(self):
+        self.assertGreaterEqual(self._config()['timeout'], 30)
+
+    def test_gunicorn_la_acepta_y_usa_el_worker_con_hilos(self):
+        try:
+            from gunicorn.config import Config
+        except Exception:
+            self.skipTest('gunicorn no se puede importar en este sistema')
+        cfg = Config()
+        for clave, valor in self._config().items():
+            if clave in ('workers', 'threads', 'timeout'):
+                cfg.set(clave, valor)
+        self.assertEqual(cfg.threads, 4)
+        try:
+            clase = cfg.worker_class
+        except ImportError:
+            self.skipTest('los workers de gunicorn no se pueden cargar en este sistema (Windows)')
+        self.assertEqual(clase.__name__, 'ThreadWorker')   # con threads > 1 gunicorn pasa solo al worker con hilos

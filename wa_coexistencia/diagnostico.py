@@ -91,6 +91,12 @@ def estado():
     if numero_distinto:
         pendientes.append('Llegaron mensajes a un número que no es el de LATAM (' + numero_distinto.detalle + ').')
     if not pendientes:
-        pendientes.append('Todo en orden: llegan los avisos y no hay nada por corregir.')
+        if con_mensajes.exists():
+            pendientes.append('Todo en orden: llegan los avisos y no hay nada por corregir.')
+        else:
+            pendientes.append(
+                'Meta ya llama a la dirección y no hay nada roto, pero todavía no entró ningún mensaje de una persona. '
+                'Escribile al número de LATAM desde OTRO celular (no el del negocio) y recargá esta pantalla.'
+            )
 
     return {'chequeos': chequeos, 'pendientes': pendientes, 'url_webhook': url_del_webhook()}

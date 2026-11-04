@@ -151,6 +151,13 @@ class PanelDeEstadoTests(_Base):
             self.enviar_aviso(_aviso_con_numero(PHONE_NUMBER_ID))
         self.assertEqual(estado()['pendientes'], ['Todo en orden: llegan los avisos y no hay nada por corregir.'])
 
+    def test_verificada_pero_sin_mensajes_no_dice_todo_en_orden(self):
+        self.client.get(self.url, {'hub.mode': 'subscribe', 'hub.verify_token': 'frase-de-verificacion', 'hub.challenge': '1'})
+        texto = self._pendientes()
+        self.assertNotIn('Todo en orden', texto)
+        self.assertIn('todavía no entró ningún mensaje', texto)
+        self.assertIn('OTRO celular', texto)
+
     def test_nunca_muestra_los_valores_de_las_variables(self):
         texto = str(estado())
         for valor in ENTORNO.values():
