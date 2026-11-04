@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from directorio.models import Pais
 
-from .models import ConfiguracionWhatsApp, ContactoWhatsApp, MensajeRecibido
+from .models import ConfiguracionWhatsApp, ContactoWhatsApp, EventoWebhook, MensajeRecibido
 from .views import GRAPH, PHONE_NUMBER_ID
 
 logger = logging.getLogger(__name__)
@@ -31,12 +31,40 @@ LIMITE_PIE = 1000   # WhatsApp admite hasta 1024 caracteres en el pie de un arch
 TIPOS_QUE_NO_ACTIVAN = {'reaction'}   # una reacción a un mensaje no es alguien que escribe
 
 
-def _firma_valida(cuerpo, cabecera):
+def _motivo_firma_invalida(cuerpo, cabecera):
+    """None si la firma es válida; si no, el motivo en palabras (se anota en el registro de avisos)."""
     secreto = os.environ.get('META_APP_SECRET', '')
-    if not secreto or not cabecera.startswith('sha256='):
-        return False
+    if not secreto:
+        return 'META_APP_SECRET no está configurado en el servidor'
+    if not cabecera:
+        return 'el aviso no trae la firma de Meta (X-Hub-Signature-256): no parece venir de Meta'
+    if not cabecera.startswith('sha256='):
+        return 'la firma tiene un formato desconocido'
     esperada = hmac.new(secreto.encode(), cuerpo, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(esperada, cabecera[len('sha256='):])
+    if not hmac.compare_digest(esperada, cabecera[len('sha256='):]):
+        return 'la firma no coincide: META_APP_SECRET no es el secreto de la app de Meta que manda los avisos'
+    return None
+
+
+def _firma_valida(cuerpo, cabecera):
+    return _motivo_firma_invalida(cuerpo, cabecera) is None
+
+
+MAX_EVENTOS = 500   # el registro de avisos guarda los últimos
+
+
+def _anotar(request, resultado, detalle='', mensajes=0, numero_id=''):
+    """Anota la llamada en el registro de avisos. Es solo para diagnosticar: si falla, nunca rompe la respuesta."""
+    try:
+        EventoWebhook.objects.create(
+            metodo=request.method, resultado=resultado, detalle=detalle[:300], mensajes=mensajes,
+            numero_id=str(numero_id)[:40], agente=request.headers.get('User-Agent', '')[:120],
+        )
+        if EventoWebhook.objects.count() > MAX_EVENTOS + 100:
+            viejos = list(EventoWebhook.objects.order_by('-creado').values_list('pk', flat=True)[MAX_EVENTOS:])
+            EventoWebhook.objects.filter(pk__in=viejos).delete()
+    except Exception:
+        logger.exception('No se pudo anotar el aviso del webhook de WhatsApp')
 
 
 def pais_del_telefono(telefono):
@@ -124,26 +152,55 @@ def recibir(request):
         esperado = os.environ.get('WHATSAPP_VERIFY_TOKEN', '')
         if esperado and request.GET.get('hub.mode') == 'subscribe' and \
                 hmac.compare_digest(request.GET.get('hub.verify_token', ''), esperado):
+            _anotar(request, 'verificacion_ok', 'Meta verificó el webhook correctamente')
             return HttpResponse(request.GET.get('hub.challenge', ''), content_type='text/plain')
+        if not esperado:
+            motivo = 'WHATSAPP_VERIFY_TOKEN no está configurado en el servidor'
+        elif request.GET.get('hub.mode') != 'subscribe':
+            motivo = 'pedido sin hub.mode=subscribe (¿alguien abrió la dirección a mano?)'
+        else:
+            motivo = 'la frase de verificación no coincide con la que está cargada en el panel de Meta'
+        _anotar(request, 'verificacion_rechazada', motivo)
         return HttpResponseForbidden()
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    if not _firma_valida(request.body, request.headers.get('X-Hub-Signature-256', '')):
+    motivo = _motivo_firma_invalida(request.body, request.headers.get('X-Hub-Signature-256', ''))
+    if motivo:
+        _anotar(request, 'firma_invalida', motivo)
         return HttpResponseForbidden()
     try:
         datos = json.loads(request.body)
     except ValueError:
+        _anotar(request, 'json_invalido', 'el cuerpo del aviso no es JSON')
         return HttpResponse(status=400)
 
+    nuevos, fallos, numeros = 0, 0, set()
     for entrada in datos.get('entry') or []:
         for cambio in entrada.get('changes') or []:
             valor = cambio.get('value') or {}
+            numero = (valor.get('metadata') or {}).get('phone_number_id')
+            if numero:
+                numeros.add(str(numero))
             for mensaje in valor.get('messages') or []:   # los "statuses" (entregado, leído) no traen "messages"
+                nuevos += 1
                 try:
                     _atender(request, mensaje)
                 except Exception:
+                    fallos += 1
                     logger.exception('Falló la respuesta automática de WhatsApp')
+
+    if fallos:
+        resultado, detalle = 'recibido_con_error', f'falló la respuesta a {fallos} de {nuevos} mensaje(s): mirá los logs'
+    elif not nuevos:
+        resultado, detalle = 'recibido', 'solo avisos de estado (entregado/leído) o de otro tipo, ningún mensaje nuevo'
+    elif numeros and PHONE_NUMBER_ID not in numeros:
+        resultado = 'recibido'
+        detalle = (f'{nuevos} mensaje(s) llegaron al número {", ".join(sorted(numeros))}, que NO es el configurado '
+                   f'({PHONE_NUMBER_ID}); se respondió igual desde el configurado')
+    else:
+        resultado, detalle = 'recibido', f'{nuevos} mensaje(s) nuevo(s)'
+    _anotar(request, resultado, detalle, mensajes=nuevos, numero_id=', '.join(sorted(numeros)))
     # Siempre 200 si la firma es válida: si no, Meta reintenta y se acumulan avisos repetidos.
     return HttpResponse(status=200)
 

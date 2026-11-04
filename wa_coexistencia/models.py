@@ -79,3 +79,33 @@ class MensajeRecibido(models.Model):
     """Ids de mensajes ya atendidos: Meta reintenta el aviso si tarda, y así no se responde dos veces."""
     wa_id = models.CharField(max_length=200, unique=True)
     creado = models.DateTimeField(auto_now_add=True)
+
+
+class EventoWebhook(models.Model):
+    """Registro de cada vez que Meta (o cualquiera) llamó a /wa-coexistencia/webhook/, y qué se hizo.
+    Sirve para diagnosticar: si no hay ninguno, Meta nunca llamó; si hay "firma inválida", Meta llama pero
+    el secreto de la app no coincide. NO guarda el contenido de los mensajes ni teléfonos."""
+    RESULTADOS = [
+        ('verificacion_ok', 'Verificación de Meta aceptada'),
+        ('verificacion_rechazada', 'Verificación rechazada (frase distinta)'),
+        ('firma_invalida', 'RECHAZADO: firma inválida'),
+        ('json_invalido', 'Rechazado: cuerpo inválido'),
+        ('recibido', 'Aviso recibido'),
+        ('recibido_con_error', 'Recibido, pero falló la respuesta'),
+    ]
+
+    creado = models.DateTimeField('Cuándo', auto_now_add=True, db_index=True)
+    metodo = models.CharField('Método', max_length=6)
+    resultado = models.CharField('Resultado', max_length=30, choices=RESULTADOS)
+    detalle = models.CharField('Detalle', max_length=300, blank=True)
+    mensajes = models.PositiveSmallIntegerField('Mensajes nuevos', default=0)
+    numero_id = models.CharField('Número que lo recibió (ID de Meta)', max_length=40, blank=True)
+    agente = models.CharField('Quién llamó', max_length=120, blank=True)
+
+    class Meta:
+        verbose_name = 'Aviso recibido de Meta'
+        verbose_name_plural = 'Avisos de Meta (diagnóstico)'
+        ordering = ['-creado']
+
+    def __str__(self):
+        return f'{self.creado:%d/%m %H:%M} {self.metodo} {self.resultado}'

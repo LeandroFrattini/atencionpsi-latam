@@ -1,0 +1,30 @@
+{% extends "admin/change_list.html" %}
+{% block content %}
+<div class="module" style="margin-bottom:24px;padding:16px 18px">
+  <h2 style="margin:0 0 10px;font-size:1.1rem">Estado de las respuestas automáticas de WhatsApp</h2>
+
+  <p style="margin:0 0 6px;font-weight:700">Qué revisar primero</p>
+  <ol style="margin:0 0 16px 18px;padding:0">
+    {% for p in estado.pendientes %}<li style="margin-bottom:6px">{{ p }}</li>{% endfor %}
+  </ol>
+
+  <table style="width:100%;margin-bottom:12px">
+    <thead><tr><th style="width:36px"></th><th>Qué se comprueba</th><th>Estado</th></tr></thead>
+    <tbody>
+      {% for texto, ok, detalle in estado.chequeos %}
+        <tr>
+          <td style="text-align:center;font-weight:700;color:{% if ok %}#2e7d32{% else %}#c62828{% endif %}">{% if ok %}&#10003;{% else %}&#10007;{% endif %}</td>
+          <td>{{ texto }}</td>
+          <td>{{ detalle }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="margin:0;font-size:.85rem;color:#666">
+    Dirección del webhook que tiene que figurar en el panel de Meta: <code>{{ estado.url_webhook }}</code><br>
+    El registro de abajo guarda los últimos avisos (sin contenido de mensajes ni teléfonos).
+  </p>
+</div>
+{{ block.super }}
+{% endblock %}
