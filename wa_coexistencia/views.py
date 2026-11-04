@@ -9,9 +9,11 @@ import logging
 import os
 
 import requests
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
@@ -191,10 +193,26 @@ def _salud_del_numero(numero_id, cabecera):
     return r.json()
 
 
+def _apuntar_avisos_a_esta_web():
+    """Datos para que Meta mande los avisos de ESTA cuenta de WhatsApp directo a nuestra web
+    (override_callback_uri). Sin esto, los avisos van a la dirección que tenga cargada la APP de Meta a nivel
+    general, que se comparte con otras cuentas (Argentina) y puede no ser la nuestra: Meta nunca nos llama.
+    Meta verifica la dirección apenas la recibe, con la frase de WHATSAPP_VERIFY_TOKEN. None si falta la frase."""
+    frase = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    if not frase:
+        return None
+    return {
+        "override_callback_uri": settings.SITE_URL.rstrip("/") + reverse("wa_webhook"),
+        "verify_token": frase,
+    }
+
+
 def _conectar_cuenta(waba_id, token):
-    """Suscribe la app a la cuenta (para recibir webhooks) y lista sus números. Sin datos sensibles."""
+    """Suscribe la app a la cuenta (para recibir webhooks), apuntando los avisos de esa cuenta a esta web, y
+    lista sus números. Sin datos sensibles."""
     cabecera = {"Authorization": f"Bearer {token}"}
-    s = requests.post(f"{GRAPH}/{waba_id}/subscribed_apps", headers=cabecera, timeout=20)
+    aviso_a = _apuntar_avisos_a_esta_web()
+    s = requests.post(f"{GRAPH}/{waba_id}/subscribed_apps", headers=cabecera, data=aviso_a, timeout=20)
     # Primero con el detalle del estado (tipo de plataforma, si sigue en la app del celular...). Si Meta
     # rechaza algún campo, se reintenta con los básicos para no perder la lista.
     for campos in (CAMPOS_NUMERO_DETALLE, "id,verified_name,status"):
@@ -208,6 +226,7 @@ def _conectar_cuenta(waba_id, token):
         "waba_id": waba_id,
         "suscripcion_ok": s.ok,
         "suscripcion": s.json(),
+        "avisos_a": aviso_a["override_callback_uri"] if aviso_a else "NO SE APUNTARON: falta WHATSAPP_VERIFY_TOKEN en el servidor",
         "numeros": numeros,
     }
 
