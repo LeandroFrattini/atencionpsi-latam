@@ -24,7 +24,7 @@ GRAPH = "https://graph.facebook.com/v25.0"
 APP_ID = "895833073525544"
 CONFIG_ID = "2165478444074323"
 # Se muestra en la página y en las respuestas: sirve para saber qué versión está desplegada.
-VERSION = 10
+VERSION = 11
 # Identificador del número de teléfono de LATAM (aparece en el Administrador de WhatsApp). Solo se usa para
 # comprobar si el token llega a ver el número cuando no encuentra la cuenta.
 PHONE_NUMBER_ID = "1228482323672734"
