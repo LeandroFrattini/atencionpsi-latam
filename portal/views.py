@@ -410,8 +410,13 @@ def dashboard(request):
     ahora = timezone.now()
     proximos = (psicologo.turnos.filter(fecha_hora__gte=ahora, estado='agendado')
                 .select_related('tipo_sesion').order_by('fecha_hora')[:5])
+    url_calendario = ''
+    if psicologo.es_premium:
+        token = psicologo.asegurar_token_calendario()
+        url_calendario = settings.SITE_URL.rstrip('/') + reverse('calendario_personal', args=[token])
     return render(request, 'portal/dashboard.html', {
         'p': psicologo,
+        'url_calendario': url_calendario,
         'faltantes': psicologo.faltantes_perfil,
         'proximos_turnos': proximos,
         'turnos_por_confirmar': psicologo.turnos.filter(fecha_hora__lt=ahora, estado='agendado').count(),
@@ -419,6 +424,21 @@ def dashboard(request):
         'agenda_lista': psicologo.tipos_sesion.exists() and psicologo.disponibilidad_semanal.exists(),
         'visitas': visitas.resumen_perfil(psicologo),
     })
+
+
+@psicologo_required
+def renovar_calendario(request):
+    """Genera una clave nueva para el calendario personal: el link anterior deja de funcionar (por si
+    se compartió sin querer). Hay que volver a suscribirse con el link nuevo."""
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    psicologo = request.user.psicologo
+    if not psicologo.es_premium:
+        raise Http404
+    psicologo.renovar_token_calendario()
+    messages.success(request, 'Listo: generamos un link nuevo para tu calendario. El anterior ya no funciona; '
+                              'suscribite de nuevo con el link nuevo.')
+    return redirect('portal_dashboard')
 
 
 @psicologo_required

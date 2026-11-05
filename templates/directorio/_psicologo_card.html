@@ -58,7 +58,9 @@ contexto. Extraída del buscador para reutilizarla también en los
 
         <div class="psicologo-card-botones">
             <a href="{{ p.url_publica }}" class="btn-secundario-card">Ver perfil</a>
-            {% if p.tipos_sesion.all %}
+            {% if p.agenda_externa %}
+                <a href="{{ p.agenda_externa }}" class="btn-ver-perfil" target="_blank" rel="noopener noreferrer nofollow">Reservar turno</a>
+            {% elif p.tipos_sesion.all %}
                 <a href="{% url 'reserva_tipo' pais.slug p.pk %}" class="btn-ver-perfil">Reservar turno</a>
             {% endif %}
             <a href="https://wa.me/{{ p.whatsapp_limpio }}" class="btn-whatsapp" target="_blank" rel="noopener">

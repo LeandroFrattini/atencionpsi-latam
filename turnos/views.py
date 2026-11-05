@@ -2,14 +2,17 @@ import datetime
 import logging
 
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.conf import settings
+from django.core.mail import EmailMessage, send_mail
 from django.db import transaction
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
 from directorio.models import Pais, Psicologo
 
+from . import calendario
 from .disponibilidad import fecha_larga, fechas_horizonte, slot_disponible, slots_para_fecha
 from .forms import ReservaDatosForm
 from .models import Paciente, TipoSesion, Turno
@@ -26,7 +29,6 @@ def _psicologo_publicado(pais_slug, pk):
     pais = get_object_or_404(Pais, slug=pais_slug, activo=True)
     psicologo = get_object_or_404(Psicologo, pk=pk, pais=pais)
     if not psicologo.publicado:
-        from django.http import Http404
         raise Http404('Perfil no disponible')
     return pais, psicologo
 
@@ -269,7 +271,17 @@ def paso_confirmar(request, pais_slug, pk):
             # muestra la confirmación: lo contrario sería un 500 después de
             # una reserva que en realidad sí se guardó.
             logger.exception('No se pudo avisar por mail el turno %s', turno.pk)
-        return render(request, 'turnos/confirmado.html', {'pais': pais, 'p': psicologo, 'turno': turno})
+        # Extra del Plan Premium: confirmación al paciente con el turno para su calendario.
+        if psicologo.es_premium:
+            try:
+                _confirmar_al_paciente(turno)
+            except Exception:
+                logger.exception('No se pudo confirmar por mail al paciente el turno %s', turno.pk)
+        contexto = {'pais': pais, 'p': psicologo, 'turno': turno}
+        if psicologo.es_premium:
+            contexto['link_google_calendar'] = calendario.link_google_calendar(turno)
+            contexto['ics_paciente'] = calendario.generar_ics([turno], f'Sesión con {psicologo.nombre}', para_profesional=False)
+        return render(request, 'turnos/confirmado.html', contexto)
 
     return render(request, 'turnos/paso_confirmar.html', {
         'pais': pais, 'p': psicologo, 'resumen': resumen,
@@ -326,9 +338,8 @@ def _upsert_paciente(psicologo, reserva):
 
 
 def _avisar_por_mail(turno):
-    send_mail(
-        subject=f'Nueva reserva: {turno.nombres} {turno.apellidos}',
-        message=(
+    asunto = f'Nueva reserva: {turno.nombres} {turno.apellidos}'
+    cuerpo = (
             f'{turno.nombres} {turno.apellidos} reservó un turno con vos.\n\n'
             f'Fecha: {turno.fecha_hora:%d/%m/%Y %H:%M}\n'
             f'Tipo de sesión: {turno.tipo_sesion.nombre}\n'
@@ -336,7 +347,66 @@ def _avisar_por_mail(turno):
             f'Teléfono: {turno.telefono}\n'
             f'Email: {turno.email}\n'
             f'Motivo de consulta: {turno.motivo_consulta or "(no especificado)"}\n'
-        ),
-        from_email=None,
-        recipient_list=[turno.psicologo.usuario.email],
     )
+    if not turno.psicologo.es_premium:
+        send_mail(subject=asunto, message=cuerpo, from_email=None, recipient_list=[turno.psicologo.usuario.email])
+        return
+    # Plan Premium: el mail trae el turno como archivo de calendario (Google Calendar, Apple, Outlook
+    # lo ofrecen para agregar con un toque).
+    cuerpo += (
+        '\nEl turno va adjunto (turno.ics): abrilo para sumarlo a tu calendario. Si preferís que se carguen solos, '
+        f'suscribite a tu calendario personal desde {settings.SITE_URL.rstrip("/")}{reverse("portal_dashboard")}\n'
+    )
+    mensaje = EmailMessage(subject=asunto, body=cuerpo, from_email=None, to=[turno.psicologo.usuario.email])
+    mensaje.attach('turno.ics', calendario.generar_ics([turno], 'Turnos Atención Psi', con_motivo=True), 'text/calendar; charset=utf-8; method=PUBLISH')
+    mensaje.send()
+
+
+def _confirmar_al_paciente(turno):
+    """Mail al paciente con los datos de su turno y el archivo para sumarlo a su calendario."""
+    p = turno.psicologo
+    fecha = timezone.localtime(turno.fecha_hora)
+    lineas = [
+        f'Hola {turno.nombres},',
+        '',
+        f'Tu turno con {p.nombre} quedó confirmado.',
+        '',
+        f'Fecha: {fecha:%d/%m/%Y} a las {fecha:%H:%M}',
+        f'Tipo de sesión: {turno.tipo_sesion.nombre} ({turno.tipo_sesion.duracion_min} min)',
+        f'Modalidad: {turno.get_modalidad_display()}',
+    ]
+    if p.whatsapp_limpio():
+        lineas.append(f'Si necesitás reprogramar, escribile al profesional por WhatsApp: +{p.whatsapp_limpio()}')
+    lineas += [
+        '',
+        'Sumalo a tu calendario con un toque: abrí el archivo adjunto (turno.ics) o usá este link de Google Calendar:',
+        calendario.link_google_calendar(turno),
+        '',
+        'Atención Psi',
+    ]
+    mensaje = EmailMessage(
+        subject=f'Tu turno con {p.nombre} está confirmado', body='\n'.join(lineas), from_email=None, to=[turno.email],
+    )
+    mensaje.attach('turno.ics', calendario.generar_ics([turno], f'Sesión con {p.nombre}', para_profesional=False),
+                   'text/calendar; charset=utf-8; method=PUBLISH')
+    mensaje.send()
+
+
+def calendario_personal(request, token):
+    """Calendario personal del profesional (feed .ics) para suscribirse desde Google Calendar, Apple
+    Calendar u Outlook. La clave secreta va en la dirección: quien la tenga ve los turnos, por eso
+    es larga, se puede renovar desde el portal y la página no se indexa."""
+    psicologo = Psicologo.objects.select_related('pais').filter(token_calendario=token).first() if token else None
+    if psicologo is None or not psicologo.es_premium:
+        raise Http404
+    desde = timezone.now() - datetime.timedelta(days=60)
+    turnos = (psicologo.turnos.filter(fecha_hora__gte=desde).exclude(estado='cancelado')
+              .select_related('tipo_sesion', 'psicologo__pais').order_by('fecha_hora'))
+    respuesta = HttpResponse(
+        calendario.generar_ics(turnos, 'Turnos Atención Psi'),
+        content_type='text/calendar; charset=utf-8',
+    )
+    respuesta['Cache-Control'] = 'private, max-age=300'
+    respuesta['X-Robots-Tag'] = 'noindex, nofollow'
+    respuesta['Referrer-Policy'] = 'no-referrer'
+    return respuesta

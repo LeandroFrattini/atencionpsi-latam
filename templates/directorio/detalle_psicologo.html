@@ -169,7 +169,9 @@
                     <p class="perfil-aside-nota">Consultá valores y horarios directamente con el profesional.</p>
                 {% endif %}
                 <div class="perfil-acciones perfil-acciones-aside">
-                    {% if sesiones %}
+                    {% if p.agenda_externa %}
+                        <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="{{ p.agenda_externa }}" target="_blank" rel="noopener noreferrer nofollow"{% endif %} class="btn-primario">Reservar turno</a>
+                    {% elif sesiones %}
                         <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="{% url 'reserva_tipo' pais.slug p.pk %}"{% endif %} class="btn-primario">Reservar turno</a>
                     {% endif %}
                     <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="https://wa.me/{{ p.whatsapp_limpio }}" target="_blank" rel="noopener"{% endif %} class="btn-whatsapp">Escribir por WhatsApp</a>

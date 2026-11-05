@@ -19,6 +19,7 @@ urlpatterns = [
     path('dlocal/webhook/', views.dlocal_webhook, name='portal_dlocal_webhook'),
     path('', views.dashboard, name='portal_dashboard'),
     path('perfil/', views.editar_perfil, name='portal_editar_perfil'),
+    path('calendario/renovar/', views.renovar_calendario, name='portal_calendario_renovar'),
     path('contrasena/', views.CambiarContrasenaView.as_view(), name='portal_cambiar_contrasena'),
     path('vista-previa/', views.vista_previa, name='portal_vista_previa'),
     path('publicar/', views.publicar, name='portal_publicar'),

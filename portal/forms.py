@@ -3,7 +3,9 @@ import io
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile, UploadedFile
+from django.core.validators import URLValidator
 from django.forms import inlineformset_factory
 from django.urls import reverse
 from django.utils.html import format_html
@@ -148,6 +150,13 @@ class PerfilForm(forms.ModelForm):
         label='Usuario de Instagram', max_length=100, required=False,
         help_text='Ej: @atencionpsi. No se muestra en tu perfil público.',
     )
+    # Solo Plan Premium (se saca del formulario si no lo es). Va como texto y se valida a mano para
+    # aceptar solo http/https y completar el "https://" si lo escribieron sin eso.
+    link_agenda_externa = forms.CharField(
+        label='Link a tu agenda externa', max_length=300, required=False,
+        help_text='Si ya usás una agenda online (Encuadrado, Calendly, citas de Google Calendar, etc.), pegá acá su link: '
+                  'el botón «Reservar turno» de tu perfil lleva directo ahí.',
+    )
     publico_nuevo = forms.CharField(
         label='¿El público que atendés no está en la lista? Escribilo acá', max_length=60, required=False,
         help_text='Ej: "Adultos mayores", "Deportistas". Lo revisamos y, si corresponde, lo sumamos para todos; mientras tanto lo ves solo vos.'
@@ -157,7 +166,7 @@ class PerfilForm(forms.ModelForm):
         model = Psicologo
         fields = [
             'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'modalidad',
-            'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
+            'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
             'orientaciones', 'especialidades', 'publicos',
         ]
         field_classes = {
@@ -175,7 +184,7 @@ class PerfilForm(forms.ModelForm):
 
     field_order = [
         'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'ciudad_nueva', 'modalidad',
-        'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas',
+        'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
         'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
 
@@ -214,6 +223,7 @@ class PerfilForm(forms.ModelForm):
         )
         if not psicologo or psicologo.plan != 'premium':
             del self.fields['quiere_colaborar']
+            del self.fields['link_agenda_externa']
 
         # Orientaciones y públicos: las aprobadas, más las que propuso este
         # profesional, más las que ya tiene tildadas (por si otra persona
@@ -243,6 +253,22 @@ class PerfilForm(forms.ModelForm):
 
     def clean_instagram(self):
         return _limpiar_instagram(self.cleaned_data.get('instagram'))
+
+    def clean_link_agenda_externa(self):
+        link = (self.cleaned_data.get('link_agenda_externa') or '').strip()
+        if not link:
+            return ''
+        if '://' not in link:
+            link = 'https://' + link
+        try:
+            if any(c.isspace() for c in link):
+                raise ValidationError('')
+            URLValidator(schemes=['http', 'https'])(link)
+        except ValidationError:
+            raise forms.ValidationError(
+                'Ese link no parece válido. Copialo completo desde tu agenda (tiene que empezar con https://).'
+            )
+        return link
 
     def clean(self):
         datos = super().clean()

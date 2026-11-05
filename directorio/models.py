@@ -339,6 +339,14 @@ class Psicologo(models.Model):
         help_text='Solo Plan Premium: lo sumamos como colaborador/a (Collab) en las publicaciones de Atención Psi',
     )
 
+    # Solo Plan Premium: link a la agenda que el profesional ya usa por fuera (Encuadrado,
+    # Calendly, "citas" de Google Calendar, etc.). Si está cargado, el botón "Reservar turno"
+    # de su perfil lleva ahí en vez de a la agenda de Atención Psi. Ver `agenda_externa`.
+    link_agenda_externa = models.URLField('Link a tu agenda externa', max_length=300, blank=True)
+    # Clave secreta de su calendario personal (feed .ics que se suscribe en Google Calendar).
+    # Se crea la primera vez que la pide y se puede renovar si se filtra.
+    token_calendario = models.CharField(max_length=64, blank=True, editable=False, db_index=True)
+
     PLAN_CHOICES = [
         ('basico', 'Básico'),
         ('premium', 'Premium'),
@@ -528,6 +536,26 @@ class Psicologo(models.Model):
     @property
     def url_publica(self):
         return reverse('perfil_psicologo', args=[self.pais.slug, self.slug_url])
+
+    @property
+    def es_premium(self):
+        return self.plan == 'premium'
+
+    @property
+    def agenda_externa(self):
+        """Link a su agenda externa, solo si es Premium (si baja de plan, el link queda guardado
+        pero deja de mostrarse)."""
+        return self.link_agenda_externa if self.es_premium else ''
+
+    def renovar_token_calendario(self):
+        """Crea (o reemplaza) la clave de su calendario personal. Al reemplazarla, el link anterior
+        deja de funcionar."""
+        self.token_calendario = secrets.token_urlsafe(32)
+        self.save(update_fields=['token_calendario'])
+        return self.token_calendario
+
+    def asegurar_token_calendario(self):
+        return self.token_calendario or self.renovar_token_calendario()
 
     @property
     def publicos_publicos(self):

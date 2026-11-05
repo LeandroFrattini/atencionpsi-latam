@@ -1214,3 +1214,10 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 @media (max-width: 640px) {
     .previa-banner { position: static; }
 }
+
+/* Calendario personal (Plan Premium) y "agregar a mi calendario" */
+.portal-calendario { margin: 8px 0 20px; }
+.portal-calendario-fila { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.portal-calendario-fila input { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border: 1px solid var(--borde, #d8dde3); border-radius: 8px; font-size: 14px; }
+.agregar-calendario { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 18px 0; }
+.agregar-calendario .portal-field-ayuda { margin: 0; }

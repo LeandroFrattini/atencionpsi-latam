@@ -76,6 +76,38 @@
         </a>
     </div>
 
+    <h2 class="portal-subtitulo">Tu calendario</h2>
+    {% if url_calendario %}
+        <div class="portal-calendario">
+            <p class="portal-field-ayuda">Tus turnos de Atención Psi, en tu Google Calendar. En Google Calendar (desde la compu) andá a <strong>Otros calendarios → + → Desde URL</strong>, pegá este link y listo. Google lo actualiza cada varias horas, así que un turno nuevo puede tardar en aparecer; el mail de cada reserva trae además el turno adjunto para sumarlo al instante.</p>
+            <div class="portal-calendario-fila">
+                <input type="text" id="url-calendario" value="{{ url_calendario }}" readonly onclick="this.select()" aria-label="Link de tu calendario personal">
+                <button type="button" class="btn-secundario" id="copiar-calendario">Copiar link</button>
+            </div>
+            <p class="portal-field-ayuda">Es privado: quien tenga este link ve tus turnos (nombre del paciente, no el motivo de consulta). No lo compartas. Si se filtró, generá uno nuevo:</p>
+            <form method="post" action="{% url 'portal_calendario_renovar' %}" class="portal-inline-form" onsubmit="return confirm('El link actual va a dejar de funcionar y vas a tener que suscribirte de nuevo con el nuevo. ¿Seguimos?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-secundario">Generar un link nuevo</button>
+            </form>
+        </div>
+        <script>
+        (function () {
+            var boton = document.getElementById('copiar-calendario');
+            var campo = document.getElementById('url-calendario');
+            if (!boton || !campo) return;
+            boton.addEventListener('click', function () {
+                campo.select();
+                var listo = function () { boton.textContent = '¡Copiado!'; };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(campo.value).then(listo, function () { document.execCommand('copy'); listo(); });
+                } else { document.execCommand('copy'); listo(); }
+            });
+        })();
+        </script>
+    {% else %}
+        <p class="portal-field-ayuda">En el <strong>Plan Premium</strong> tus turnos aparecen solos en tu Google Calendar (y te llega cada reserva con el turno adjunto), y podés enlazar tu agenda externa (Calendly, Encuadrado, etc.) desde tu perfil.</p>
+    {% endif %}
+
     {% if proximos_turnos %}
         <h2 class="portal-subtitulo">Tus próximos turnos</h2>
         <table class="portal-tabla">

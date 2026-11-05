@@ -28,7 +28,7 @@ def nombre_plan(pais, plan):
 def descripcion_plan(pais, plan):
     if plan == 'basico':
         return f'Perfil publicado en el buscador de Atención Psi {pais.nombre} y optimizado para Google.'
-    return f'Plan Básico + agenda de turnos online + perfil destacado en la difusión paga en {pais.nombre}.'
+    return f'Plan Básico + agenda de turnos + Google Calendar + agenda externa + perfil destacado en {pais.nombre}.'
 
 
 def monto_plan(pais, plan):
