@@ -109,10 +109,14 @@ class AQuienSeLeEnviaTests(_Base):
         _correr('--apply')
         self.assertEqual(mail.outbox, [])
 
-    def test_no_a_quien_no_confirmo_el_email(self):
+    def test_a_quien_no_confirmo_el_email_no_le_llega_el_seguimiento_comun_sino_el_de_confirmacion(self):
+        # No puede entrar a armar el perfil, así que "completá tu perfil" no le sirve: se le manda un link nuevo
+        # para confirmar (ver tests_seguimiento_confirmacion.py).
         self.psi(activo=False)
         _correr('--apply')
-        self.assertEqual(mail.outbox, [])
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Confirmá tu email', mail.outbox[0].subject)
+        self.assertNotIn('Te falta:', mail.outbox[0].body)
 
     def test_no_a_quien_se_le_vencio_el_periodo_gratis(self):
         self.psi(completo=True, gratis_hasta=timezone.now() - datetime.timedelta(days=1))

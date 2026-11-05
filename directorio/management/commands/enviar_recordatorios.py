@@ -2,10 +2,14 @@ import datetime
 import logging
 
 from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from directorio import estados
 from directorio.models import Psicologo
@@ -20,10 +24,20 @@ AVISO_VENCIMIENTO = datetime.timedelta(days=7)
 PRIMER_SEGUIMIENTO = datetime.timedelta(days=2)
 ENTRE_SEGUIMIENTOS = datetime.timedelta(days=3)
 MAX_SEGUIMIENTOS = 6
-# Quedan afuera: los publicados, los que no confirmaron el email y los que se les venció el período gratis
-# (esos tienen su propio aviso de fin de período).
+# Quedan afuera: los publicados y los que se les venció el período gratis (esos tienen su propio aviso de
+# fin de período).
 ESTADOS_CON_SEGUIMIENTO = ('sin_pago', 'incompleto', 'por_pagar', 'perfil_listo', 'listo')
+# Quien se registró pero NUNCA confirmó el email no puede entrar: el mail de seguimiento común no le sirve. Se le
+# manda otro, con un link NUEVO para confirmar (el del mail original vence a los 3 días), con el mismo ritmo de
+# avisos pero menos veces: si en tres avisos no confirmó, es probable que el mail no sea suyo o no le interese.
+MAX_CONFIRMACIONES = 3
 PASOS_TOTALES = 6   # nombre, matrícula, WhatsApp, foto, descripción y una orientación
+
+ASUNTOS_CONFIRMACION = [
+    'Confirmá tu email para activar tu perfil en Atención Psi',
+    'Tu perfil en Atención Psi te está esperando: confirmá tu email',
+    'Último aviso: confirmá tu email para activar tu cuenta',
+]
 
 ASUNTOS = [
     'Tu perfil en Atención Psi está casi listo',
@@ -46,10 +60,9 @@ def pendientes_de_seguimiento(ahora=None):
     """Profesionales a los que hoy les toca un aviso de seguimiento."""
     ahora = ahora or timezone.now()
     base = estados.con_estado(Psicologo.objects.all()).filter(
-        estado_codigo__in=ESTADOS_CON_SEGUIMIENTO,
-        usuario__is_active=True,          # sin confirmar el email no pueden entrar
+        Q(estado_codigo__in=ESTADOS_CON_SEGUIMIENTO, usuario__is_active=True, seguimientos_enviados__lt=MAX_SEGUIMIENTOS)
+        | Q(estado_codigo='sin_confirmar', seguimientos_enviados__lt=MAX_CONFIRMACIONES),
         no_enviar_seguimiento=False,      # pausado a mano desde el admin
-        seguimientos_enviados__lt=MAX_SEGUIMIENTOS,
     ).select_related('usuario', 'pais')
     return base.filter(
         Q(seguimientos_enviados=0, fecha_alta__lte=ahora - PRIMER_SEGUIMIENTO)
@@ -58,12 +71,40 @@ def pendientes_de_seguimiento(ahora=None):
 
 
 def _asunto(p):
+    if getattr(p, 'estado_codigo', '') == 'sin_confirmar':
+        return ASUNTOS_CONFIRMACION[min(p.seguimientos_enviados, len(ASUNTOS_CONFIRMACION) - 1)]
     return ASUNTOS[min(p.seguimientos_enviados, len(ASUNTOS) - 1)]
+
+
+def link_de_confirmacion(usuario):
+    """Link NUEVO para confirmar el email (el mismo mecanismo que usa el registro: vence a los 3 días)."""
+    uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+    token = default_token_generator.make_token(usuario)
+    return settings.SITE_URL.rstrip('/') + reverse('portal_verificar_email', args=[uid, token])
+
+
+def _mensaje_confirmacion(p):
+    nombre = p.nombre_corto or p.nombre
+    final = ''
+    if p.seguimientos_enviados + 1 >= MAX_CONFIRMACIONES:
+        final = 'Este es el último aviso automático que te enviamos. '
+    return (
+        f'Hola {nombre},\n\n'
+        f'Te registraste en Atención Psi {p.pais.nombre}, pero todavía no confirmaste tu email, y sin eso no podés entrar a '
+        'armar tu perfil.\n\n'
+        f'Confirmalo con un toque desde acá (el link dura 3 días): {link_de_confirmacion(p.usuario)}\n\n'
+        'Una vez adentro armás tu perfil con calma (podés ir guardándolo de a partes) y recién cuando lo publiques '
+        'elegís tu plan: hasta ese momento no pagás nada.\n\n'
+        'Si no encontrás nuestros mails, revisá la carpeta de spam o de promociones.\n\n'
+        f'{final}Si no querés recibir más estos avisos, respondé este mail y los pausamos.\n\n' + _cierre()
+    )
 
 
 def _mensaje(p):
     """Mail de seguimiento. Dice dónde quedó el perfil: qué falta, o que solo falta elegir el plan, o que ya
     puede publicarlo. Cambia el asunto con cada aviso y el último avisa que no habrá más."""
+    if getattr(p, 'estado_codigo', '') == 'sin_confirmar':
+        return _mensaje_confirmacion(p)
     nombre = p.nombre_corto or p.nombre
     faltan = p.faltantes_perfil
     if faltan:
