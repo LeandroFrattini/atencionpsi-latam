@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from . import dlocal_go, estados, planes_dlocal, suscripciones, visitas
-from .models import Visita, VisitaPerfil, Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
+from .models import Visita, VisitaPerfil, ClickWhatsApp, Ciudad, CodigoFundador, Especialidad, Formacion, Orientacion, Pais, PlanDLocal, Psicologo, Publico
 
 
 @admin.register(Pais)
@@ -168,6 +168,14 @@ class VisitaPerfilAdmin(_SoloLecturaAdmin):
     date_hierarchy = 'fecha'
 
 
+@admin.register(ClickWhatsApp)
+class ClickWhatsAppAdmin(_SoloLecturaAdmin):
+    list_display = ('fecha', 'psicologo', 'origen', 'cantidad')
+    list_filter = ('fecha', 'origen', 'psicologo__pais')
+    search_fields = ('psicologo__nombre',)
+    date_hierarchy = 'fecha'
+
+
 @admin.register(PlanDLocal)
 class PlanDLocalAdmin(admin.ModelAdmin):
     """Los planes se crean con `manage.py crear_planes_dlocal --apply`, no a mano:
@@ -226,7 +234,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     # Primero los países, y dentro de cada uno, los publicados arriba y los que solo hicieron la
     # cuenta al final. El estado se calcula con las mismas reglas que usa el sitio (ver estados.py).
     list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
-                    'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible')
+                    'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible', 'clicks_wa_30_visible')
     list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago',
                    'destacado', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
@@ -312,6 +320,10 @@ class PsicologoAdmin(admin.ModelAdmin):
     @admin.display(description='Visitas (30 d)', ordering='visitas_30')
     def visitas_30_visible(self, obj):
         return obj.visitas_30 or 0
+
+    @admin.display(description='Clicks WhatsApp (30 d)', ordering='clicks_wa_30')
+    def clicks_wa_30_visible(self, obj):
+        return obj.clicks_wa_30 or 0
 
     # ---- Seguimiento por mail de los perfiles sin publicar ----
     @admin.action(description='Pausar el seguimiento por mail')

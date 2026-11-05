@@ -16,9 +16,16 @@
     <tbody><tr>{% for fecha, n in dias %}<td style="text-align:center">{{ n }}</td>{% endfor %}</tr></tbody>
   </table>
 
+  <h2 style="margin-top:28px">Clicks en WhatsApp por día (últimos 14 días)</h2>
+  <table>
+    <thead><tr>{% for fecha, n in dias_wa %}<th>{{ fecha|date:"d/m" }}</th>{% endfor %}</tr></thead>
+    <tbody><tr>{% for fecha, n in dias_wa %}<td style="text-align:center">{{ n }}</td>{% endfor %}</tr></tbody>
+  </table>
+  <p class="help">Cuenta cada vez que una persona toca el botón de WhatsApp de un profesional (perfil o tarjeta del buscador). No cuenta robots, ni al equipo, ni al profesional tocando su propio botón.</p>
+
   <h2 style="margin-top:28px">Visitas por profesional</h2>
   <table>
-    <thead><tr><th>Profesional</th><th>País</th><th>Publicado</th><th>7 días</th><th>30 días</th><th>Total</th></tr></thead>
+    <thead><tr><th>Profesional</th><th>País</th><th>Publicado</th><th>Visitas 7 días</th><th>Visitas 30 días</th><th>Visitas total</th><th>WhatsApp 7 días</th><th>WhatsApp 30 días</th><th>WhatsApp total</th></tr></thead>
     <tbody>
     {% for f in profesionales %}
       <tr>
@@ -26,9 +33,10 @@
         <td>{{ f.psicologo.pais.nombre }}</td>
         <td>{% if f.publicado %}Sí{% else %}No{% endif %}</td>
         <td>{{ f.siete }}</td><td>{{ f.treinta }}</td><td>{{ f.total }}</td>
+        <td>{{ f.wa_siete }}</td><td>{{ f.wa_treinta }}</td><td>{{ f.wa_total }}</td>
       </tr>
     {% empty %}
-      <tr><td colspan="6">Todavía no hay profesionales.</td></tr>
+      <tr><td colspan="9">Todavía no hay profesionales.</td></tr>
     {% endfor %}
     </tbody>
   </table>

@@ -4,10 +4,10 @@ El estado se calcula en la base de datos con las mismas reglas que usa el sitio
 (`Psicologo.publicado`, `puede_publicar`, `perfil_completo`), así lo que ves en el admin es
 exactamente lo que está o no publicado. Hay un test que compara las dos cosas.
 """
-from django.db.models import CharField, Case, Exists, IntegerField, OuterRef, Q, Sum, Value, When
+from django.db.models import CharField, Case, Exists, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
 from django.utils import timezone
 
-from .models import Psicologo
+from .models import ClickWhatsApp, Psicologo
 
 # (código, etiqueta corta, qué significa, color del cartelito)
 ESTADOS = [
@@ -27,8 +27,8 @@ COLORES = {c: col for c, _, _, col in ESTADOS}
 
 
 def con_estado(queryset):
-    """Agrega al queryset `estado_codigo`, `estado_orden` y `visitas_30` (visitas al perfil de
-    los últimos 30 días)."""
+    """Agrega al queryset `estado_codigo`, `estado_orden`, `visitas_30` (visitas al perfil de
+    los últimos 30 días) y `clicks_wa_30` (clicks en su botón de WhatsApp en ese período)."""
     import datetime
     ahora = timezone.now()
     hace_30 = timezone.localdate() - datetime.timedelta(days=29)
@@ -57,12 +57,17 @@ def con_estado(queryset):
         default=Value(len(CODIGOS)),
         output_field=IntegerField(),
     )
+    clicks_30 = (
+        ClickWhatsApp.objects.filter(psicologo=OuterRef('pk'), fecha__gte=hace_30)
+        .values('psicologo').annotate(t=Sum('cantidad')).values('t')
+    )
     return (
         queryset
         .annotate(con_orientacion=tiene_orientacion)
         .annotate(estado_codigo=estado)
         .annotate(estado_orden=orden)
         .annotate(visitas_30=Sum('visitas_perfil__cantidad', filter=Q(visitas_perfil__fecha__gte=hace_30)))
+        .annotate(clicks_wa_30=Subquery(clicks_30, output_field=IntegerField()))
     )
 
 

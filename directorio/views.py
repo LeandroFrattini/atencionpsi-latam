@@ -13,10 +13,13 @@ from django.core.mail import EmailMessage
 from django.core.management import call_command
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import ContactoForm
-from .models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
+from .bot_detector import es_bot
+from .middleware import _sumar
+from .models import Ciudad, ClickWhatsApp, Especialidad, Orientacion, Pais, Psicologo, Publico
 from . import buscador
 from .destacados import CANTIDAD_DESTACADOS_INICIO, mezcla_de_psicologos
 from .taxonomia import clave
@@ -34,6 +37,7 @@ def robots_txt(request):
         'User-agent: *',
         'Disallow: /admin/',
         'Disallow: /portal/',
+        'Disallow: /*/whatsapp/',
         '',
         f'Sitemap: {request.scheme}://{request.get_host()}/sitemap.xml',
     ]
@@ -292,6 +296,30 @@ def buscador_pais(request, pais_slug):
 
     contexto['sugerencias'] = buscador.sugerencias(publicados)
     return render(request, 'directorio/buscador.html', contexto)
+
+
+def ir_a_whatsapp(request, pais_slug, pk):
+    """Cuenta el click en el botón de WhatsApp de un profesional y manda a su chat (wa.me).
+
+    Solo cuenta clicks de personas reales: no robots, ni quien administra el sitio, ni al
+    profesional probando su propio botón. Si contar falla, igual redirige: el paciente nunca
+    se queda sin llegar al WhatsApp."""
+    pais = _pais_o_404(pais_slug)
+    psicologo = pais.psicologos.select_related('usuario').filter(pk=pk).first()
+    if not psicologo or not psicologo.publicado or not psicologo.whatsapp_limpio():
+        raise Http404('Perfil no encontrado')
+    try:
+        usuario = getattr(request, 'user', None)
+        es_staff = usuario is not None and usuario.is_authenticated and usuario.is_staff
+        es_el_mismo = usuario is not None and usuario.is_authenticated and psicologo.usuario_id == usuario.pk
+        if not (es_bot(request) or es_staff or es_el_mismo):
+            origen = request.GET.get('o') if request.GET.get('o') in ('perfil', 'buscador') else 'buscador'
+            _sumar(ClickWhatsApp, fecha=timezone.localdate(), psicologo=psicologo, origen=origen)
+    except Exception:
+        logger.warning('No se pudo contar el click de WhatsApp del profesional %s', pk, exc_info=True)
+    respuesta = redirect(f'https://wa.me/{psicologo.whatsapp_limpio()}')
+    respuesta['Cache-Control'] = 'no-store'
+    return respuesta
 
 
 def detalle_psicologo(request, pais_slug, pk):

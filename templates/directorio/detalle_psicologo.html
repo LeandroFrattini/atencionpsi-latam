@@ -174,7 +174,7 @@
                     {% elif sesiones %}
                         <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="{% url 'reserva_tipo' pais.slug p.pk %}"{% endif %} class="btn-primario">Reservar turno</a>
                     {% endif %}
-                    <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="https://wa.me/{{ p.whatsapp_limpio }}" target="_blank" rel="noopener"{% endif %} class="btn-whatsapp">Escribir por WhatsApp</a>
+                    <a {% if vista_previa %}href="#" data-vista-previa{% else %}href="{% url 'ir_whatsapp' pais.slug p.pk %}?o=perfil" target="_blank" rel="noopener nofollow"{% endif %} class="btn-whatsapp">Escribir por WhatsApp</a>
                 </div>
 
                 {% if not vista_previa %}

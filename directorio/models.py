@@ -650,3 +650,26 @@ class VisitaPerfil(models.Model):
 
     def __str__(self):
         return f'{self.fecha} | {self.psicologo.nombre} ({self.cantidad})'
+
+
+class ClickWhatsApp(models.Model):
+    """Clicks reales en el botón de WhatsApp de un profesional, por día y por lugar del sitio (sin
+    robots, sin los del propio profesional ni los de quien administra el sitio). Ver
+    directorio/views.py::ir_a_whatsapp."""
+    ORIGEN_CHOICES = [
+        ('perfil', 'Perfil'),
+        ('buscador', 'Buscador / tarjeta'),
+    ]
+    fecha = models.DateField()
+    psicologo = models.ForeignKey(Psicologo, on_delete=models.CASCADE, related_name='clicks_whatsapp')
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='buscador')
+    cantidad = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['fecha', 'psicologo', 'origen'], name='click_whatsapp_unico_por_dia')]
+        ordering = ['-fecha']
+        verbose_name = 'Click en WhatsApp'
+        verbose_name_plural = 'Clicks en WhatsApp'
+
+    def __str__(self):
+        return f'{self.fecha} | {self.psicologo.nombre} · {self.get_origen_display()} ({self.cantidad})'
