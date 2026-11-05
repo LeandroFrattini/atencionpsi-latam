@@ -1,13 +1,19 @@
+import hmac
+import io
 import logging
+import os
 import random
 import re
 from collections import Counter
 
 from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.core.mail import EmailMessage
+from django.core.management import call_command
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 from .forms import ContactoForm
 from .models import Ciudad, Especialidad, Orientacion, Pais, Psicologo, Publico
@@ -384,3 +390,40 @@ def reverse_ciudad(pais, ciudad):
 def reverse_especialidad(pais, especialidad):
     from django.urls import reverse
     return reverse('psicologos_por_especialidad', args=[pais.slug, especialidad.slug])
+
+
+@csrf_exempt
+def tareas_diarias(request, token):
+    """Corre las dos tareas que tienen que pasar todos los días: confirmar contra dLocal Go quién pagó
+    (red de seguridad por si se pierde un aviso) y mandar los mails de seguimiento a quien no terminó su perfil.
+
+    Está pensada para que la visite una vez por día un servicio de tareas programadas (Render Cron Job o uno
+    gratuito como cron-job.org). Solo funciona con la clave secreta TAREAS_DIARIAS_TOKEN (cargada en Render) en la
+    dirección; sin clave, o con otra, responde como si la página no existiera. Seguro de repetir: los recordatorios
+    ya llevan su propia cuenta de cuántos mandó y cuándo."""
+    esperado = os.environ.get('TAREAS_DIARIAS_TOKEN', '')
+    if not esperado or not hmac.compare_digest(token, esperado):
+        raise Http404
+    if request.method not in ('GET', 'POST'):
+        return HttpResponse(status=405)
+    if not cache.add('tareas_diarias_en_curso', 1, 900):
+        return HttpResponse('Ya hay una corrida en curso: no se hizo nada.', status=409, content_type='text/plain; charset=utf-8')
+
+    lineas, fallo = [], False
+    try:
+        for titulo, comando, argumentos in (
+            ('Pagos (dLocal Go)', 'sincronizar_suscripciones', []),
+            ('Recordatorios por mail', 'enviar_recordatorios', ['--apply']),
+        ):
+            salida = io.StringIO()
+            lineas.append(f'== {titulo}')
+            try:
+                call_command(comando, *argumentos, stdout=salida, stderr=salida)
+            except Exception as error:
+                fallo = True
+                logger.exception('Falló la tarea diaria %s', comando)
+                lineas.append(f'FALLÓ: {str(error)[:200]}')
+            lineas.append(salida.getvalue().strip() or '(sin novedades)')
+    finally:
+        cache.delete('tareas_diarias_en_curso')
+    return HttpResponse('\n'.join(lineas) + '\n', status=500 if fallo else 200, content_type='text/plain; charset=utf-8')

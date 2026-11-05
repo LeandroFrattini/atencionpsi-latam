@@ -146,7 +146,8 @@ class ContenidoTests(_Base):
     def test_completo_sin_plan_pide_elegir_el_plan(self):
         self.psi(completo=True)
         _correr('--apply')
-        self.assertIn('elegir tu plan y publicarlo', mail.outbox[0].body)
+        self.assertIn('Guardar y publicar', mail.outbox[0].body)   # todavía no tocó Publicar: ese es su siguiente paso
+        self.assertIn('elegir tu plan', mail.outbox[0].body)
         self.assertNotIn('te falta', mail.outbox[0].body.lower())
 
     def test_completo_con_acceso_pide_tocar_publicar(self):

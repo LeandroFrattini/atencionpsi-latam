@@ -76,11 +76,20 @@ def _mensaje(p):
         if not p.tiene_acceso:
             cuerpo += ' El plan se elige recién cuando decidas publicar; hasta ese momento no pagás nada.'
         cuerpo += '\n\nSeguí desde acá: https://atencionpsi.lat/portal/perfil/'
+    elif not p.tiene_acceso and p.publicado_por_usuario:
+        # Ya tocó "Publicar" y se quedó en el pago: el link va directo a elegir el plan.
+        simbolo, precio = p.pais.simbolo_moneda, p.pais.precio_basico
+        desde = f' (desde {simbolo} {precio} por mes)' if precio else ''
+        cuerpo = (
+            'Tu perfil está completo y listo para publicarse: solo falta elegir tu plan' + desde + '. '
+            'En cuanto se confirme el pago, los pacientes empiezan a encontrarte en el buscador.\n\n'
+            'Elegí tu plan desde acá: https://atencionpsi.lat/portal/checkout/'
+        )
     elif not p.tiene_acceso:
         cuerpo = (
-            'Tu perfil está completo y se ve muy bien. Falta un solo paso: elegir tu plan y publicarlo, '
-            'así los pacientes empiezan a encontrarte en el buscador.\n\n'
-            'Mirá cómo te ven y publicalo desde acá: https://atencionpsi.lat/portal/'
+            'Tu perfil está completo y se ve muy bien. Falta un solo paso: tocar "Guardar y publicar" y elegir tu plan, '
+            'así los pacientes empiezan a encontrarte en el buscador. Hasta ese momento no pagás nada.\n\n'
+            'Mirá cómo te ven y publicalo desde acá: https://atencionpsi.lat/portal/perfil/'
         )
     else:
         cuerpo = (
