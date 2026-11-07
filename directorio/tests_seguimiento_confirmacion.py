@@ -64,12 +64,12 @@ class MailParaQuienNoConfirmoTests(_Base):
         self.assertIn('Hola Fergie', mail.outbox[0].body)
         self.assertIn('Atención Psi Chile', mail.outbox[0].body)
 
-    def test_no_se_manda_antes_de_los_dos_dias(self):
+    def test_no_se_manda_antes_de_las_36_horas(self):
         self.psi(hace_dias=1)
         _correr('--apply')
         self.assertEqual(mail.outbox, [])
 
-    def test_es_un_aviso_cada_tres_dias_y_se_frena_a_los_tres(self):
+    def test_es_un_aviso_cada_36_horas_y_se_frena_a_los_tres(self):
         psi = self.psi()
         for numero in range(1, MAX_CONFIRMACIONES + 1):
             _correr('--apply')

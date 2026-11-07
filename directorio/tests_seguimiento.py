@@ -1,4 +1,4 @@
-"""Seguimiento por mail a quien todavía no publicó su perfil: uno a los 2 días y después cada 3, hasta 6."""
+"""Seguimiento por mail a quien todavía no publicó su perfil: uno a las 36 horas y después cada 36 horas, hasta 6."""
 import datetime
 from io import StringIO
 from unittest import mock
@@ -46,7 +46,7 @@ class _Base(TestCase):
 
 
 class CuandoSeEnviaTests(_Base):
-    def test_a_los_2_dias_recibe_el_primero_y_queda_anotado(self):
+    def test_pasadas_las_36_horas_recibe_el_primero_y_queda_anotado(self):
         psi = self.psi(dias=3)
         _correr('--apply')
         self.assertEqual(len(mail.outbox), 1)
@@ -55,17 +55,29 @@ class CuandoSeEnviaTests(_Base):
         self.assertEqual(psi.seguimientos_enviados, 1)
         self.assertIsNotNone(psi.ultimo_seguimiento)
 
-    def test_antes_de_los_2_dias_no(self):
+    def test_a_las_40_horas_de_registrarse_ya_recibe_el_primero(self):
+        psi = self.psi(dias=0)
+        Psicologo.objects.filter(pk=psi.pk).update(fecha_alta=timezone.now() - datetime.timedelta(hours=40))
+        _correr('--apply')
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_a_las_30_horas_todavia_no(self):
+        psi = self.psi(dias=0)
+        Psicologo.objects.filter(pk=psi.pk).update(fecha_alta=timezone.now() - datetime.timedelta(hours=30))
+        _correr('--apply')
+        self.assertEqual(mail.outbox, [])
+
+    def test_antes_de_las_36_horas_no(self):
         self.psi(dias=1)
         _correr('--apply')
         self.assertEqual(mail.outbox, [])
 
-    def test_el_siguiente_recien_a_los_3_dias_del_anterior(self):
+    def test_el_siguiente_recien_a_las_36_horas_del_anterior(self):
         psi = self.psi(dias=10, seguimientos_enviados=1)
-        Psicologo.objects.filter(pk=psi.pk).update(ultimo_seguimiento=timezone.now() - datetime.timedelta(days=2))
+        Psicologo.objects.filter(pk=psi.pk).update(ultimo_seguimiento=timezone.now() - datetime.timedelta(hours=35))
         _correr('--apply')
         self.assertEqual(mail.outbox, [])
-        Psicologo.objects.filter(pk=psi.pk).update(ultimo_seguimiento=timezone.now() - datetime.timedelta(days=3, minutes=1))
+        Psicologo.objects.filter(pk=psi.pk).update(ultimo_seguimiento=timezone.now() - datetime.timedelta(hours=36, minutes=1))
         _correr('--apply')
         self.assertEqual([m.subject for m in mail.outbox], ['Te falta muy poco para publicar tu perfil'])
 

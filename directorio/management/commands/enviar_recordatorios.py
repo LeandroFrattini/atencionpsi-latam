@@ -19,10 +19,9 @@ logger = logging.getLogger(__name__)
 AVISO_VENCIMIENTO = datetime.timedelta(days=7)
 
 # Seguimiento a quien todavía no publicó su perfil (esté incompleto, completo sin plan, o completo sin publicar):
-# primer aviso a los 2 días de registrarse y después uno cada 3 días, hasta MAX_SEGUIMIENTOS avisos en total
-# (unas dos semanas y media). Después se frena solo: no se insiste para siempre.
-PRIMER_SEGUIMIENTO = datetime.timedelta(days=2)
-ENTRE_SEGUIMIENTOS = datetime.timedelta(days=3)
+# primer aviso a las 36 horas de registrarse y después uno cada 36 horas, hasta MAX_SEGUIMIENTOS avisos en total. Después se frena solo: no se insiste para siempre.
+PRIMER_SEGUIMIENTO = datetime.timedelta(hours=36)
+ENTRE_SEGUIMIENTOS = datetime.timedelta(hours=36)
 MAX_SEGUIMIENTOS = 6
 # Quedan afuera: los publicados y los que se les venció el período gratis (esos tienen su propio aviso de
 # fin de período).
