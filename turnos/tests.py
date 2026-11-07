@@ -100,8 +100,10 @@ class WizardReservaTests(TestCase):
         resp = self.client.post(reverse('reserva_confirmar', args=['peru', self.psicologo.pk]))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(Turno.objects.filter(email='juan@example.com').exists())
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('psico@example.com', mail.outbox[0].to)
+        # Un aviso al profesional y una confirmación al paciente.
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn(['psico@example.com'], [m.to for m in mail.outbox])
+        self.assertIn(['juan@example.com'], [m.to for m in mail.outbox])
 
     def test_honeypot_completo_no_deja_avanzar_a_confirmar(self):
         self._avanzar_hasta_horario()

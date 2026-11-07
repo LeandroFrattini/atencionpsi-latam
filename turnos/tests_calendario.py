@@ -225,20 +225,35 @@ class ReservaConPremiumTests(_Base):
         self.assertContains(resp, 'Agregar a Google Calendar')
         self.assertContains(resp, 'data:text/calendar')
 
-    def test_basico_se_comporta_como_siempre(self):
+    def test_basico_profesional_y_paciente_reciben_mail_pero_sin_calendario(self):
         resp = self.reservar(self.psi(plan='basico'))
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual([m.to for m in mail.outbox], [['ana@example.com']])
-        self.assertEqual(mail.outbox[0].attachments, [])
+        self.assertCountEqual([m.to[0] for m in mail.outbox], ['ana@example.com', 'juan@example.com'])
+        for mensaje in mail.outbox:
+            self.assertEqual(mensaje.attachments, [])
+            self.assertNotIn('calendar.google.com', mensaje.body)
+        al_paciente = next(m for m in mail.outbox if m.to == ['juan@example.com'])
+        self.assertIn('quedó confirmado', al_paciente.body)
+        self.assertIn('+51999111222', al_paciente.body)
         self.assertNotContains(resp, 'Google Calendar')
+        self.assertContains(resp, 'Te enviamos la confirmación a')
 
-    def test_si_falla_el_mail_al_paciente_el_turno_igual_queda(self):
+    def test_si_falla_el_mail_al_paciente_el_turno_igual_queda_y_la_pantalla_no_miente(self):
         from unittest import mock
         psi = self.psi()
         with mock.patch('turnos.views._confirmar_al_paciente', side_effect=Exception('SMTP caído')):
             resp = self.reservar(psi)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(Turno.objects.filter(psicologo=psi).count(), 1)
+        self.assertContains(resp, 'No pudimos enviarte el mail de confirmación')
+        self.assertNotContains(resp, 'Te enviamos la confirmación a')
+
+    def test_si_falla_el_aviso_al_profesional_el_paciente_igual_recibe_su_mail(self):
+        from unittest import mock
+        with mock.patch('turnos.views._avisar_por_mail', side_effect=Exception('SMTP caído')):
+            resp = self.reservar(self.psi(plan='basico'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([m.to for m in mail.outbox], [['juan@example.com']])
 
 
 class CalendarioPersonalTests(_Base):

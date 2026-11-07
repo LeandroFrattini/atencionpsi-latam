@@ -271,13 +271,14 @@ def paso_confirmar(request, pais_slug, pk):
             # muestra la confirmación: lo contrario sería un 500 después de
             # una reserva que en realidad sí se guardó.
             logger.exception('No se pudo avisar por mail el turno %s', turno.pk)
-        # Extra del Plan Premium: confirmación al paciente con el turno para su calendario.
-        if psicologo.es_premium:
-            try:
-                _confirmar_al_paciente(turno)
-            except Exception:
-                logger.exception('No se pudo confirmar por mail al paciente el turno %s', turno.pk)
-        contexto = {'pais': pais, 'p': psicologo, 'turno': turno}
+        # Confirmación al paciente (a todos; el turno para su calendario va solo si el profesional es Premium).
+        mail_paciente_enviado = False
+        try:
+            _confirmar_al_paciente(turno)
+            mail_paciente_enviado = True
+        except Exception:
+            logger.exception('No se pudo confirmar por mail al paciente el turno %s', turno.pk)
+        contexto = {'pais': pais, 'p': psicologo, 'turno': turno, 'mail_paciente_enviado': mail_paciente_enviado}
         if psicologo.es_premium:
             contexto['link_google_calendar'] = calendario.link_google_calendar(turno)
             contexto['ics_paciente'] = calendario.generar_ics([turno], f'Sesión con {psicologo.nombre}', para_profesional=False)
@@ -377,18 +378,19 @@ def _confirmar_al_paciente(turno):
     ]
     if p.whatsapp_limpio():
         lineas.append(f'Si necesitás reprogramar, escribile al profesional por WhatsApp: +{p.whatsapp_limpio()}')
-    lineas += [
-        '',
-        'Sumalo a tu calendario con un toque: abrí el archivo adjunto (turno.ics) o usá este link de Google Calendar:',
-        calendario.link_google_calendar(turno),
-        '',
-        'Atención Psi',
-    ]
+    if p.es_premium:
+        lineas += [
+            '',
+            'Sumalo a tu calendario con un toque: abrí el archivo adjunto (turno.ics) o usá este link de Google Calendar:',
+            calendario.link_google_calendar(turno),
+        ]
+    lineas += ['', 'Atención Psi']
     mensaje = EmailMessage(
         subject=f'Tu turno con {p.nombre} está confirmado', body='\n'.join(lineas), from_email=None, to=[turno.email],
     )
-    mensaje.attach('turno.ics', calendario.generar_ics([turno], f'Sesión con {p.nombre}', para_profesional=False),
-                   'text/calendar; charset=utf-8; method=PUBLISH')
+    if p.es_premium:
+        mensaje.attach('turno.ics', calendario.generar_ics([turno], f'Sesión con {p.nombre}', para_profesional=False),
+                       'text/calendar; charset=utf-8; method=PUBLISH')
     mensaje.send()
 
 

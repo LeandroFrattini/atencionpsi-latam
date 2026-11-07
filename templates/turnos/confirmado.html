@@ -8,14 +8,17 @@
     <h1>¡Turno confirmado!</h1>
     <p class="wizard-subtitulo">
         Tu sesión con {{ p.nombre }} quedó reservada para el {{ turno.fecha_hora|date:'l j \\d\\e F, H:i' }}.
-        Te contactamos a {{ turno.email }} si hace falta algo más.
+        {% if mail_paciente_enviado %}
+            Te enviamos la confirmación a <strong>{{ turno.email }}</strong>; si no la ves, revisá la carpeta de spam.
+        {% else %}
+            No pudimos enviarte el mail de confirmación, pero tu turno quedó reservado: anotá la fecha y la hora. Si hace falta algo más, te contactamos a {{ turno.email }}.
+        {% endif %}
     </p>
     {% if link_google_calendar %}
         <div class="agregar-calendario">
             <p class="portal-field-ayuda">Agregá el turno a tu calendario para no olvidarte:</p>
             <a href="{{ link_google_calendar }}" target="_blank" rel="noopener noreferrer" class="btn-secundario">Agregar a Google Calendar</a>
             <a href="data:text/calendar;charset=utf-8,{{ ics_paciente|urlencode:'' }}" download="turno.ics" class="btn-secundario">Descargar para otro calendario (.ics)</a>
-            <p class="portal-field-ayuda">También te lo enviamos por mail a {{ turno.email }}.</p>
         </div>
     {% endif %}
     <a href="{% url 'buscador_pais' pais.slug %}" class="btn-primario">Volver al buscador</a>
