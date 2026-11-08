@@ -1,0 +1,15 @@
+Hola {{ nombre }},
+
+Te damos la bienvenida a Atención Psi {{ pais }}. Ya cargamos tu perfil con los datos que nos enviaste.
+
+Para entrar, creá tu contraseña desde este link (vale {{ dias }} días):
+
+{{ enlace }}
+
+Al terminar entrás directo a tu cuenta. Ahí revisás tu perfil, subís tu foto si falta y lo publicás cuando quieras. Las próximas veces entrás con tu email ({{ email }}) y la contraseña que elegiste, desde {{ sitio }}/portal/login/
+
+Si el link venció, en esa misma pantalla de ingreso tocá «¿Olvidaste tu contraseña?» y te mandamos otro.
+
+Cualquier cosa, escribinos a {{ contacto_email }}.
+
+Atención Psi

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Revisá tu email | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>Revisá tu email</h1>
+    <p class="portal-lead">Si ese email tiene una cuenta en Atención Psi, te mandamos un link para elegir tu contraseña. Puede tardar unos minutos; si no lo ves, revisá la carpeta de spam o de promociones.</p>
+    <a href="{% url 'portal_login' %}" class="portal-lead-sm">&larr; Volver a ingresar</a>
+</div>
+{% endblock %}

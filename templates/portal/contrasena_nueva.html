@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Elegí tu contraseña | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    {% if validlink %}
+        <h1>Elegí tu contraseña</h1>
+        <p class="portal-lead">Con esta contraseña vas a entrar a tu cuenta desde ahora.</p>
+        <form method="post" class="portal-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="portal-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="portal-field-ayuda">{{ field.help_text|safe }}</div>{% endif %}
+                    {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn-primario">Guardar y entrar</button>
+        </form>
+    {% else %}
+        <h1>Este link ya no es válido</h1>
+        <p class="portal-lead">Puede que ya lo hayas usado o que haya vencido. Pedí uno nuevo y te lo mandamos por mail.</p>
+        <a href="{% url 'portal_contrasena_olvide' %}" class="btn-primario">Pedir un link nuevo</a>
+    {% endif %}
+</div>
+{% endblock %}

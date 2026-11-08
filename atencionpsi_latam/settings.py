@@ -72,6 +72,10 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',
 ]
 
+# Los links para crear la contraseña (bienvenida a una profesional cargada a mano, "olvidé mi contraseña")
+# duran 7 días (Django: 3 por defecto).
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24 * 7
+
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
     'directorio.auth_backends.EmailCaseInsensitiveBackend',

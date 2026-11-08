@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Recuperar contraseña | Atención Psi{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block content %}
+<div class="portal-card">
+    <h1>¿Olvidaste tu contraseña?</h1>
+    <p class="portal-lead">Escribí tu email y te mandamos un link para elegir una contraseña nueva.</p>
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        <div class="portal-field">
+            <label for="id_email">Tu email</label>
+            {{ form.email }}
+            {% if form.email.errors %}<p class="portal-error">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+        <button type="submit" class="btn-primario">Enviarme el link</button>
+    </form>
+    <a href="{% url 'portal_login' %}" class="portal-lead-sm">&larr; Volver a ingresar</a>
+</div>
+{% endblock %}

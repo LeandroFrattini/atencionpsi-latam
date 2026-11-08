@@ -1,0 +1,13 @@
+Hola,
+
+Pediste crear o cambiar la contraseña de tu cuenta en Atención Psi ({{ email }}).
+
+Elegí tu contraseña desde este link (vale {{ dias }} días):
+
+{{ sitio }}{% url 'portal_contrasena_nueva' uidb64=uid token=token %}
+
+Si no lo pediste vos, ignorá este mensaje: tu cuenta sigue como estaba.
+
+Cualquier cosa, escribinos a {{ contacto_email }}.
+
+Atención Psi

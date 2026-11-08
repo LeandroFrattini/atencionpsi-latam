@@ -1,13 +1,20 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.views.generic import TemplateView
 
 from . import views
+from .contrasenas import NuevaContrasenaView, OlvideContrasenaView
 from .forms import LoginForm
 
 urlpatterns = [
     path('<slug:pais_slug>/registro/', views.registro, name='portal_registro'),
     path('login/', auth_views.LoginView.as_view(template_name='portal/login.html', authentication_form=LoginForm), name='portal_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='portal_logout'),
+
+    # Crear o recuperar la contraseña con un link por mail
+    path('contrasena/olvide/', OlvideContrasenaView.as_view(), name='portal_contrasena_olvide'),
+    path('contrasena/enviada/', TemplateView.as_view(template_name='portal/contrasena_enviada.html'), name='portal_contrasena_enviada'),
+    path('contrasena/nueva/<uidb64>/<token>/', NuevaContrasenaView.as_view(), name='portal_contrasena_nueva'),
 
     # Confirmación de email
     path('verificar/enviado/', views.verificar_enviado, name='portal_verificar_enviado'),
