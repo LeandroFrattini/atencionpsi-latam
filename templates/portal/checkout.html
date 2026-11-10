@@ -17,10 +17,15 @@
     {% else %}
         {% if psicologo.perfil_completo %}
             <h1>Tu perfil está listo: elegí tu plan y publicalo</h1>
-            <p class="portal-lead">Apenas se confirme el pago, tu perfil aparece en el buscador de {{ psicologo.pais.nombre }}. <a href="{% url 'portal_vista_previa' %}" target="_blank" rel="noopener">Ver cómo te ven</a></p>
+            <p class="portal-lead">Lo que cargaste quedó guardado. Apenas se confirme el pago, tu perfil aparece en el buscador de {{ psicologo.pais.nombre }}.{% if not psicologo.plan_primero %} <a href="{% url 'portal_vista_previa' %}" target="_blank" rel="noopener">Ver cómo te ven</a>{% endif %}</p>
         {% else %}
-            <h1>Elegí tu plan</h1>
-            <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa. Todavía te falta completar: {{ psicologo.faltantes_perfil|join:", " }}. <a href="{% url 'portal_editar_perfil' %}">Completar mi perfil</a></p>
+            {% if psicologo.plan_primero %}
+                <h1>Elegí tu plan para empezar</h1>
+                <p class="portal-lead">Es el último paso antes de armar tu perfil: elegí tu plan y activá la suscripción. Apenas se confirme el pago, cargás tu foto, tu descripción y tus datos, y publicás tu perfil en {{ psicologo.pais.nombre }} cuando esté listo.</p>
+            {% else %}
+                <h1>Elegí tu plan</h1>
+                <p class="portal-lead">Para publicar tu perfil en {{ psicologo.pais.nombre }} necesitás una suscripción activa. Todavía te falta completar: {{ psicologo.faltantes_perfil|join:", " }}. <a href="{% url 'portal_editar_perfil' %}">Completar mi perfil</a></p>
+            {% endif %}
         {% endif %}
     {% endif %}
 

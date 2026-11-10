@@ -149,6 +149,7 @@ def registro(request, pais_slug):
                         nombre=form.cleaned_data['nombre'],
                         whatsapp=form.cleaned_data['whatsapp'],
                         matricula='',
+                        plan_primero=True,
                         terminos_aceptados_en=timezone.now(),
                     )
                     codigo = form.cleaned_data.get('codigo_fundador')
@@ -242,9 +243,12 @@ def verificar_email(request, uidb64, token):
     usuario.is_active = True
     usuario.save(update_fields=['is_active'])
     login(request, usuario, backend=_LOGIN_BACKEND)
-    # Directo a armar el perfil: el plan se elige al final, cuando toca "Publicar".
-    messages.success(request, '¡Listo, tu email quedó confirmado! Completá tu perfil con calma: abajo ves cómo te van a ver los pacientes.')
-    return redirect('portal_editar_perfil')
+    # Siguiente paso: elegir el plan y pagar. El perfil se arma después, ya con la suscripción activa.
+    if not (usuario.psicologo.plan_primero and not usuario.psicologo.tiene_acceso):
+        messages.success(request, '¡Listo, tu email quedó confirmado! Completá tu perfil con calma: abajo ves cómo te van a ver los pacientes.')
+        return redirect('portal_editar_perfil')
+    messages.success(request, '¡Listo, tu email quedó confirmado! Último paso antes de armar tu perfil: elegí tu plan.')
+    return redirect('portal_checkout')
 
 
 def reenviar_verificacion(request):
@@ -285,6 +289,22 @@ def psicologo_required(view_func):
                 '(¿es una cuenta de administración?). Iniciá sesión con tu cuenta de psicólogo/a.'
             )
             return redirect('portal_login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def acceso_required(view_func):
+    """El recorrido es: registro, confirmar el email, ELEGIR PLAN Y PAGAR, y recién después armar el perfil.
+    Sin acceso (plan activo, período gratis o exenta) todo el portal, salvo el checkout, lleva a elegir el plan.
+    Lo que ya cargó queda guardado: lo retoma apenas se confirma el pago."""
+    @wraps(view_func)
+    @psicologo_required
+    def wrapper(request, *args, **kwargs):
+        yo = request.user.psicologo
+        if yo.plan_primero and not yo.tiene_acceso:
+            messages.info(request, 'Para seguir, elegí tu plan y activá tu suscripción. Apenas se confirme el pago '
+                                   'armás tu perfil.')
+            return redirect('portal_checkout')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -344,8 +364,12 @@ def checkout_retorno(request):
     if psicologo.suscripcion_activa:
         if psicologo.publicado:
             messages.success(request, '¡Listo! Tu suscripción está activa y tu perfil ya está publicado en el buscador.')
-        elif psicologo.publicado_por_usuario:
-            messages.success(request, '¡Listo! Tu suscripción está activa. Completá lo que falta de tu perfil y se publica solo.')
+            return redirect('portal_dashboard')
+        if psicologo.plan_primero and not psicologo.perfil_completo:
+            messages.success(request, '¡Pago confirmado! Ahora armá tu perfil: podés ir guardándolo de a partes y publicarlo cuando esté listo.')
+            return redirect('portal_editar_perfil')
+        if psicologo.publicado_por_usuario:
+            messages.success(request, '¡Listo! Tu suscripción está activa. Completá lo que falta de tu perfil y se publica solo.' if not psicologo.perfil_completo else '¡Listo! Tu suscripción está activa y tu perfil ya está completo: se publica solo.')
         else:
             messages.success(request, '¡Listo! Tu suscripción está activa. Cuando quieras, publicá tu perfil.')
         return redirect('portal_dashboard')
@@ -404,7 +428,7 @@ def simular_pago(request):
     return redirect('portal_dashboard')
 
 
-@psicologo_required
+@acceso_required
 def dashboard(request):
     psicologo = request.user.psicologo
     ahora = timezone.now()
@@ -426,7 +450,7 @@ def dashboard(request):
     })
 
 
-@psicologo_required
+@acceso_required
 def renovar_calendario(request):
     """Genera una clave nueva para el calendario personal: el link anterior deja de funcionar (por si
     se compartió sin querer). Hay que volver a suscribirse con el link nuevo."""
@@ -441,7 +465,7 @@ def renovar_calendario(request):
     return redirect('portal_dashboard')
 
 
-@psicologo_required
+@acceso_required
 def editar_perfil(request):
     psicologo = request.user.psicologo
     if request.method == 'POST':
@@ -540,7 +564,7 @@ def _contexto_editor(psicologo, form, formset):
     }
 
 
-@psicologo_required
+@acceso_required
 def vista_previa(request):
     """El perfil público tal cual lo ven los pacientes, pero visible solo para su dueño y sin importar si
     ya está publicado. Con los cambios guardados (no los que está escribiendo)."""
@@ -569,14 +593,14 @@ def _intentar_publicar(request, psicologo):
     return redirect('portal_checkout')
 
 
-@psicologo_required
+@acceso_required
 def publicar(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
     return _intentar_publicar(request, request.user.psicologo)
 
 
-@psicologo_required
+@acceso_required
 def despublicar(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -591,7 +615,7 @@ def despublicar(request):
 # AGENDA -- tipos de sesión, disponibilidad semanal y días que no atiende.
 # Las tres cosas se editan en una sola página con un solo "Guardar".
 # =========================================================================
-@psicologo_required
+@acceso_required
 def agenda(request):
     psicologo = request.user.psicologo
 
@@ -644,7 +668,7 @@ _ACCIONES_TURNO = {
 }
 
 
-@psicologo_required
+@acceso_required
 def turnos_lista(request):
     psicologo = request.user.psicologo
     ahora = timezone.now()
@@ -657,7 +681,7 @@ def turnos_lista(request):
     })
 
 
-@psicologo_required
+@acceso_required
 def turno_detalle(request, pk):
     psicologo = request.user.psicologo
     turno = get_object_or_404(Turno.objects.select_related('tipo_sesion', 'paciente'),
@@ -672,7 +696,7 @@ def turno_detalle(request, pk):
     return render(request, 'portal/turno_detalle.html', {'p': psicologo, 't': turno})
 
 
-@psicologo_required
+@acceso_required
 def turno_accion(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -694,7 +718,7 @@ def turno_accion(request, pk):
 # =========================================================================
 # PACIENTES
 # =========================================================================
-@psicologo_required
+@acceso_required
 def pacientes_lista(request):
     psicologo = request.user.psicologo
     q = request.GET.get('q', '').strip()
@@ -708,7 +732,7 @@ def pacientes_lista(request):
     })
 
 
-@psicologo_required
+@acceso_required
 def paciente_nuevo(request):
     psicologo = request.user.psicologo
     if request.method == 'POST':
@@ -726,7 +750,7 @@ def paciente_nuevo(request):
     })
 
 
-@psicologo_required
+@acceso_required
 def paciente_detalle(request, pk):
     psicologo = request.user.psicologo
     paciente = get_object_or_404(Paciente, pk=pk, psicologo=psicologo)
@@ -748,7 +772,7 @@ def paciente_detalle(request, pk):
     })
 
 
-@psicologo_required
+@acceso_required
 def paciente_eliminar(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])

@@ -49,7 +49,7 @@
 {% endif %}
 <div style="margin-bottom: 24px; padding: 16px 20px; background: #eef6ef; border: 1px solid #a9c9ae; border-radius: 6px;">
     <strong>Tareas de cobros y avisos</strong>
-    <p style="margin: 6px 0 12px; color: #555;">Corrélas cuando quieras: sincronizar una vez por semana (o cuando alguien cancele o rechacen una tarjeta) y los recordatorios cada 2 o 3 días.</p>
+    <p style="margin: 6px 0 12px; color: #555;">Corrélas cuando quieras: sincronizar una vez por semana (o cuando alguien cancele o rechacen una tarjeta) y los recordatorios cada 36 horas (una vez por día alcanza).</p>
     <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
         <form method="post" action="{% url 'admin:directorio_psicologo_sincronizar' %}" style="display:inline">
             {% csrf_token %}

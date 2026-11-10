@@ -235,7 +235,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     # cuenta al final. El estado se calcula con las mismas reglas que usa el sitio (ver estados.py).
     list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
                     'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible', 'clicks_wa_30_visible')
-    list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago',
+    list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'plan_primero',
                    'destacado', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
     list_per_page = 50
@@ -246,7 +246,7 @@ class PsicologoAdmin(admin.ModelAdmin):
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
         ('Seguimiento por mail', {'fields': ('no_enviar_seguimiento', 'seguimientos_enviados', 'ultimo_seguimiento')}),
-        ('Pago y publicación', {'fields': ('plan', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
+        ('Pago y publicación', {'fields': ('plan', 'plan_primero', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
     )
     readonly_fields = ('terminos_aceptados_en', 'pago_declinado_desde', 'seguimientos_enviados', 'ultimo_seguimiento')
     actions = ['generar_imagenes_action', 'generar_imagen_feed_action', 'dar_de_baja_dlocal_action',
@@ -446,7 +446,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     @method_decorator(require_POST)
     def recordatorios_view(self, request):
         """Muestra (modo=simular) o manda (modo=enviar) los mails de recordatorio:
-        seguimiento a quien no publicó su perfil (cada 3 días) y fin del período de fundador."""
+        seguimiento a quien no publicó su perfil (cada 36 horas) y fin del período de fundador."""
         if not self.has_change_permission(request):
             raise PermissionDenied
         enviar = request.POST.get('modo') == 'enviar'

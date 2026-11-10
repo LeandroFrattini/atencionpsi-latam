@@ -17,7 +17,7 @@ ESTADOS = [
     ('perfil_listo', 'Perfil listo, sin pedir publicar', 'Completó todo el perfil pero todavía no tocó "Publicar" ni tiene plan: está por decidir.', '#26a69a'),
     ('incompleto', 'Perfil incompleto', 'Ya puede publicar (pagó, tiene gratis o está exento) pero le faltan datos del perfil.', '#ef6c00'),
     ('vencido', 'Gratis vencido', 'Se le terminó el período gratis y no activó la suscripción: su perfil no se muestra.', '#8e24aa'),
-    ('sin_pago', 'Solo cuenta', 'Hizo la cuenta y confirmó su email, pero no completó el perfil ni pagó.', '#757575'),
+    ('sin_pago', 'Solo cuenta', 'Hizo la cuenta y confirmó su email, pero no completó el perfil ni pagó. Las cuentas nuevas no pueden armar el perfil hasta pagar; las anteriores sí.', '#757575'),
     ('sin_confirmar', 'Email sin confirmar', 'Se registró pero no confirmó su email: todavía no puede entrar.', '#c62828'),
 ]
 CODIGOS = [c for c, *_ in ESTADOS]

@@ -347,6 +347,15 @@ class Psicologo(models.Model):
     # Se crea la primera vez que la pide y se puede renovar si se filtra.
     token_calendario = models.CharField(max_length=64, blank=True, editable=False, db_index=True)
 
+    # Recorrido nuevo (desde el 06/11/2026): registro, confirmar el email, ELEGIR PLAN Y PAGAR y recién
+    # después armar el perfil. Se activa solo en las cuentas que se crean desde esa fecha (ver
+    # portal/views.py::registro): las que ya existían siguen pudiendo armar el perfil antes de pagar.
+    plan_primero = models.BooleanField(
+        'Tiene que pagar antes de armar el perfil', default=False,
+        help_text='Las cuentas nuevas lo tienen tildado: no pueden armar el perfil hasta activar un plan. '
+                  'Destildalo para dejar entrar a alguien sin pagar.',
+    )
+
     PLAN_CHOICES = [
         ('basico', 'Básico'),
         ('premium', 'Premium'),

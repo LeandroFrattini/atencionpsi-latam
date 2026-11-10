@@ -1,6 +1,6 @@
 Hola {{ nombre }},
 
-Gracias por sumarte a Atención Psi. Para activar tu cuenta y poder publicar tu perfil, confirmá tu email entrando a este link:
+Gracias por sumarte a Atención Psi. Para activar tu cuenta, confirmá tu email entrando a este link:
 
 {{ url }}
 

@@ -146,7 +146,8 @@ class VerificacionEmailTests(TestCase):
 
     def test_link_valido_activa_la_cuenta_y_loguea(self):
         resp = self.client.get(self._link_del_mail())
-        self.assertRedirects(resp, reverse('portal_editar_perfil'))
+        # Cuenta nueva: el siguiente paso es elegir el plan (el perfil se arma después de pagar).
+        self.assertRedirects(resp, reverse('portal_checkout'))
         self.usuario.refresh_from_db()
         self.assertTrue(self.usuario.is_active)
         self.assertTrue(self.client.session.get('_auth_user_id'))
