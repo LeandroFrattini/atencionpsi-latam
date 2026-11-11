@@ -165,7 +165,7 @@ class PerfilForm(forms.ModelForm):
     class Meta:
         model = Psicologo
         fields = [
-            'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'modalidad',
+            'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'modalidad', 'hace_factura',
             'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
             'orientaciones', 'especialidades', 'publicos',
         ]
@@ -184,7 +184,7 @@ class PerfilForm(forms.ModelForm):
 
     field_order = [
         'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'ciudad_nueva', 'modalidad',
-        'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
+        'hace_factura', 'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
         'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
 
@@ -362,9 +362,23 @@ class DiaNoAtiendeForm(forms.ModelForm):
         return cleaned
 
 
+class TipoSesionForm(forms.ModelForm):
+    class Meta:
+        model = TipoSesion
+        fields = ['nombre', 'duracion_min', 'precio', 'orden']
+        widgets = {'precio': forms.NumberInput(attrs={'step': 'any', 'min': 0, 'inputmode': 'decimal', 'placeholder': 'Ej: 35000'})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # El precio se guarda con dos decimales: si es un número redondo se muestra sin ",00" (35000, no 35000,00).
+        precio = self.instance.precio if self.instance.pk else None
+        if precio is not None and precio == precio.to_integral_value():
+            self.initial['precio'] = int(precio)
+
+
 TipoSesionFormSet = inlineformset_factory(
     Psicologo, TipoSesion,
-    fields=['nombre', 'duracion_min', 'precio', 'orden'],
+    form=TipoSesionForm,
     extra=1, can_delete=True,
 )
 

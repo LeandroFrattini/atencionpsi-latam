@@ -236,7 +236,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
                     'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible', 'clicks_wa_30_visible')
     list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'plan_primero',
-                   'destacado', 'orientaciones', 'especialidades', 'publicos')
+                   'destacado', 'hace_factura', 'orientaciones', 'especialidades', 'publicos')
     search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
     list_per_page = 50
     list_select_related = ('pais', 'usuario')
@@ -244,7 +244,7 @@ class PsicologoAdmin(admin.ModelAdmin):
     inlines = [FormacionInline]
     fieldsets = (
         (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
-        ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
+        ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'hace_factura', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
         ('Seguimiento por mail', {'fields': ('no_enviar_seguimiento', 'seguimientos_enviados', 'ultimo_seguimiento')}),
         ('Pago y publicación', {'fields': ('plan', 'plan_primero', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),
     )

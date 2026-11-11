@@ -95,6 +95,7 @@
                     <h1>{{ p.nombre }}</h1>
                     <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}, {{ pais.nombre }}{% endif %}</p>
                     <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
+                    {% if p.hace_factura %}<p class="perfil-factura"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Hace factura para reintegro</p>{% endif %}
                     {% if p.sesiones_atendidas %}
                         <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>
                     {% endif %}

@@ -290,6 +290,11 @@ class Psicologo(models.Model):
     foto = models.ImageField(upload_to='psicologos/', blank=True, null=True)
     bio = models.TextField(blank=True)
     docencia = models.TextField('Docencia', blank=True, help_text='Un párrafo con la experiencia dando clases/formación a otros, si tiene')
+    hace_factura = models.BooleanField(
+        'Hago factura para reintegro', default=False,
+        help_text='Tildalo si emitís factura o recibo oficial que tus pacientes puedan presentar para pedir reintegro a su '
+                  'seguro de salud o a su empleador. Se muestra con un tilde en tu perfil público.',
+    )
     precio_sesion = models.DecimalField(
         'Precio de sesión', max_digits=8, decimal_places=2, null=True, blank=True,
         help_text='Opcional. Se muestra en tu perfil público.'

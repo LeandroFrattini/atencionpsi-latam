@@ -236,6 +236,9 @@ main {
 }
 .psicologo-linea svg { color: var(--verde-medio); flex-shrink: 0; }
 .psicologo-modalidad { gap: 14px; }
+.psicologo-factura { color: var(--verde-oscuro); font-weight: 600; }
+.psicologo-factura svg { color: var(--verde-oscuro); }
+.perfil-factura { display: flex; align-items: center; gap: 6px; color: var(--verde-oscuro); font-size: 0.85rem; font-weight: 600; margin: 6px 0 0; }
 .psicologo-modalidad span { display: inline-flex; align-items: center; gap: 4px; }
 .psicologo-modalidad svg { color: var(--rosa-medio); }
 

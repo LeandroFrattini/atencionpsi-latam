@@ -36,6 +36,10 @@ contexto. Extraída del buscador para reutilizarla también en los
             {% endif %}
         </div>
 
+        {% if p.hace_factura %}
+            <div class="psicologo-linea psicologo-factura"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Factura para reintegro</div>
+        {% endif %}
+
         {# Topes para que todas las tarjetas tengan un alto parecido: 2 orientaciones, 3 motivos, 3 públicos y "+N" con lo que sobra. #}
         {# (La vista previa del editor, en portal/editar_perfil.html, usa los mismos números.) #}
         {% with ors=p.orientaciones_publicas %}{% if ors %}

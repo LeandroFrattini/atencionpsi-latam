@@ -19,14 +19,14 @@
         {{ fs_tipos.non_form_errors }}
         {{ fs_tipos.management_form }}
         <table class="portal-tabla portal-tabla-form" id="tabla-tipos">
-            <thead><tr><th>Nombre</th><th>Duración (min)</th><th>Precio (opcional)</th><th>Orden</th><th></th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Duración (min)</th><th>Precio en {{ user.psicologo.pais.simbolo_moneda }} (opcional)</th><th>Orden</th><th></th></tr></thead>
             <tbody>
             {% for f in fs_tipos %}
                 <tr>
                     {{ f.id }}
                     <td data-label="Nombre">{{ f.nombre }}{% if f.nombre.errors %}<p class="portal-error">{{ f.nombre.errors.0 }}</p>{% endif %}</td>
                     <td data-label="Duración (min)">{{ f.duracion_min }}</td>
-                    <td data-label="Precio (opcional)">{{ f.precio }}</td>
+                    <td data-label="Precio en {{ user.psicologo.pais.simbolo_moneda }} (opcional)">{{ f.precio }}</td>
                     <td data-label="Orden">{{ f.orden }}</td>
                     <td>{% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} eliminar</label>{% endif %}</td>
                 </tr>
@@ -38,7 +38,7 @@
                 {{ fs_tipos.empty_form.id }}
                 <td data-label="Nombre">{{ fs_tipos.empty_form.nombre }}</td>
                 <td data-label="Duración (min)">{{ fs_tipos.empty_form.duracion_min }}</td>
-                <td data-label="Precio (opcional)">{{ fs_tipos.empty_form.precio }}</td>
+                <td data-label="Precio en {{ user.psicologo.pais.simbolo_moneda }} (opcional)">{{ fs_tipos.empty_form.precio }}</td>
                 <td data-label="Orden">{{ fs_tipos.empty_form.orden }}</td>
                 <td></td>
             </tr>
