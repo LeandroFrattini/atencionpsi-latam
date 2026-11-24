@@ -1231,3 +1231,6 @@ footer.site-footer { flex-shrink: 0; background: #1f2e26; color: #cddcd2; paddin
 .chip-centros { display: inline-flex; align-items: center; padding: 8px 16px; border: 1.5px solid #4a7c59; border-radius: 99px; color: #3f6b4d; font-weight: 700; font-size: 14px; text-decoration: none; background: #fff; }
 .chip-centros:hover { background: #eef4ef; }
 .chip-centros-activo, .chip-centros-activo:hover { background: #4a7c59; color: #fff; }
+.centros-cta { margin: 10px 0 16px; font-size: 14px; }
+.centros-cta a { color: var(--verde-oscuro, #3f6b4d); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.centros-cta-caja { padding: 10px 14px; background: #eef4ef; border: 1px solid #cfe0d3; border-radius: 10px; }

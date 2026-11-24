@@ -356,3 +356,37 @@ class AdminYMigracionTests(TestCase):
         self.assertEqual(self.client.get(reverse('admin:directorio_psicologo_changelist') + '?tipo=centro').status_code, 200)
         self.assertEqual(self.client.get(reverse('admin:directorio_psicologo_changelist') + '?q=' + RUC_VALIDO).status_code, 200)
         self.assertEqual(self.client.get(reverse('admin:directorio_pais_changelist')).status_code, 200)
+
+
+class AccesoVisibleParaRegistrarCentrosTests(TestCase):
+    """Un centro tiene que poder encontrar dónde registrarse sin saber el link."""
+
+    def setUp(self):
+        self.peru = _pais()
+        self.link = reverse('portal_registro_centro', args=['peru'])
+
+    def test_se_ve_en_el_buscador_aunque_todavia_no_haya_ningun_centro(self):
+        resp = self.client.get(reverse('buscador_pais', args=['peru']))
+        self.assertContains(resp, self.link)
+        self.assertContains(resp, '¿Tenés un centro especializado?')
+        self.assertNotContains(resp, 'chip-centros')    # el filtro aparece recién cuando hay centros publicados
+
+    def test_se_ve_en_la_pagina_principal_del_pais(self):
+        self.assertContains(self.client.get(reverse('pais_home', args=['peru'])), self.link)
+
+    def test_se_ve_en_el_pie_de_todas_las_paginas_del_pais(self):
+        resp = self.client.get(reverse('buscador_pais', args=['peru']))
+        self.assertContains(resp, 'Sumá tu centro especializado')
+
+    def test_se_ve_arriba_de_todo_en_el_registro_de_profesionales(self):
+        resp = self.client.get(reverse('portal_registro', args=['peru']))
+        self.assertContains(resp, 'centros-cta-caja')
+        self.assertContains(resp, self.link)
+
+    def test_en_los_paises_sin_centros_no_aparece_en_ningun_lado(self):
+        Pais.objects.filter(pk=self.peru.pk).update(acepta_centros=False)
+        for url in (reverse('buscador_pais', args=['peru']), reverse('pais_home', args=['peru']),
+                    reverse('portal_registro', args=['peru'])):
+            resp = self.client.get(url)
+            self.assertNotContains(resp, 'registro-centros', msg_prefix=url)
+            self.assertNotContains(resp, 'centro especializado', msg_prefix=url)

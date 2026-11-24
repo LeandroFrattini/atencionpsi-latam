@@ -130,7 +130,7 @@
                         <a href="{% url 'portal_dashboard' %}">Mi cuenta</a>
                     {% else %}
                         <a href="{% url 'portal_login' %}">Portal profesional</a>
-                        {% with destino=pais|default:pais_para_sumarse %}{% if destino and not destino.es_externo %}<a href="{% url 'portal_registro' destino.slug %}">Sumate al equipo</a>{% endif %}{% endwith %}
+                        {% with destino=pais|default:pais_para_sumarse %}{% if destino and not destino.es_externo %}<a href="{% url 'portal_registro' destino.slug %}">Sumate al equipo</a>{% if destino.acepta_centros %}<a href="{% url 'portal_registro_centro' destino.slug %}">Sumá tu centro especializado</a>{% endif %}{% endif %}{% endwith %}
                     {% endif %}
                 </div>
                 <div class="site-footer-col">

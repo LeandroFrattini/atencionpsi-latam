@@ -36,6 +36,7 @@
         Buscá por nombre, ciudad, motivo de consulta o enfoque.
     </p>
     {% if total_sesiones_atendidas_latam %}<p class="hub-stat-confianza buscar-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>{% endif %}
+    {% if pais.acepta_centros %}<p class="centros-cta"><a href="{% url 'portal_registro_centro' pais.slug %}">¿Tenés un centro especializado? Sumalo a la red &rarr;</a></p>{% endif %}
 
     <form id="form-buscar" method="get" action="{{ ruta }}" role="search" class="buscar-form" autocomplete="off">
         <div class="buscar-campo">

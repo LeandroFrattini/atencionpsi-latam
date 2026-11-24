@@ -21,6 +21,7 @@
 
 <div class="portal-card">
     <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Sumate a Atención Psi {{ pais.nombre }}</h1>
+    {% if pais.acepta_centros %}<p class="centros-cta centros-cta-caja">¿Sos un <strong>centro especializado</strong> (clínica, instituto)? <a href="{% url 'portal_registro_centro' pais.slug %}">Registrá tu centro acá &rarr;</a></p>{% endif %}
     <p class="portal-lead">Son tres pasos: <strong>1)</strong> creás tu cuenta y confirmás tu email, <strong>2)</strong> elegís tu plan y activás la suscripción, y <strong>3)</strong> armás tu perfil y lo publicás cuando esté listo. Estos son los dos planes:</p>
     {% include 'directorio/_placas_precio.html' %}
     <form method="post" class="portal-form">

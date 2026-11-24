@@ -16,6 +16,7 @@
         <p class="hub-stat-confianza">{{ total_publicados }} psicólogo{{ total_publicados|pluralize }} publicado{{ total_publicados|pluralize }} en {{ pais.nombre }}</p>
     {% endif %}
     <a href="{% url 'buscador_pais' pais.slug %}" class="btn-primario home-hero-cta">Ver todos los psicólogos</a>
+    {% if pais.acepta_centros %}<p class="centros-cta"><a href="{% url 'portal_registro_centro' pais.slug %}">¿Tenés un centro especializado? Sumalo a la red &rarr;</a></p>{% endif %}
 </div>
 
 {% if ciudades_con_psicologos %}
