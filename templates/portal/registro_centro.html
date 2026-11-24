@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sumá tu centro especializado | Atención Psi {{ pais.nombre }}{% endblock %}
+{% block content %}
+<div class="registro-beneficios">
+    <ul class="registro-beneficios-lista">
+        <li>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div><strong>Figurás en el buscador junto a los psicólogos de {{ pais.nombre }}.</strong> Quien busca terapia te encuentra en el mismo lugar, con un perfil propio de centro: dirección, orientaciones, motivos de consulta y tu RUC.</div>
+        </li>
+        <li>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            <div><strong>Un sello de confianza.</strong> Verificamos el RUC del centro y, cuando lo comprobamos, el perfil muestra «RUC verificado».</div>
+        </li>
+        <li>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.77.46 3.45 1.28 4.9L2 22l5.31-1.39a9.9 9.9 0 0 0 4.73 1.2h.01c5.46 0 9.9-4.45 9.9-9.9C21.95 6.45 17.5 2 12.04 2Z"/></svg>
+            <div><strong>Contacto directo por WhatsApp.</strong> Sin intermediarios ni comisión por consulta: la persona le escribe al centro.</div>
+        </li>
+    </ul>
+</div>
+
+<div class="portal-card">
+    <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Sumá tu centro a Atención Psi {{ pais.nombre }}</h1>
+    <p class="portal-lead">Son tres pasos: <strong>1)</strong> creás la cuenta del centro y confirmás el email, <strong>2)</strong> elegís el plan y activás la suscripción, y <strong>3)</strong> armás el perfil del centro y lo publicás cuando esté listo. Los planes cuestan lo mismo que para los profesionales:</p>
+    {% include 'directorio/_placas_precio.html' %}
+    <form method="post" class="portal-form">
+        {% csrf_token %}
+        {% for field in form %}
+            {% if field.is_hidden %}
+                {{ field }}
+            {% else %}
+            <div class="portal-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="portal-field-ayuda">{{ field.help_text }}</p>{% endif %}
+                {% if field.errors %}<p class="portal-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+        <button type="submit" class="btn-primario">Crear la cuenta del centro</button>
+    </form>
+    <p class="portal-lead-sm">¿Ya tenés cuenta? <a href="{% url 'portal_login' %}">Iniciar sesión</a></p>
+    <p class="portal-lead-sm">¿Sos psicólogo/a y no un centro? <a href="{% url 'portal_registro' pais.slug %}">Registrate acá</a></p>
+</div>
+{% endblock %}

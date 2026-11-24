@@ -39,6 +39,7 @@ from .forms import (
     FormacionFormSet,
     PacienteForm,
     PerfilForm,
+    RegistroCentroForm,
     RegistroForm,
     TipoSesionFormSet,
 )
@@ -84,6 +85,7 @@ def _avisar_nuevo_registro(request, psicologo, mail_enviado):
             '¡FELICITACIONES! 🎉 Tenés un nuevo registro en Atención Psi.',
             '',
             f'Nombre: {psicologo.nombre}',
+        ] + ([f'Tipo: CENTRO ESPECIALIZADO (RUC {psicologo.ruc})'] if psicologo.es_centro else []) + [
             f'País: {pais.nombre}',
             f'Email: {psicologo.usuario.email}',
             f'WhatsApp: {psicologo.whatsapp or "(no cargó)"}',
@@ -107,7 +109,7 @@ def _avisar_nuevo_registro(request, psicologo, mail_enviado):
             f'Ver en el admin: {admin_url}',
         ]
         EmailMultiAlternatives(
-            subject=f'🎉 ¡Nuevo registro! {psicologo.nombre} ({pais.nombre})',
+            subject=f'🎉 ¡Nuevo registro! {psicologo.nombre} ({pais.nombre}){" – centro" if psicologo.es_centro else ""}',
             body='\n'.join(lineas),
             from_email=None,
             to=settings.REGISTROS_NOTIFICAR_A,
@@ -117,13 +119,26 @@ def _avisar_nuevo_registro(request, psicologo, mail_enviado):
 
 
 def registro(request, pais_slug):
+    return _registro(request, pais_slug, centro=False)
+
+
+def registro_centro(request, pais_slug):
+    """Registro de centros especializados: solo en los países que lo habilitan (ej: Perú)."""
+    return _registro(request, pais_slug, centro=True)
+
+
+def _registro(request, pais_slug, centro):
     pais = get_object_or_404(Pais, slug=pais_slug, activo=True)
+    if centro and not pais.acepta_centros:
+        raise Http404('Este país todavía no registra centros')
+    Formulario = RegistroCentroForm if centro else RegistroForm
+    plantilla = 'portal/registro_centro.html' if centro else 'portal/registro.html'
 
     if request.user.is_authenticated:
         return redirect('portal_dashboard')
 
     if request.method == 'POST':
-        form = RegistroForm(request.POST, pais=pais)
+        form = Formulario(request.POST, pais=pais)
         if form.is_valid():
             # is_active=False hasta que confirme el mail -- si no, cualquiera
             # se registra con un email ajeno o inventado y nunca se entera.
@@ -149,6 +164,8 @@ def registro(request, pais_slug):
                         nombre=form.cleaned_data['nombre'],
                         whatsapp=form.cleaned_data['whatsapp'],
                         matricula='',
+                        tipo='centro' if centro else 'profesional',
+                        ruc=form.cleaned_data['ruc'] if centro else '',
                         plan_primero=True,
                         terminos_aceptados_en=timezone.now(),
                     )
@@ -161,7 +178,7 @@ def registro(request, pais_slug):
                 logger.exception('Falló la base de datos al registrar a %s', form.cleaned_data['email'])
                 close_old_connections()
                 messages.error(request, 'No pudimos completar el registro por un problema momentáneo. Probá de nuevo en un minuto: no se guardó nada.')
-                return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
+                return render(request, plantilla, {'pais': pais, 'form': form})
             mail_enviado = True
             try:
                 _enviar_verificacion(request, usuario)
@@ -181,9 +198,9 @@ def registro(request, pais_slug):
                 return redirect('portal_login')
             return render(request, 'portal/verificar_enviado.html', {'email': usuario.email})
     else:
-        form = RegistroForm(pais=pais, initial={'codigo_fundador': request.GET.get('codigo', '').strip().upper()})
+        form = Formulario(pais=pais, initial={'codigo_fundador': request.GET.get('codigo', '').strip().upper()})
 
-    return render(request, 'portal/registro.html', {'pais': pais, 'form': form})
+    return render(request, plantilla, {'pais': pais, 'form': form})
 
 
 # La invitación llega por link (?codigo=...) y la gente no ve ningún "código": los avisos hablan de

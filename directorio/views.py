@@ -287,7 +287,11 @@ def buscador_pais(request, pais_slug):
         'orientaciones_list': [o for o in Orientacion.objects.filter(aprobado=True) if o.pk in ids_orient],
         'publicos_list': [pu for pu in Publico.objects.filter(aprobado=True) if pu.pk in ids_pub],
         'especialidades_list': [e for e in Especialidad.objects.filter(aprobado=True) if e.pk in ids_esp],
-        'filtros_extra': sum(1 for k in ('ciudad', 'orientacion', 'especialidad', 'publico') if datos[k]),
+        'filtros_extra': sum(1 for k in ('ciudad', 'orientacion', 'especialidad', 'publico', 'tipo') if datos[k]),
+        # El filtro «Tipo» solo aparece si hay centros publicados en este país.
+        'hay_centros': pais.acepta_centros and any(p.es_centro for p in publicados),
+        'tipos': buscador.TIPOS[1:],
+        'centros_url': buscador.url_con(ruta, datos, tipo='' if datos['tipo'] == 'centro' else 'centro'),
     })
 
     # Con ?fragmento=1 se devuelve solo la parte que cambia (la usa el buscador en vivo).

@@ -26,8 +26,9 @@
                     </div>
                 {% endfor %}
 
-                <h2 class="portal-subtitulo">Formación</h2>
                 {{ formset.management_form }}
+                {% if not p.es_centro %}
+                <h2 class="portal-subtitulo">Formación</h2>
                 {% for f in formset %}
                     <div class="portal-formacion-fila">
                         {{ f.id }}
@@ -35,6 +36,7 @@
                         {% if f.instance.pk %}<label class="portal-check-eliminar">{{ f.DELETE }} Eliminar</label>{% endif %}
                     </div>
                 {% endfor %}
+                {% endif %}
 
                 <div class="editor-botones">
                     {% if not p.publicado %}
@@ -55,7 +57,8 @@
         <aside class="previa" id="previa" aria-label="Así te ven los pacientes"
                data-foto-actual="{% if p.foto %}{{ p.foto.url }}{% endif %}"
                data-muestra-precio="{{ pais.muestra_precio_sesion|yesno:'1,0' }}"
-               data-simbolo="{{ pais.simbolo_moneda }}">
+               data-simbolo="{{ pais.simbolo_moneda }}"
+               data-centro="{{ p.es_centro|yesno:'1,0' }}">
             <button type="button" class="previa-cerrar" id="previa-cerrar">Cerrar &times;</button>
             <h2 class="previa-titulo">Así te ven los pacientes</h2>
             <p class="previa-sub">Es tu tarjeta en el buscador de {{ pais.nombre }}. Se actualiza mientras completás.</p>
@@ -69,10 +72,10 @@
                 <h3>Para publicar</h3>
                 <ul class="portal-checklist" id="previa-pasos">
                     <li data-paso="nombre" class="{% if p.nombre %}ok{% endif %}">Nombre</li>
-                    <li data-paso="matricula" class="{% if p.matricula %}ok{% endif %}">{{ pais.etiqueta_matricula }}</li>
+                    <li data-paso="matricula" class="{% if p.documento %}ok{% endif %}">{{ p.etiqueta_documento }}</li>
                     <li data-paso="whatsapp" class="{% if p.whatsapp %}ok{% endif %}">WhatsApp</li>
-                    <li data-paso="foto" class="{% if p.foto %}ok{% endif %}">Foto de perfil</li>
-                    <li data-paso="bio" class="{% if p.bio %}ok{% endif %}">Descripción</li>
+                    <li data-paso="foto" class="{% if p.foto %}ok{% endif %}">{% if p.es_centro %}Logo o foto del centro{% else %}Foto de perfil{% endif %}</li>
+                    <li data-paso="bio" class="{% if p.bio %}ok{% endif %}">{% if p.es_centro %}Presentación del centro{% else %}Descripción{% endif %}</li>
                     <li data-paso="orientacion" class="{% if 'al menos una orientación' not in faltantes %}ok{% endif %}">Al menos una orientación</li>
                 </ul>
                 {% if p.publicado %}
@@ -109,6 +112,7 @@
     var muestraPrecio = panel.dataset.muestraPrecio === '1';
     var simbolo = panel.dataset.simbolo || '';
     var fotoNueva = '';
+    var esCentro = panel.dataset.centro === '1';
 
     function campo(nombre) { return form.elements[nombre]; }
     function valor(nombre) { var c = campo(nombre); return c && c.value ? c.value.trim() : ''; }
@@ -154,6 +158,7 @@
         if (precio) h += '<span class="psicologo-precio-burbuja">' + esc(simbolo) + ' ' + esc(precio) + '</span>';
         h += '</div><div class="psicologo-card-body">';
         h += '<div class="psicologo-nombre">' + esc(nombre) + '</div>';
+        if (esCentro) h += '<div class="psicologo-centro-badge">Centro especializado</div>';
         if (lugar) h += '<div class="psicologo-linea">' + ICONO_LUGAR + ' ' + esc(lugar) + '</div>';
         h += '<div class="psicologo-linea psicologo-modalidad">';
         if (modalidad === 'online' || modalidad === 'ambas') h += '<span>' + ICONO_PANTALLA + ' Online</span>';
@@ -170,7 +175,7 @@
         tarjeta.innerHTML = h;
 
         marcar('nombre', valor('nombre'));
-        marcar('matricula', valor('matricula'));
+        marcar('matricula', valor('matricula') || valor('ruc'));
         marcar('whatsapp', valor('whatsapp'));
         marcar('foto', foto);
         marcar('bio', valor('bio'));

@@ -40,5 +40,6 @@
         <button type="submit" class="btn-primario">Crear mi cuenta</button>
     </form>
     <p class="portal-lead-sm">¿Ya tenés cuenta? <a href="{% url 'portal_login' %}">Iniciar sesión</a></p>
+    {% if pais.acepta_centros %}<p class="portal-lead-sm">¿Sos un centro especializado (clínica, instituto)? <a href="{% url 'portal_registro_centro' pais.slug %}">Registrá tu centro acá</a></p>{% endif %}
 </div>
 {% endblock %}

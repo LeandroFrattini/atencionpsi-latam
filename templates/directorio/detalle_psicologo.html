@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static precio_tags %}
 {% block robots %}{% if vista_previa %}noindex, nofollow{% else %}index, follow{% endif %}{% endblock %}
-{% block title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}, {{ pais.nombre }} | Atención Psi{% endblock %}
-{% block meta_description %}{{ p.nombre }}, psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}). {{ pais.etiqueta_matricula }} {{ p.matricula }}. {{ p.get_modalidad_display }}{% if p.especialidades_publicas %} &middot; {% for e in p.especialidades_publicas|slice:":3" %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas|slice:":3" %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Reservá tu turno o escribí por WhatsApp.{% endblock %}
-{% block og_title %}{{ p.nombre }} – Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}{% endblock %}
-{% block og_description %}{{ pais.etiqueta_matricula }} {{ p.matricula }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}{% endblock %}
+{% block title %}{{ p.nombre }} – {% if p.es_centro %}Centro especializado{% else %}Psicólogo/a{% endif %}{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}, {{ pais.nombre }} | Atención Psi{% endblock %}
+{% block meta_description %}{{ p.nombre }}, {% if p.es_centro %}centro especializado{% else %}psicólogo/a{% endif %}{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %} ({{ pais.nombre }}). {{ p.etiqueta_documento }} {{ p.documento }}. {{ p.get_modalidad_display }}{% if p.especialidades_publicas %} &middot; {% for e in p.especialidades_publicas|slice:":3" %}{{ e.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif p.orientaciones_publicas %} &middot; {% for o in p.orientaciones_publicas|slice:":3" %}{{ o.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}. Reservá tu turno o escribí por WhatsApp.{% endblock %}
+{% block og_title %}{{ p.nombre }} – {% if p.es_centro %}Centro especializado{% else %}Psicólogo/a{% endif %}{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}{% endblock %}
+{% block og_description %}{{ p.etiqueta_documento }} {{ p.documento }} &middot; {{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}{% endif %}{% endblock %}
 {% block og_image %}{% if p.foto %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}">{% endif %}{% endblock %}
 {% block json_ld %}
 <script type="application/ld+json">
@@ -21,17 +21,19 @@
             ]
         },
         {
-            "@type": "Person",
+            "@type": "{% if p.es_centro %}MedicalClinic{% else %}Person{% endif %}",
             "name": "{{ p.nombre|escapejs }}",
-            "jobTitle": "Psicólogo/a",
+            {% if p.es_centro %}"taxID": "{{ p.ruc|escapejs }}",{% else %}"jobTitle": "Psicólogo/a",{% endif %}
             "url": "{{ request.scheme }}://{{ request.get_host }}{{ p.url_publica }}",
             {% if p.foto %}"image": "{{ request.scheme }}://{{ request.get_host }}{{ p.foto.url }}",{% endif %}
             {% if p.bio %}"description": "{{ p.bio|escapejs }}",{% endif %}
+            {% if not p.es_centro %}
             "hasCredential": {
                 "@type": "EducationalOccupationalCredential",
                 "credentialCategory": "{{ pais.etiqueta_matricula|escapejs }}",
                 "identifier": "{{ p.matricula|escapejs }}"
             },
+            {% endif %}
             {% if p.especialidades_publicas %}
             "knowsAbout": [{% for e in p.especialidades_publicas %}"{{ e.nombre|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
             {% endif %}
@@ -48,7 +50,7 @@
             },
             {% endif %}
             {% if p.ciudad_publica %}
-            "address": {"@type": "PostalAddress", "addressLocality": "{{ p.ciudad_publica|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
+            "address": {"@type": "PostalAddress", {% if p.direccion %}"streetAddress": "{{ p.direccion|escapejs }}", {% endif %}"addressLocality": "{{ p.ciudad_publica|escapejs }}", "addressCountry": "{{ pais.codigo_iso }}"},
             {% endif %}
             "worksFor": {"@type": "Organization", "name": "Atención Psi"}
         }
@@ -91,10 +93,11 @@
         <header class="perfil-header perfil-area-head">
                 {% if p.foto %}<img src="{{ p.foto.url }}" alt="Foto de {{ p.nombre }}" class="perfil-foto">{% else %}<div class="perfil-foto perfil-foto-vacia" aria-hidden="true">{{ p.nombre|slice:":1" }}</div>{% endif %}
                 <div class="perfil-header-texto">
-                    <p class="perfil-eyebrow">Psicólogo/a{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}</p>
+                    <p class="perfil-eyebrow">{% if p.es_centro %}Centro especializado{% else %}Psicólogo/a{% endif %}{% if p.ciudad_publica %} en {{ p.ciudad_publica }}{% endif %}</p>
                     <h1>{{ p.nombre }}</h1>
                     <p class="perfil-meta">{{ p.get_modalidad_display }}{% if p.ciudad_publica %} &middot; {{ p.ciudad_publica }}, {{ pais.nombre }}{% endif %}</p>
-                    <p class="perfil-matricula">{{ pais.etiqueta_matricula }}: {{ p.matricula }}</p>
+                    {% if p.es_centro and p.direccion %}<p class="perfil-meta">{{ p.direccion }}</p>{% endif %}
+                    <p class="perfil-matricula">{{ p.etiqueta_documento }}: {{ p.documento }}{% if p.es_centro and p.ruc_verificado %} <span class="sello-ruc" title="Atención Psi comprobó este RUC en SUNAT">&#10003; RUC verificado</span>{% endif %}</p>
                     {% if p.hace_factura %}<p class="perfil-factura"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Hace factura para reintegro</p>{% endif %}
                     {% if p.sesiones_atendidas %}
                         <p class="perfil-experiencia">{{ p.get_sesiones_atendidas_display }} sesiones atendidas en su trayectoria</p>
@@ -130,7 +133,7 @@
 
             {% if p.bio %}
                 <section class="perfil-seccion">
-                    <h2>Sobre mí</h2>
+                    <h2>{% if p.es_centro %}Sobre el centro{% else %}Sobre mí{% endif %}</h2>
                     <p>{{ p.bio|linebreaksbr }}</p>
                 </section>
             {% endif %}
@@ -167,7 +170,7 @@
                 {% elif pais.muestra_precio_sesion and p.precio_sesion %}
                     <p class="perfil-precio">Sesión: {{ pais.simbolo_moneda }} {{ p.precio_sesion }}</p>
                 {% else %}
-                    <p class="perfil-aside-nota">Consultá valores y horarios directamente con el profesional.</p>
+                    <p class="perfil-aside-nota">Consultá valores y horarios directamente con {% if p.es_centro %}el centro{% else %}el profesional{% endif %}.</p>
                 {% endif %}
                 <div class="perfil-acciones perfil-acciones-aside">
                     {% if p.agenda_externa %}

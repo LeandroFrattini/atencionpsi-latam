@@ -8,6 +8,7 @@ from .forms import LoginForm
 
 urlpatterns = [
     path('<slug:pais_slug>/registro/', views.registro, name='portal_registro'),
+    path('<slug:pais_slug>/registro-centros/', views.registro_centro, name='portal_registro_centro'),
     path('login/', auth_views.LoginView.as_view(template_name='portal/login.html', authentication_form=LoginForm), name='portal_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='portal_logout'),
 

@@ -24,6 +24,9 @@ Los controles llevan form="form-buscar" para viajar con el campo de búsqueda.
             <a href="{{ m.url }}" class="seg-link{% if m.activo or not datos.modalidad and forloop.first %} seg-link-activo{% endif %}" aria-pressed="{% if m.activo or not datos.modalidad and forloop.first %}true{% else %}false{% endif %}">{{ m.etiqueta }}</a>
         {% endfor %}
     </div>
+    {% if hay_centros %}
+    <a href="{{ centros_url }}" class="chip-centros{% if datos.tipo == 'centro' %} chip-centros-activo{% endif %}" aria-pressed="{% if datos.tipo == 'centro' %}true{% else %}false{% endif %}">Centros especializados</a>
+    {% endif %}
     <details class="mas-filtros"{% if filtros_extra %} open{% endif %}>
         <summary>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
@@ -48,6 +51,14 @@ Los controles llevan form="form-buscar" para viajar con el campo de búsqueda.
                     {% for o in orientaciones_list %}<option value="{{ o.pk }}"{% if datos.orientacion == o.pk|stringformat:'s' %} selected{% endif %}>{{ o.nombre }}</option>{% endfor %}
                 </select>
             </label>
+            {% if hay_centros %}
+            <label>Tipo
+                <select name="tipo" form="form-buscar">
+                    <option value="">Todos</option>
+                    {% for valor, etiqueta in tipos %}<option value="{{ valor }}"{% if datos.tipo == valor %} selected{% endif %}>{{ etiqueta }}</option>{% endfor %}
+                </select>
+            </label>
+            {% endif %}
             <label>Atiende a
                 <select name="publico" form="form-buscar">
                     <option value="">Todos</option>

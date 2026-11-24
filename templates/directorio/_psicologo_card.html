@@ -19,6 +19,7 @@ contexto. Extraída del buscador para reutilizarla también en los
         <a href="{{ p.url_publica }}" class="psicologo-nombre-link">
             <div class="psicologo-nombre">{{ p.nombre }}</div>
         </a>
+        {% if p.es_centro %}<div class="psicologo-centro-badge">Centro especializado</div>{% endif %}
 
         {% if p.ciudad_publica %}
             <div class="psicologo-linea">

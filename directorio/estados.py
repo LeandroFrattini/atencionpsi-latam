@@ -35,7 +35,7 @@ def con_estado(queryset):
 
     acceso = Q(suscripcion_activa=True) | Q(exento_de_pago=True) | Q(gratis_hasta__gt=ahora)
     perfil_completo = (
-        ~Q(nombre='') & ~Q(matricula='') & ~Q(whatsapp='')
+        ~Q(nombre='') & ((Q(tipo='centro') & ~Q(ruc='')) | (~Q(tipo='centro') & ~Q(matricula=''))) & ~Q(whatsapp='')
         & Q(foto__isnull=False) & ~Q(foto='')
         & ~Q(bio='') & Q(con_orientacion=True)
     )

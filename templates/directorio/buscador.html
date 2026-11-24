@@ -32,7 +32,7 @@
     <p class="buscar-migas"><a href="{% url 'hub' %}">&larr; Todos los países</a></p>
     <h1><img src="{% static pais.bandera_svg %}" alt="" class="bandera-icono bandera-icono-titulo"> Encontrá tu psicólogo en {{ pais.nombre }}</h1>
     <p class="buscar-lead">
-        {% if total_pais %}{{ total_pais }} profesional{{ total_pais|pluralize:"es" }} con matrícula habilitante.{% endif %}
+        {% if total_pais %}{% if hay_centros %}{{ total_pais }} profesionales y centros especializados, con matrícula o RUC.{% else %}{{ total_pais }} profesional{{ total_pais|pluralize:"es" }} con matrícula habilitante.{% endif %}{% endif %}
         Buscá por nombre, ciudad, motivo de consulta o enfoque.
     </p>
     {% if total_sesiones_atendidas_latam %}<p class="hub-stat-confianza buscar-confianza">Más de {{ total_sesiones_atendidas_latam }} sesiones atendidas en Latinoamérica</p>{% endif %}

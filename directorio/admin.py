@@ -22,7 +22,7 @@ from .models import Visita, VisitaPerfil, ClickWhatsApp, Ciudad, CodigoFundador,
 
 @admin.register(Pais)
 class PaisAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'codigo_telefono', 'precio_basico', 'precio_premium', 'etiqueta_matricula', 'muestra_precio_sesion', 'es_externo', 'activo', 'orden')
+    list_display = ('nombre', 'codigo_iso', 'slug', 'moneda', 'codigo_telefono', 'precio_basico', 'precio_premium', 'etiqueta_matricula', 'muestra_precio_sesion', 'es_externo', 'acepta_centros', 'activo', 'orden')
     list_editable = ('activo', 'orden', 'codigo_telefono', 'precio_basico', 'precio_premium')
     prepopulated_fields = {'slug': ('nombre',)}
 
@@ -235,15 +235,20 @@ class PsicologoAdmin(admin.ModelAdmin):
     # cuenta al final. El estado se calcula con las mismas reglas que usa el sitio (ver estados.py).
     list_display = ('nombre', 'pais', 'estado_visible', 'acceso_visible', 'ciudad', 'email_visible', 'whatsapp_visible',
                     'fecha_alta_visible', 'seguimiento_visible', 'visitas_30_visible', 'clicks_wa_30_visible')
-    list_filter = ('pais', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'plan_primero',
+    list_filter = ('pais', 'tipo', EstadoFilter, 'plan', 'modalidad', 'quiere_colaborar', 'suscripcion_activa', 'exento_de_pago', 'plan_primero',
                    'destacado', 'hace_factura', 'orientaciones', 'especialidades', 'publicos')
-    search_fields = ('nombre', 'matricula', 'whatsapp', 'usuario__email')
+    search_fields = ('nombre', 'matricula', 'ruc', 'whatsapp', 'usuario__email')
     list_per_page = 50
     list_select_related = ('pais', 'usuario')
     filter_horizontal = ('orientaciones', 'especialidades', 'publicos')
     inlines = [FormacionInline]
     fieldsets = (
-        (None, {'fields': ('usuario', 'pais', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
+        (None, {'fields': ('usuario', 'pais', 'tipo', 'nombre', 'matricula', 'whatsapp', 'instagram', 'ciudad', 'modalidad')}),
+        ('Centro especializado (solo si el tipo es «Centro»)', {
+            'fields': ('ruc', 'ruc_verificado', 'direccion'),
+            'description': 'El RUC se valida al registrarse (formato y dígito verificador). Comprobalo en SUNAT y tildá «RUC verificado» '
+                           'para que el perfil público muestre el sello.',
+        }),
         ('Perfil público', {'fields': ('foto', 'bio', 'docencia', 'hace_factura', 'precio_sesion', 'sesiones_atendidas', 'orientaciones', 'especialidades', 'publicos')}),
         ('Seguimiento por mail', {'fields': ('no_enviar_seguimiento', 'seguimientos_enviados', 'ultimo_seguimiento')}),
         ('Pago y publicación', {'fields': ('plan', 'plan_primero', 'suscripcion_activa', 'dlocal_subscription_id', 'pago_declinado_desde', 'exento_de_pago', 'codigo_fundador', 'gratis_hasta', 'quiere_colaborar', 'destacado', 'terminos_aceptados_en')}),

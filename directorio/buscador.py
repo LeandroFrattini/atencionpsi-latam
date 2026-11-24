@@ -24,8 +24,9 @@ ORDENES = [
     ('precio_asc', 'Menor precio'),
     ('precio_desc', 'Mayor precio'),
 ]
-PARAMETROS = ('q', 'modalidad', 'ciudad', 'orientacion', 'especialidad', 'publico', 'orden')
+PARAMETROS = ('q', 'modalidad', 'ciudad', 'orientacion', 'especialidad', 'publico', 'tipo', 'orden')
 MODALIDADES = [('', 'Todas'), ('online', 'Online'), ('presencial', 'Presencial')]
+TIPOS = [('', 'Todos'), ('profesional', 'Solo profesionales'), ('centro', 'Solo centros especializados')]
 
 
 def palabras(q):
@@ -35,7 +36,7 @@ def palabras(q):
 def _campos(p):
     """Texto normalizado de cada parte de un perfil, para buscar y puntuar."""
     return {
-        'nombre': clave(p.nombre),
+        'nombre': clave(p.nombre + (' centro especializado' if p.es_centro else '')),
         'ciudad': clave(p.ciudad_publica),
         'temas': clave(' '.join(
             [e.nombre for e in p.especialidades_publicas]
@@ -92,6 +93,8 @@ def leer_parametros(get):
         datos['modalidad'] = ''
     if datos['orden'] not in {k for k, _ in ORDENES}:
         datos['orden'] = ''
+    if datos['tipo'] not in {'profesional', 'centro'}:
+        datos['tipo'] = ''
     for k in ('orientacion', 'especialidad', 'publico'):
         if not datos[k].isdigit():
             datos[k] = ''   # un valor que no es un id se ignora en vez de dejar la lista vacía
@@ -103,6 +106,8 @@ def aplicar_filtros(psicologos, datos):
     resultado = []
     for p in psicologos:
         if datos['modalidad'] and p.modalidad not in (datos['modalidad'], 'ambas'):
+            continue
+        if datos['tipo'] and p.tipo != datos['tipo']:
             continue
         if datos['ciudad'] and clave(p.ciudad_publica) != clave(datos['ciudad']):
             continue
@@ -130,6 +135,8 @@ def pills_activas(ruta, datos, nombres):
         pills.append({'etiqueta': f'“{datos["q"]}”', 'quitar': url_con(ruta, datos, q='')})
     if datos['modalidad']:
         pills.append({'etiqueta': dict(MODALIDADES)[datos['modalidad']], 'quitar': url_con(ruta, datos, modalidad='')})
+    if datos['tipo']:
+        pills.append({'etiqueta': dict(TIPOS)[datos['tipo']], 'quitar': url_con(ruta, datos, tipo='')})
     for clave_param, etiqueta in (('ciudad', None), ('especialidad', 'especialidad'), ('orientacion', 'orientacion'), ('publico', 'publico')):
         if datos[clave_param]:
             texto = datos[clave_param] if clave_param == 'ciudad' else nombres[etiqueta].get(datos[clave_param])

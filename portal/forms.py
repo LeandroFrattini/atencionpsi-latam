@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from PIL import Image, ImageOps
 
+from directorio import ruc as ruc_documento
 from directorio.forms import HoneypotMixin
 from directorio.instagram import normalizar_instagram
 from django.db.models import Q
@@ -119,6 +120,32 @@ class RegistroForm(HoneypotMixin, forms.Form):
         return codigo
 
 
+class RegistroCentroForm(RegistroForm):
+    """Registro de un centro especializado (clínica, instituto): igual al de un profesional, pero con el nombre del
+    centro y su RUC en lugar de la matrícula."""
+    ruc = forms.CharField(
+        label='RUC del centro', max_length=20,
+        help_text='Solo números. Lo mostramos en el perfil del centro y lo verificamos en SUNAT.',
+    )
+    field_order = ['nombre', 'ruc', 'email', 'whatsapp', 'password', 'acepto_terminos', 'codigo_fundador']
+
+    def __init__(self, *args, pais=None, **kwargs):
+        super().__init__(*args, pais=pais, **kwargs)
+        self.fields['nombre'].label = 'Nombre del centro'
+        self.fields['whatsapp'].label = 'WhatsApp del centro'
+        self.fields['ruc'].widget.attrs.update({'inputmode': 'numeric', 'autocomplete': 'off'})
+
+    def clean_ruc(self):
+        try:
+            ruc = ruc_documento.validar_documento(self.pais, self.cleaned_data['ruc'])
+        except ValueError as error:
+            raise forms.ValidationError(str(error))
+        if Psicologo.objects.filter(ruc=ruc, tipo='centro').exists():
+            raise forms.ValidationError(
+                'Ya hay un centro registrado con ese RUC. Si es el tuyo, escribinos desde Contacto y lo resolvemos.')
+        return ruc
+
+
 class _ChecksConPendientes(forms.ModelMultipleChoiceField):
     """Casillas de orientaciones/públicos: lo que el profesional propuso a
     mano y todavía no aprobó la dueña se ve marcado, solo en SU formulario."""
@@ -165,7 +192,7 @@ class PerfilForm(forms.ModelForm):
     class Meta:
         model = Psicologo
         fields = [
-            'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'modalidad', 'hace_factura',
+            'nombre', 'matricula', 'ruc', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'direccion', 'modalidad', 'hace_factura',
             'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
             'orientaciones', 'especialidades', 'publicos',
         ]
@@ -183,7 +210,7 @@ class PerfilForm(forms.ModelForm):
         }
 
     field_order = [
-        'nombre', 'matricula', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'ciudad_nueva', 'modalidad',
+        'nombre', 'matricula', 'ruc', 'whatsapp', 'instagram', 'quiere_colaborar', 'ciudad', 'ciudad_nueva', 'direccion', 'modalidad',
         'hace_factura', 'foto', 'bio', 'docencia', 'precio_sesion', 'sesiones_atendidas', 'link_agenda_externa',
         'orientaciones', 'orientacion_nueva', 'especialidades', 'especialidad_nueva', 'publicos', 'publico_nuevo',
     ]
@@ -195,7 +222,7 @@ class PerfilForm(forms.ModelForm):
         # (eso se chequea con perfil_completo al publicar, no acá).
         self.parcial = parcial
         if parcial:
-            for campo in ('nombre', 'matricula', 'whatsapp'):
+            for campo in ('nombre', 'matricula', 'ruc', 'whatsapp'):
                 self.fields[campo].required = False
         if pais:
             self.fields['matricula'].label = pais.etiqueta_matricula
@@ -211,6 +238,20 @@ class PerfilForm(forms.ModelForm):
 
         psicologo = self.instance if self.instance.pk else None
         aclarar_whatsapp(self.fields['whatsapp'], pais)
+
+        if psicologo and psicologo.es_centro:
+            for campo in ('matricula', 'docencia', 'sesiones_atendidas'):
+                self.fields.pop(campo, None)
+            self.fields['nombre'].label = 'Nombre del centro'
+            self.fields['bio'].label = 'Presentación del centro'
+            self.fields['foto'].label = 'Logo o foto del centro'
+            self.fields['foto'].help_text = 'JPG o PNG, hasta 5 MB. El logo, la fachada o una foto del equipo.'
+            self.fields['ruc'].required = not parcial
+            self.fields['ruc'].help_text = 'Solo números. Si lo cambiás, queda pendiente de verificar de nuevo.'
+            self.fields['direccion'].help_text = 'Dónde atienden. Se muestra en el perfil del centro.'
+        else:
+            for campo in ('ruc', 'direccion'):
+                self.fields.pop(campo, None)
 
         # Instagram: se muestra con arroba. La casilla de colaborador/a es solo
         # del Plan Premium (el plan se elige en el checkout).
@@ -253,6 +294,20 @@ class PerfilForm(forms.ModelForm):
 
     def clean_instagram(self):
         return _limpiar_instagram(self.cleaned_data.get('instagram'))
+
+    def clean_ruc(self):
+        valor = (self.cleaned_data.get('ruc') or '').strip()
+        if not valor:
+            return ''
+        try:
+            ruc = ruc_documento.validar_documento(self.instance.pais, valor)
+        except ValueError as error:
+            raise forms.ValidationError(str(error))
+        if Psicologo.objects.filter(ruc=ruc, tipo='centro').exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Ya hay un centro registrado con ese RUC. Escribinos desde Contacto si es un error.')
+        if ruc != self.instance.ruc:
+            self.instance.ruc_verificado = False   # un RUC nuevo hay que volver a comprobarlo
+        return ruc
 
     def clean_link_agenda_externa(self):
         link = (self.cleaned_data.get('link_agenda_externa') or '').strip()

@@ -47,6 +47,11 @@ class Pais(models.Model):
     # Chile = registro RNPI (la colegiatura es voluntaria, no es la credencial
     # oficial), México = cédula profesional (SEP), Colombia = tarjeta
     # profesional (COLPSIC).
+    acepta_centros = models.BooleanField(
+        'Acepta centros especializados', default=False,
+        help_text='Habilita el registro de centros (clínicas, institutos) en /portal/<país>/registro-centros/. '
+                  'Los centros figuran en el buscador junto a los profesionales y pagan los mismos planes.',
+    )
     etiqueta_matricula = models.CharField(
         'Etiqueta de habilitación profesional', max_length=60, default='N° de Matrícula',
         help_text='Ej: "N° de Colegiatura", "N° de Matrícula", "N° de Cédula Profesional"'
@@ -284,6 +289,16 @@ class Psicologo(models.Model):
     # La etiqueta que ve el paciente ("N° de Colegiatura", "N° de Matrícula", etc.)
     # sale de pais.etiqueta_matricula, no de acá -- este campo solo guarda el número.
     matricula = models.CharField('N° de habilitación profesional', max_length=60)
+    # Un centro especializado (clínica, instituto) es una ficha como la de un profesional: aparece en el buscador,
+    # paga los mismos planes y se arma igual. Cambia el documento (RUC en vez de matrícula) y suma la dirección.
+    TIPO_CHOICES = [('profesional', 'Profesional'), ('centro', 'Centro especializado')]
+    tipo = models.CharField('Tipo de ficha', max_length=12, choices=TIPO_CHOICES, default='profesional', db_index=True)
+    ruc = models.CharField('RUC del centro', max_length=20, blank=True, db_index=True)
+    ruc_verificado = models.BooleanField(
+        'RUC verificado', default=False,
+        help_text='Tildalo después de comprobar el RUC en SUNAT. Es lo que muestra el sello «RUC verificado» en el perfil público.',
+    )
+    direccion = models.CharField('Dirección', max_length=200, blank=True)
     whatsapp = models.CharField(max_length=30)
     ciudad = models.CharField(max_length=100, blank=True)
     modalidad = models.CharField(max_length=12, choices=MODALIDAD_CHOICES, default='online')
@@ -492,8 +507,21 @@ class Psicologo(models.Model):
         return self.publicado_por_usuario and self.puede_publicar
 
     @property
+    def es_centro(self):
+        return self.tipo == 'centro'
+
+    @property
+    def documento(self):
+        """El número que identifica a quien atiende: la matrícula de un profesional o el RUC de un centro."""
+        return self.ruc if self.es_centro else self.matricula
+
+    @property
+    def etiqueta_documento(self):
+        return 'RUC' if self.es_centro else self.pais.etiqueta_matricula
+
+    @property
     def perfil_completo(self):
-        campos_obligatorios = [self.nombre, self.matricula, self.whatsapp, self.foto, self.bio]
+        campos_obligatorios = [self.nombre, self.documento, self.whatsapp, self.foto, self.bio]
         return all(campos_obligatorios) and self.orientaciones.exists()
 
     @property
@@ -501,16 +529,17 @@ class Psicologo(models.Model):
         """Qué le falta al perfil para estar completo, en palabras para mostrarle al
         profesional. Mismas reglas que `perfil_completo` (hay un test que las compara)."""
         faltan = []
+        centro = self.es_centro
         if not self.nombre:
-            faltan.append('tu nombre')
-        if not self.matricula:
-            faltan.append(self.pais.etiqueta_matricula)
+            faltan.append('el nombre del centro' if centro else 'tu nombre')
+        if not self.documento:
+            faltan.append(self.etiqueta_documento)
         if not self.whatsapp:
             faltan.append('tu WhatsApp')
         if not self.foto:
-            faltan.append('tu foto')
+            faltan.append('el logo o una foto del centro' if centro else 'tu foto')
         if not self.bio:
-            faltan.append('tu descripción')
+            faltan.append('la presentación del centro' if centro else 'tu descripción')
         if not self.orientaciones.exists():
             faltan.append('al menos una orientación')
         return faltan
